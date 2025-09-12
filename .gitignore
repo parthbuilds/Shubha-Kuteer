@@ -22,11 +22,11 @@ pids
 .DS_Store
 Thumbs.db
 
-# Build / dist
-dist/
-build/
-.cache/
-.next/
+# # Build / dist
+# dist/
+# build/
+# .cache/
+# .next/
 
 # IDE configs
 .vscode/
