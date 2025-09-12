@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
@@ -11,7 +12,7 @@ const app = express();
 // 🔹 Middlewares
 // =========================
 app.use(cors({
-    origin: "http://localhost:3000/public", // adjust for your frontend
+    origin: "http://localhost:3000", // adjust for your frontend
     credentials: true
 }));
 app.use(bodyParser.json());

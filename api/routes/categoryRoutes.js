@@ -7,7 +7,7 @@ const pool = require("../utils/db");
 const router = express.Router();
 
 // Ensure upload directory exists
-const uploadPath = path.join(__dirname, "../../assets/images/categories");
+const uploadPath = path.join(__dirname, "../../assets/categories");
 if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
 
 // Multer setup
@@ -32,7 +32,7 @@ router.post("/", upload.single("icon"), async (req, res) => {
             data_item = name.toLowerCase().replace(/\s+/g, "-");
         }
 
-        const icon = `/assets/images/categories/${req.file.filename}`;
+        const icon = `/assets/categories/${req.file.filename}`;
 
         await pool.query(
             "INSERT INTO categories (name, data_item, icon, sale) VALUES (?, ?, ?, ?)",
