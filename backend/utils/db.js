@@ -1,8 +1,7 @@
 // backend/utils/db.js
 const mysql = require("mysql2/promise");
 const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, "../../.env") }); 
-// ✅ ensures .env from root is loaded
+// require("dotenv").config({ path: path.resolve(__dirname, "../../.env") }); 
 
 console.log("DB Config:", {
   host: process.env.DB_HOST,
