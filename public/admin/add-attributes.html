@@ -839,28 +839,32 @@
                                 </div>
                                 <!-- new-attribute -->
                                 <div class="wg-box">
-    <form class="form-new-product form-style-1" id="new-attribute-form">
-        <fieldset class="name">
-            <div class="body-title">Category <span class="tf-color-1">*</span></div>
-            <select name="category_id" id="attribute-category" required></select>
-        </fieldset>
+                                    <form class="form-new-product form-style-1" id="new-attribute-form">
+                                        <fieldset class="name">
+                                            <div class="body-title">Category <span class="tf-color-1">*</span></div>
+                                            <select name="category_id" id="attribute-category" required></select>
+                                        </fieldset>
 
-        <fieldset class="name">
-            <div class="body-title">Attribute name <span class="tf-color-1">*</span></div>
-            <input type="text" name="attribute_name" placeholder="Attribute name" required>
-        </fieldset>
+                                        <fieldset class="name">
+                                            <div class="body-title">Attribute name <span class="tf-color-1">*</span>
+                                            </div>
+                                            <input type="text" name="attribute_name" placeholder="Attribute name"
+                                                required>
+                                        </fieldset>
 
-        <fieldset class="name">
-            <div class="body-title">Attribute value <span class="tf-color-1">*</span></div>
-            <input type="text" name="attribute_value" placeholder="Attribute value" required>
-        </fieldset>
+                                        <fieldset class="name">
+                                            <div class="body-title">Attribute value <span class="tf-color-1">*</span>
+                                            </div>
+                                            <input type="text" name="attribute_value" placeholder="Attribute value"
+                                                required>
+                                        </fieldset>
 
-        <div class="bot">
-            <div></div>
-            <button class="tf-button w208" type="submit">Save</button>
-        </div>
-    </form>
-</div>
+                                        <div class="bot">
+                                            <div></div>
+                                            <button class="tf-button w208" type="submit">Save</button>
+                                        </div>
+                                    </form>
+                                </div>
                                 <!-- /new-category -->
                             </div>
                             <!-- /main-content-wrap -->
@@ -888,55 +892,55 @@
 
     <!-- Javascript -->
     <script>
-async function loadCategories() {
-    try {
-        const res = await fetch("/api/admin/categories");
-        const categories = await res.json();
-        const select = document.getElementById("attribute-category");
-        categories.forEach(cat => {
-            const option = document.createElement("option");
-            option.value = cat.id;
-            option.textContent = cat.name;
-            select.appendChild(option);
-        });
-    } catch (err) {
-        console.error("Error loading categories:", err);
-    }
-}
-
-window.addEventListener("DOMContentLoaded", loadCategories);
-
-const attributeForm = document.getElementById("new-attribute-form");
-attributeForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(attributeForm);
-    const data = {
-        category_id: formData.get("category_id"),
-        attribute_name: formData.get("attribute_name"),
-        attribute_value: formData.get("attribute_value")
-    };
-
-    try {
-        const res = await fetch("/api/admin/attributes", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        });
-
-        const result = await res.json();
-        if (res.ok && result.success) {
-            alert(result.message);
-            attributeForm.reset();
-        } else {
-            alert(result.message || result.error || "Error saving attribute");
+        async function loadCategories() {
+            try {
+                const res = await fetch("/api/admin/categories");
+                const categories = await res.json();
+                const select = document.getElementById("attribute-category");
+                categories.forEach(cat => {
+                    const option = document.createElement("option");
+                    option.value = cat.id;
+                    option.textContent = cat.name;
+                    select.appendChild(option);
+                });
+            } catch (err) {
+                console.error("Error loading categories:", err);
+            }
         }
-    } catch (err) {
-        console.error("Error saving attribute:", err);
-        alert("Error saving attribute");
-    }
-});
-</script>
+
+        window.addEventListener("DOMContentLoaded", loadCategories);
+
+        const attributeForm = document.getElementById("new-attribute-form");
+        attributeForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(attributeForm);
+            const data = {
+                category_id: formData.get("category_id"),
+                attribute_name: formData.get("attribute_name"),
+                attribute_value: formData.get("attribute_value")
+            };
+
+            try {
+                const res = await fetch("/api/admin/attributes", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    alert(result.message);
+                    attributeForm.reset();
+                } else {
+                    alert(result.message || result.error || "Error saving attribute");
+                }
+            } catch (err) {
+                console.error("Error saving attribute:", err);
+                alert("Error saving attribute");
+            }
+        });
+    </script>
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>
