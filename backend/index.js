@@ -24,6 +24,8 @@ app.use("/api/orders", ordersRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/users", userRoutes);
 
+app.use("/admin", express.static(path.join(__dirname, "admin-panel")));
+
 // Export wrapped as one serverless function
 module.exports = app;
 module.exports.handler = serverless(app);
