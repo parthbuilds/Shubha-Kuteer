@@ -1,4 +1,4 @@
-import handler from './_routes/orders';
+import handler from './routes/orders';
 export default function(req, res) {
   return handler(req, res);
 }
