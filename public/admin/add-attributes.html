@@ -383,7 +383,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Dog Food
+                                                                <a href="/admin/product-list.html" class="body-text">Dog
+                                                                    Food
                                                                     Rachael Ray Nutrish®</a>
                                                             </div>
                                                         </div>
@@ -397,7 +398,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Natural
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Natural
                                                                     Dog Food Healthy Dog Food</a>
                                                             </div>
                                                         </div>
@@ -411,7 +413,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Freshpet
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Freshpet
                                                                     Healthy Dog Food and Cat</a>
                                                             </div>
                                                         </div>
@@ -434,7 +437,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Sojos
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Sojos
                                                                     Crunchy Natural Grain Free...</a>
                                                             </div>
                                                         </div>
@@ -448,7 +452,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Kristin
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Kristin
                                                                     Watson</a>
                                                             </div>
                                                         </div>
@@ -462,7 +467,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Mega
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Mega
                                                                     Pumpkin Bone</a>
                                                             </div>
                                                         </div>
@@ -476,7 +482,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Mega
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Mega
                                                                     Pumpkin Bone</a>
                                                             </div>
                                                         </div>
@@ -842,7 +849,9 @@
                                     <form class="form-new-product form-style-1" id="new-attribute-form">
                                         <fieldset class="name">
                                             <div class="body-title">Category <span class="tf-color-1">*</span></div>
-                                            <select name="category_id" id="attribute-category" required></select>
+                                            <select name="category_id" id="attribute-category" required>
+                                                <option value="">Loading categories...</option>
+                                            </select>
                                         </fieldset>
 
                                         <fieldset class="name">
@@ -865,6 +874,7 @@
                                         </div>
                                     </form>
                                 </div>
+
                                 <!-- /new-category -->
                             </div>
                             <!-- /main-content-wrap -->
@@ -892,55 +902,70 @@
 
     <!-- Javascript -->
     <script>
-        async function loadCategories() {
-            try {
-                const res = await fetch("/api/admin/categories");
-                const categories = await res.json();
-                const select = document.getElementById("attribute-category");
-                categories.forEach(cat => {
-                    const option = document.createElement("option");
-                    option.value = cat.id;
-                    option.textContent = cat.name;
-                    select.appendChild(option);
-                });
-            } catch (err) {
-                console.error("Error loading categories:", err);
-            }
-        }
+        document.addEventListener("DOMContentLoaded", () => {
+            const categorySelect = document.getElementById("attribute-category");
+            const attributeForm = document.getElementById("new-attribute-form");
 
-        window.addEventListener("DOMContentLoaded", loadCategories);
+            // --- Load categories into select ---
+            async function loadCategories() {
+                try {
+                    const res = await fetch("/api/admin/categories/public"); // <--- correct endpoint
+                    if (!res.ok) throw new Error("Failed to load categories");
 
-        const attributeForm = document.getElementById("new-attribute-form");
-        attributeForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
+                    const categories = await res.json();
+                    categorySelect.innerHTML = '<option value="">Select Category</option>';
 
-            const formData = new FormData(attributeForm);
-            const data = {
-                category_id: formData.get("category_id"),
-                attribute_name: formData.get("attribute_name"),
-                attribute_value: formData.get("attribute_value")
-            };
-
-            try {
-                const res = await fetch("/api/admin/attributes", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
-                });
-
-                const result = await res.json();
-                if (res.ok && result.success) {
-                    alert(result.message);
-                    attributeForm.reset();
-                } else {
-                    alert(result.message || result.error || "Error saving attribute");
+                    categories.forEach(cat => {
+                        const option = document.createElement("option");
+                        option.value = cat.id;
+                        option.textContent = cat.name;
+                        categorySelect.appendChild(option);
+                    });
+                } catch (err) {
+                    console.error("Error loading categories:", err);
+                    categorySelect.innerHTML = '<option value="">Failed to load categories</option>';
                 }
-            } catch (err) {
-                console.error("Error saving attribute:", err);
-                alert("Error saving attribute");
             }
+
+            // --- Handle attribute form submission ---
+            if (attributeForm) {
+                attributeForm.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const formData = new FormData(attributeForm);
+                    const data = {
+                        category_id: formData.get("category_id"),
+                        attribute_name: formData.get("attribute_name"),
+                        attribute_value: formData.get("attribute_value")
+                    };
+
+                    try {
+                        const res = await fetch("/api/admin/attributes", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(data)
+                        });
+
+                        const result = await res.json();
+
+                        if (res.ok && result.success) {
+                            alert(result.message || "Attribute added successfully");
+                            attributeForm.reset();
+                        } else {
+                            alert(result.message || result.error || "Failed to save attribute");
+                        }
+                    } catch (err) {
+                        console.error("Error saving attribute:", err);
+                        alert("Failed to save attribute");
+                    }
+                });
+            }
+
+            // --- Initial load ---
+            loadCategories();
         });
     </script>
+
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>

@@ -30,9 +30,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 
-// --- USER-FACING PAGES ---
-app.use(express.static(path.join(__dirname, "..", "public")));
-
 // --- ADMIN LOGIN PAGE (public) ---
 app.get("/admin/login.html", (req, res) => {
     res.sendFile(path.join(__dirname, "..", "public/admin/login.html"));
@@ -41,25 +38,29 @@ app.get("/admin/login.html", (req, res) => {
 // --- ADMIN STATIC ASSETS ---
 app.use("/admin/assets", express.static(path.join(__dirname, "..", "public/admin/assets")));
 
+// --- API ROUTES (must come BEFORE admin page routes) ---
+app.use("/api/admin/auth", adminAuthRoutes);
+app.use("/api/admin/users", adminUserRoutes);
+app.use("/api/admin/attributes", attributeRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/admin/categories", categoryRoutes);
+app.use("/api/orders", ordersRoutes);
+app.use("/api/admin/products", productRoutes);
+app.use("/api/users", userRoutes);
+
 // --- PROTECTED ADMIN PAGES ---
-app.get("/admin/:page", adminAuth, (req, res) => {
-    const allowedPages = ["index.html", "dashboard.html"];
+// Use /admin/pages/:page instead of /admin/:page
+app.get("/admin/pages/:page", adminAuth, (req, res) => {
     const page = req.params.page;
-
-    if (!allowedPages.includes(page)) return res.status(404).send("Page not found");
-
+    if (!page.endsWith(".html")) return res.status(404).send("Page not found");
     res.sendFile(path.join(__dirname, "..", "public/admin", page));
 });
 
-// --- API ROUTES ---
-app.use("/api/admin/auth", adminAuthRoutes);
-app.use("/api/admin/users", adminUserRoutes);
-app.use("/api/attributes", attributeRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/orders", ordersRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/users", userRoutes);
+// --- USER-FACING PAGES ---
+app.use(express.static(path.join(__dirname, "..", "public")));
+
+// --- Uploads ---
+app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
 
 // --- Export for serverless ---
 export { app };
