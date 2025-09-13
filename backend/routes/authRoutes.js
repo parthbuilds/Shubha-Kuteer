@@ -1,9 +1,9 @@
-export default function handler(req, res) {
-    if (req.method === "POST" && req.url.endsWith("/login")) {
-        res.json({ message: "Login route working ✅" });
-    } else if (req.method === "POST" && req.url.endsWith("/register")) {
-        res.json({ message: "Register route working ✅" });
-    } else {
-        res.status(405).json({ message: "Method not allowed" });
-    }
-}
+import express from "express";
+import { registerUser, loginUser } from "../controllers/authController.js";
+
+const router = express.Router();
+
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+
+export default router;

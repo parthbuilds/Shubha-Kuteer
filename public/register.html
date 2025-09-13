@@ -63,7 +63,7 @@
         </div>
     </div>
 
-    
+
 
     <div class="register-block md:py-20 py-10">
         <div class="container">
@@ -101,6 +101,8 @@
                                 <a href="#!" class="text-black hover:underline pl-1">Terms of User</a>
                             </label>
                         </div>
+
+                        <div id="messageArea" class="hidden mt-4 text-sm"></div>
 
                         <div class="block-button md:mt-7 mt-4">
                             <button type="submit"
@@ -1126,56 +1128,62 @@
     </div>
 
     <script>
-        document.getElementById("registerForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+        document.addEventListener("DOMContentLoaded", () => {
+            const registerForm = document.getElementById("registerForm");
+            const registerButton = registerForm.querySelector("button[type='submit']");
+            const messageArea = document.getElementById("messageArea");
 
-    const name = document.getElementById("name").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-    const confirmPassword = document.getElementById("confirmPassword").value;
-    const registerButton = document.querySelector("#registerForm button[type='submit']");
+            registerForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
 
-    // Check if passwords match
-    if (password !== confirmPassword) {
-        alert("⚠️ Passwords do not match!");
-        return;
-    }
+                const name = document.getElementById("name").value.trim();
+                const email = document.getElementById("email").value.trim();
+                const password = document.getElementById("password").value;
+                const confirmPassword = document.getElementById("confirmPassword").value;
 
-    try {
-        const response = await fetch("http://localhost:3000/api/members/auth/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, password })
+                if (password !== confirmPassword) {
+                    messageArea.textContent = "Passwords do not match!";
+                    messageArea.classList.remove("hidden");
+                    messageArea.classList.add("error");
+                    return;
+                }
+
+                registerButton.disabled = true;
+                registerButton.textContent = "Registering...";
+                messageArea.classList.add("hidden");
+
+                try {
+                    const response = await fetch("/api/auth/register", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name, email, password })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        registerForm.reset();
+
+                        // ✅ Only update button, no success message
+                        registerButton.textContent = "Registered ✅";
+
+                        setTimeout(() => {
+                            window.location.assign("login.html");
+                        }, 2000);
+                    } else {
+                        throw new Error(result.message || "An unknown error occurred.");
+                    }
+                } catch (error) {
+                    console.error("❌ Error during registration:", error);
+                    messageArea.textContent = error.message;
+                    messageArea.classList.remove("hidden");
+                    messageArea.classList.add("error");
+                    registerButton.disabled = false;
+                    registerButton.textContent = "Register";
+                }
+            });
         });
-
-        const result = await response.json();
-        console.log("📩 Backend response:", result);
-
-        if (response.ok) {
-            // Clear the form fields
-            document.getElementById("registerForm").reset();
-
-            // ✅ Change button to success state 
-            registerButton.textContent = "Registered";
-            registerButton.classList.remove("bg-blue-600", "hover:bg-blue-700");
-            registerButton.classList.add("bg-green-600", "hover:bg-green-700", "cursor-not-allowed");
-            registerButton.disabled = true;
-
-            // ⏳ Redirect after short delay
-            setTimeout(() => {
-                window.location.assign("login.html");
-            }, 2000);
-        } else {
-            alert(result.message);
-        }
-    } catch (error) {
-        console.error("❌ Error during registration:", error);
-        alert("An error occurred during registration. Please try again.");
-    }
-});
-
     </script>
-
 
     <script src="./assets/js/login.js"></script>
     <script src="./assets/js/phosphor-icons.js"></script>

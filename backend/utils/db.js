@@ -1,15 +1,13 @@
-// backend/utils/db.js
-const mysql = require("mysql2/promise");
-const path = require("path");
-// require("dotenv").config({ path: path.resolve(__dirname, "../../.env") }); 
+import mysql from "mysql2/promise";
+import "dotenv/config";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 
-console.log("DB Config:", {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
+// Correctly resolve __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
+// Create the connection pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -20,4 +18,5 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-module.exports = pool;
+// Export the pool using the ES Module default export syntax
+export default pool;

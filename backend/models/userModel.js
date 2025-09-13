@@ -1,17 +1,14 @@
-// models/userModel.js
-const db = require("../db");
+import db from "../utils/db.js";
 
-const createUser = (name, email, password_hash, callback) => {
+export const createUser = (name, email, password_hash, callback) => {
     const sql = "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)";
     db.query(sql, [name, email, password_hash], callback);
 };
 
-const findByEmail = (email, callback) => {
+export const findByEmail = (email, callback) => {
     const sql = "SELECT * FROM users WHERE email = ?";
     db.query(sql, [email], (err, results) => {
         if (err) return callback(err);
         callback(null, results[0]);
     });
 };
-
-module.exports = { createUser, findByEmail };

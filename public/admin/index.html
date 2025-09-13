@@ -33,7 +33,17 @@
     <!-- Favicon and Touch Icons  -->
     <link rel="shortcut icon" href="/admin/images/favicon.png">
     <link rel="apple-touch-icon-precomposed" href="/admin/images/favicon.png">
-
+    <script>
+        (async () => {
+            try {
+                const res = await fetch("/api/admin/auth/check", { credentials: "include" });
+                if (!res.ok) window.location.href = "/admin/login.html";
+                // Authorized, page continues to load
+            } catch {
+                window.location.href = "/admin/login.html";
+            }
+        })();
+    </script>
 </head>
 
 <body class="body">
@@ -131,7 +141,7 @@
                                                     <div class="text">Product List</div>
                                                 </a>
                                             </li>
-                                            
+
                                             <!--li class="sub-menu-item">
                                                 <a href="product-detail-2.html" class="">
                                                     <div class="text">Product Detail 2</div>
@@ -219,7 +229,7 @@
                                                     <div class="text">Add new user</div>
                                                 </a>
                                             </li>
-                                            
+
                                         </ul>
                                     </li>
                                     <!--<li class="menu-item has-children">
@@ -404,9 +414,9 @@
                         <div class="wrap">
                             <div class="header-left">
                                 <a href="/admin/index.html">
-                                    <img class="logo-link" id="logo_header_mobile" alt="" src="/admin/images/logo/logo.png"
-                                        data-light="images/logo/logo.png" data-dark="images/logo/logo-dark.png"
-                                        data-retina="images/logo/logo@2x.png">
+                                    <img class="logo-link" id="logo_header_mobile" alt=""
+                                        src="/admin/images/logo/logo.png" data-light="images/logo/logo.png"
+                                        data-dark="images/logo/logo-dark.png" data-retina="images/logo/logo@2x.png">
                                 </a>
                                 <div class="button-show-hide">
                                     <i class="icon-menu-left"></i>
@@ -435,7 +445,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Dog Food
+                                                                <a href="/admin/product-list.html" class="body-text">Dog
+                                                                    Food
                                                                     Rachael Ray Nutrish®</a>
                                                             </div>
                                                         </div>
@@ -449,7 +460,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Natural
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Natural
                                                                     Dog Food Healthy Dog Food</a>
                                                             </div>
                                                         </div>
@@ -463,7 +475,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Freshpet
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Freshpet
                                                                     Healthy Dog Food and Cat</a>
                                                             </div>
                                                         </div>
@@ -486,7 +499,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Sojos
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Sojos
                                                                     Crunchy Natural Grain Free...</a>
                                                             </div>
                                                         </div>
@@ -500,7 +514,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Kristin
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Kristin
                                                                     Watson</a>
                                                             </div>
                                                         </div>
@@ -514,7 +529,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Mega
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Mega
                                                                     Pumpkin Bone</a>
                                                             </div>
                                                         </div>
@@ -528,7 +544,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Mega
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Mega
                                                                     Pumpkin Bone</a>
                                                             </div>
                                                         </div>
@@ -1032,7 +1049,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-title-2">Patimax
+                                                            <a href="/admin/product-list.html"
+                                                                class="body-title-2">Patimax
                                                                 Fragrance Long...</a>
                                                             <div class="text-tiny mt-3">100 Items</div>
                                                         </div>
@@ -1078,7 +1096,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-title-2">Pedigree
+                                                            <a href="/admin/product-list.html"
+                                                                class="body-title-2">Pedigree
                                                                 Puppy Dry Dog...</a>
                                                             <div class="text-tiny mt-3">100 Items</div>
                                                         </div>
@@ -1101,7 +1120,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-title-2">Biscoito
+                                                            <a href="/admin/product-list.html"
+                                                                class="body-title-2">Biscoito
                                                                 Premier Cookie...</a>
                                                             <div class="text-tiny mt-3">100 Items</div>
                                                         </div>
@@ -1478,7 +1498,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Soft Fluffy
+                                                            <a href="/admin/product-list.html" class="body-text">Soft
+                                                                Fluffy
                                                                 Cats</a>
                                                         </div>
                                                         <div class="body-text">#327</div>
@@ -1495,7 +1516,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Taste of the
+                                                            <a href="/admin/product-list.html" class="body-text">Taste
+                                                                of the
                                                                 Wild Formula Finder</a>
                                                         </div>
                                                         <div class="body-text">#380</div>
@@ -1512,7 +1534,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Wellness
+                                                            <a href="/admin/product-list.html"
+                                                                class="body-text">Wellness
                                                                 Natural Food</a>
                                                         </div>
                                                         <div class="body-text">#126</div>
@@ -1529,7 +1552,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Dog Food
+                                                            <a href="/admin/product-list.html" class="body-text">Dog
+                                                                Food
                                                                 Rachael Ray</a>
                                                         </div>
                                                         <div class="body-text">#582</div>
@@ -1548,7 +1572,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Best Buddy
+                                                            <a href="/admin/product-list.html" class="body-text">Best
+                                                                Buddy
                                                                 Bits Dog Treats</a>
                                                         </div>
                                                         <div class="body-text">#293</div>
@@ -1625,7 +1650,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow gap10">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Prodotti per
+                                                            <a href="/admin/product-list.html"
+                                                                class="body-text">Prodotti per
                                                                 il tuo cane...</a>
                                                         </div>
                                                         <div class="body-text">20 Nov 2023</div>
@@ -1638,7 +1664,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow gap10">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Wholesome
+                                                            <a href="/admin/product-list.html"
+                                                                class="body-text">Wholesome
                                                                 Pride...</a>
                                                         </div>
                                                         <div class="body-text">20 Nov 2023</div>
@@ -1651,7 +1678,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow gap10">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Beneful Baked
+                                                            <a href="/admin/product-list.html" class="body-text">Beneful
+                                                                Baked
                                                                 Delights...</a>
                                                         </div>
                                                         <div class="body-text">20 Nov 2023</div>
@@ -1664,7 +1692,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow gap10">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Taste of the
+                                                            <a href="/admin/product-list.html" class="body-text">Taste
+                                                                of the
                                                                 Wild...</a>
                                                         </div>
                                                         <div class="body-text">20 Nov 2023</div>
@@ -1677,7 +1706,8 @@
                                                     </div>
                                                     <div class="flex items-center justify-between flex-grow gap10">
                                                         <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Canagan -
+                                                            <a href="/admin/product-list.html" class="body-text">Canagan
+                                                                -
                                                                 Britain's...</a>
                                                         </div>
                                                         <div class="body-text">20 Nov 2023</div>

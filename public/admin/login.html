@@ -93,48 +93,35 @@
 
     <!-- Javascript -->
     <script>
-document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+        document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const errorEl = document.getElementById("error-message");
 
-    const form = e.target;
-    const btn = form.querySelector('button[type="submit"]');
-    const errorEl = document.getElementById("error-message");
+            errorEl.style.display = "none";
+            btn.disabled = true;
+            btn.textContent = "Logging in...";
 
-    errorEl.style.display = "none";
-    errorEl.textContent = "";
-    btn.disabled = true;
-
-    const email = form.email.value.trim();
-    const password = form.password.value;
-
-    try {
-        const res = await fetch("/api/admin/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-            credentials: "include" // important for cookies
+            try {
+                const res = await fetch("/api/admin/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: form.email.value.trim(), password: form.password.value }),
+                    credentials: "include"
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || "Login failed");
+                window.location.href = data.redirect || "/admin/index.html";
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.style.display = "block";
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Login";
+            }
         });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.message || "Invalid email or password");
-        }
-
-        console.log("Login response:", data);
-
-        // ✅ Perform redirect manually
-        window.location.href = data.redirect || "/admin/index.html";
-
-    } catch (err) {
-        console.error("Login failed:", err);
-        errorEl.textContent = err.message || "Something went wrong, try again.";
-        errorEl.style.display = "block";
-    } finally {
-        btn.disabled = false;
-    }
-});
-</script>
+    </script>
 
 
 
