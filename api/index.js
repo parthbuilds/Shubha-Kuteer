@@ -1,6 +1,6 @@
 // /api/index.js
-const app = require("../backend/index"); 
-const serverless = require("serverless-http");
+import serverless from "serverless-http";
+import app from "../backend/index.js";
 
 module.exports = app;
 module.exports.handler = serverless(app);

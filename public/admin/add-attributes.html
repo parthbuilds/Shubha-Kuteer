@@ -877,6 +877,7 @@
                                     </form>
                                 </div>
 
+
                                 <!-- /new-category -->
                             </div>
                             <!-- /main-content-wrap -->
@@ -907,7 +908,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             const categorySelect = document.getElementById("attribute-category");
             const attributeForm = document.getElementById("new-attribute-form");
-            const hashMessage = document.getElementById("color-hash-message");
+            const hashInput = document.getElementById("attribute-hash");
 
             async function loadCategories() {
                 try {
@@ -945,20 +946,13 @@
                     const attributeValue = attributeForm.attribute_value.value.trim();
 
                     let attributeHash = null;
-
-                    // If attribute is color, generate hash and show message
                     if (attributeName === "color") {
-                        if (!attributeValue) {
-                            alert("Please enter color values separated by commas");
-                            return;
-                        }
-
+                        // Generate hash and wait for it
                         attributeHash = await hashValue(attributeValue);
-                        hashMessage.style.display = "block";
-                        hashMessage.textContent = `Hash generated for colors: ${attributeHash}`;
-                    } else {
-                        hashMessage.style.display = "none";
                     }
+
+                    // Set hidden input value
+                    hashInput.value = attributeHash;
 
                     const data = {
                         category_id: attributeForm.category_id.value,
@@ -979,7 +973,6 @@
                         if (res.ok && result.success) {
                             alert(result.message || "Attribute added successfully");
                             attributeForm.reset();
-                            hashMessage.style.display = "none";
                         } else {
                             alert(result.message || result.error || "Failed to save attribute");
                         }
@@ -993,6 +986,7 @@
             loadCategories();
         });
     </script>
+
 
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>

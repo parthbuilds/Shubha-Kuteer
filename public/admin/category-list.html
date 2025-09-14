@@ -894,7 +894,7 @@
             // --- Load all categories ---
             async function loadCategories() {
                 try {
-                    const res = await fetch("/api/admin/categories/public"); // <--- correct endpoint
+                    const res = await fetch("/api/admin/categories/public");
                     if (!res.ok) throw new Error("Failed to load categories");
 
                     const categories = await res.json();
