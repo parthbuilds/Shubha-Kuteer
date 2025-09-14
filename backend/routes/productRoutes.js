@@ -1,25 +1,13 @@
-// routes/productRoutes.js
 import express from "express";
 import pool from "../utils/db.js";
-import path from "path";
-import fs from "fs/promises";
-import multer from "multer";
 
 const router = express.Router();
 
-// --- Multer setup for file uploads ---
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(process.cwd(), "/public/products")),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${file.fieldname}${ext}`;
-    cb(null, filename);
-  },
-});
-const upload = multer({ storage });
-
-// 🔹 POST → Add new product
-router.post("/", upload.fields([{ name: "image", maxCount: 1 }, { name: "file", maxCount: 1 }]), async (req, res) => {
+/**
+ * POST /api/admin/products
+ * Add new product safely
+ */
+router.post("/", async (req, res) => {
   try {
     const {
       name,
@@ -35,61 +23,98 @@ router.post("/", upload.fields([{ name: "image", maxCount: 1 }, { name: "file", 
       sizes,
       variations,
       category,
+      description,
+      type,
+      brand,
+      main_image,
+      gallery
     } = req.body;
 
-    if (!name || !category) return res.status(400).json({ message: "Product name and category are required!" });
+    if (!name || !category) {
+      return res.status(400).json({ message: "Product name and category are required!" });
+    }
 
-    // Parse JSON fields
-    const sizesJSON = sizes ? JSON.parse(sizes) : [];
-    const variationsJSON = variations ? JSON.parse(variations) : {};
+    // --- Sizes & Variations ---
+    let sizesJSON = "[]";
+    let variationsJSON = "{}";
+    try { if (sizes) sizesJSON = JSON.stringify(JSON.parse(sizes)); } catch {}
+    try { if (variations) variationsJSON = JSON.stringify(JSON.parse(variations)); } catch {}
 
-    // Files
-    const imageFile = req.files?.image?.[0]?.path.replace(process.cwd(), "") || "/images/products/default.png";
-    const productFile = req.files?.file?.[0]?.path.replace(process.cwd(), "") || null;
+    // --- Main Image ---
+    const mainImageURL = main_image || "https://via.placeholder.com/400x400?text=No+Image";
 
-    // Auto-generate slug
-    const finalSlug = slug?.trim() ? slug : name.toLowerCase().replace(/\s+/g, "-");
+    // --- Gallery handling (safe) ---
+    let galleryURLs = [];
+    if (Array.isArray(gallery)) {
+      galleryURLs = gallery;
+    } else if (typeof gallery === "string" && gallery.length > 0) {
+      try { galleryURLs = JSON.parse(gallery); } 
+      catch { galleryURLs = gallery.split(","); }
+    }
 
-    // Insert into DB
+    // --- Auto-slug ---
+    const finalSlug = slug?.trim() || name.toLowerCase().replace(/\s+/g, "-");
+
+    // --- Numeric defaults ---
+    const finalPrice = Number(price) || 0;
+    const finalOriginPrice = Number(origin_price) || 0;
+    const finalQuantity = Number(quantity) || 0;
+    const finalSold = Number(sold) || 0;
+    const finalQuantityPurchase = Number(quantity_purchase) || 0;
+    const finalRate = Number(rate) || 0;
+
+    // --- Insert into database (category as string) ---
     const [result] = await pool.query(
-      `INSERT INTO products 
-        (name, slug, price, origin_price, quantity, sold, quantity_purchase, rate, is_new, on_sale, sizes, variations, category_id, image, file)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-          (SELECT id FROM categories WHERE name=? LIMIT 1), ?, ?)`,
+      `INSERT INTO products
+        (name, slug, price, origin_price, quantity, sold, quantity_purchase, rate,
+         is_new, on_sale, sizes, variations, category, main_image, gallery, description, type, brand)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         finalSlug,
-        price || 0,
-        origin_price || 0,
-        quantity || 0,
-        sold || 0,
-        quantity_purchase || 0,
-        rate || 0,
+        finalPrice,
+        finalOriginPrice,
+        finalQuantity,
+        finalSold,
+        finalQuantityPurchase,
+        finalRate,
         is_new ? 1 : 0,
         on_sale ? 1 : 0,
-        JSON.stringify(sizesJSON),
-        JSON.stringify(variationsJSON),
+        sizesJSON,
+        variationsJSON,
         category,
-        imageFile,
-        productFile,
+        mainImageURL,
+        JSON.stringify(galleryURLs),
+        description || "",
+        type || "",
+        brand || ""
       ]
     );
 
-    return res.status(200).json({ message: "Product added successfully!", productId: result.insertId });
+    return res.status(200).json({
+      message: "✅ Product added successfully!",
+      productId: result.insertId,
+      main_image: mainImageURL,
+      gallery: galleryURLs
+    });
+
   } catch (err) {
-    console.error("Failed to add product:", err);
+    console.error("❌ Failed to add product:", err);
     return res.status(500).json({ message: "Failed to add product", error: err.message });
   }
 });
 
-// 🔹 GET → Fetch all products (optional)
+/**
+ * GET /api/admin/products
+ * Fetch all products
+ */
 router.get("/", async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT * FROM products ORDER BY id DESC");
+    const [rows] = await pool.query("SELECT * FROM products ORDER BY created_at DESC");
     return res.status(200).json(rows);
   } catch (err) {
-    console.error("Failed to fetch products:", err);
-    return res.status(500).json({ message: "Failed to fetch products", error: err.message });
+    console.error("❌ Failed to fetch products:", err);
+    return res.status(500).json({ message: "Failed to fetch products" });
   }
 });
 

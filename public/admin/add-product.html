@@ -1030,292 +1030,8 @@
     <!-- /#wrapper -->
 
     <!-- Javascript -->
-    <!-- <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const form = document.getElementById("addProductForm");
-            const sizesSelect = document.getElementById("sizesSelect");
-            const selectedSizesDiv = document.getElementById("selectedSizes");
-            const sizesHidden = document.getElementById("sizesHidden");
-            const variationsHidden = document.getElementById("variationsHidden");
-            let selectedSizes = [];
-            let variationList = [];
-
-            // 🔹 Handle sizes
-            sizesSelect.addEventListener("change", e => {
-                const value = e.target.value;
-                if (value && !selectedSizes.includes(value)) {
-                    selectedSizes.push(value);
-                    renderSizes();
-                }
-                sizesSelect.value = "";
-            });
-
-            function renderSizes() {
-                selectedSizesDiv.innerHTML = "";
-                if (selectedSizes.length) selectedSizesDiv.classList.add("mt-10");
-                selectedSizes.forEach(size => {
-                    const div = document.createElement("div");
-                    div.className = "box-value-item";
-                    div.innerHTML = `${size} <span onclick="removeSize('${size}')">✕</span>`;
-                    selectedSizesDiv.appendChild(div);
-                });
-                sizesHidden.value = JSON.stringify(selectedSizes);
-            }
-
-            window.removeSize = function (size) {
-                selectedSizes = selectedSizes.filter(s => s !== size);
-                renderSizes();
-            }
-
-            // 🔹 Handle color variations
-            document.getElementById("addColorBtn").addEventListener("click", () => {
-                const colorName = prompt("Enter color name:");
-                if (!colorName) return;
-                const colorCode = prompt("Enter hex code (e.g. #DB4444):", "#000000");
-                if (!colorCode) return;
-
-                variationList.push({ color: colorName, colorCode, colorImage: null });
-                renderColorVariations();
-            });
-
-            function renderColorVariations() {
-                const container = document.getElementById("variationsContainer");
-                container.innerHTML = "";
-                variationList.forEach(v => {
-                    const div = document.createElement("div");
-                    div.classList.add("variation-item", "mb-10");
-                    div.innerHTML = `
-            <div class="body-text">
-                ${v.color}
-                <span style="background:${v.colorCode};padding:0 10px;margin-left:10px;border-radius:3px;">&nbsp;</span>
-                <button type="button" onclick="removeColorVariation('${v.color}', '${v.colorCode}')">Remove</button>
-            </div>`;
-                    container.appendChild(div);
-                });
-                variationsHidden.value = JSON.stringify(variationList);
-            }
-
-            window.removeColorVariation = function (colorName, colorCode) {
-                variationList = variationList.filter(v => !(v.color === colorName && v.colorCode === colorCode));
-                renderColorVariations();
-            }
-
-            form.addEventListener("submit", async e => {
-                e.preventDefault();
-
-                // Update hidden inputs
-                sizesHidden.value = JSON.stringify(selectedSizes);
-                variationsHidden.value = JSON.stringify(variationList);
-
-                const formData = new FormData(form);
-
-                // Handle checkboxes
-                formData.set("is_new", form.is_new && form.is_new.checked ? 1 : 0);
-                formData.set("on_sale", form.on_sale && form.on_sale.checked ? 1 : 0);
-
-                // Convert empty numbers to 0 (safely)
-                ["price", "origin_price", "quantity", "sold", "quantity_purchase", "rate"].forEach(f => {
-                    if (form[f] && !form[f].value) formData.set(f, 0);
-                });
-
-                // Auto-generate slug if empty
-                if (form.slug && !form.slug.value && form.name.value) {
-                    formData.set("slug", form.name.value.toLowerCase().replace(/\s+/g, "-"));
-                }
-
-                try {
-                    const res = await fetch("/api/admin/products", {
-                        method: "POST",
-                        body: formData
-                    });
-
-                    const data = await res.json();
-                    if (res.ok) {
-                        alert("✅ Product added successfully!");
-                        form.reset();
-                        selectedSizes = [];
-                        variationList = [];
-                        renderSizes();
-                        renderColorVariations();
-                    } else {
-                        alert("❌ Error: " + (data.message || "Unknown error"));
-                        console.error(data);
-                    }
-                } catch (err) {
-                    console.error("⚠️ Fetch error:", err);
-                    alert("⚠️ Failed to add product. See console.");
-                }
-            });
-        });
-    </script>
-
-    <script>
-        async function loadCategories() {
-            try {
-                const res = await fetch("/api/admin/categories");
-                const categories = await res.json();
-
-                const select = document.getElementById("product-category");
-                categories.forEach(cat => {
-                    const option = document.createElement("option");
-                    option.value = cat.name;
-                    option.textContent = cat.name;
-                    select.appendChild(option);
-                });
-            } catch (err) {
-                console.error("Error loading categories:", err);
-            }
-        }
-
-        window.addEventListener("DOMContentLoaded", loadCategories);
-    </script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const form = document.getElementById("addProductForm");
-            const sizesSelect = document.getElementById("sizesSelect");
-            const selectedSizesDiv = document.getElementById("selectedSizes");
-            const sizesHidden = document.getElementById("sizesHidden");
-            const variationsHidden = document.getElementById("variationsHidden");
-
-            let selectedSizes = [];
-
-            // 🔹 Handle sizes
-            sizesSelect.addEventListener("change", e => {
-                const value = e.target.value;
-                if (value && !selectedSizes.includes(value)) {
-                    selectedSizes.push(value);
-                    renderSizes();
-                }
-                sizesSelect.value = "";
-            });
-
-            function renderSizes() {
-                selectedSizesDiv.innerHTML = "";
-                if (selectedSizes.length) selectedSizesDiv.classList.add("mt-10");
-                selectedSizes.forEach(size => {
-                    const div = document.createElement("div");
-                    div.className = "box-value-item";
-                    div.innerHTML = `${size} <span onclick="removeSize('${size}')">✕</span>`;
-                    selectedSizesDiv.appendChild(div);
-                });
-                sizesHidden.value = JSON.stringify(selectedSizes);
-            }
-
-            window.removeSize = function (size) {
-                selectedSizes = selectedSizes.filter(s => s !== size);
-                renderSizes();
-            }
-
-            // 🔹 Load attributes and variants
-            async function loadAttributes() {
-                try {
-                    const res = await fetch("/api/admin/attributes");
-                    const attributes = await res.json();
-                    const select = document.getElementById("attributeSelect");
-
-                    // Unique attribute names
-                    const uniqueNames = [...new Set(attributes.map(a => a.attribute_name))];
-                    uniqueNames.forEach(name => {
-                        const option = document.createElement("option");
-                        option.value = name;
-                        option.textContent = name;
-                        select.appendChild(option);
-                    });
-
-                    select.addEventListener("change", () => {
-                        displayVariants(select.value, attributes);
-                    });
-                } catch (err) {
-                    console.error("Error loading attributes:", err);
-                }
-            }
-            loadAttributes();
-
-            // 🔹 Display checkboxes for variants
-            function displayVariants(attributeName, attributes) {
-                const container = document.getElementById("variantsContainer");
-                container.innerHTML = "";
-
-                const attrObj = attributes.find(a => a.attribute_name === attributeName);
-                if (!attrObj || !attrObj.attribute_value) return;
-
-                const variants = attrObj.attribute_value.split(",");
-                variants.forEach(value => {
-                    const wrapper = document.createElement("div");
-                    wrapper.style.display = "inline-block";
-                    wrapper.style.marginRight = "10px";
-
-                    const checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-                    checkbox.value = value.trim();
-                    checkbox.dataset.attribute = attributeName;
-                    checkbox.className = "variant-checkbox";
-
-                    const label = document.createElement("label");
-                    label.textContent = value.trim();
-                    label.style.marginLeft = "5px";
-
-                    wrapper.appendChild(checkbox);
-                    wrapper.appendChild(label);
-                    container.appendChild(wrapper);
-                });
-            }
-
-            // 🔹 Handle form submission
-            form.addEventListener("submit", async e => {
-                e.preventDefault();
-
-                // Collect selected variants
-                const checkboxes = document.querySelectorAll(".variant-checkbox:checked");
-                const selectedVariants = {};
-                checkboxes.forEach(cb => {
-                    const attr = cb.dataset.attribute;
-                    if (!selectedVariants[attr]) selectedVariants[attr] = [];
-                    selectedVariants[attr].push(cb.value);
-                });
-                variationsHidden.value = JSON.stringify(selectedVariants);
-
-                // Collect all form data
-                const formData = new FormData(form);
-
-                // Checkboxes
-                formData.set("is_new", form.is_new && form.is_new.checked ? 1 : 0);
-                formData.set("on_sale", form.on_sale && form.on_sale.checked ? 1 : 0);
-
-                // Convert empty numbers to 0
-                ["price", "origin_price", "quantity", "sold", "quantity_purchase", "rate"].forEach(f => {
-                    if (form[f] && !form[f].value) formData.set(f, 0);
-                });
-
-                // Auto-generate slug if empty
-                if (form.slug && !form.slug.value && form.name.value) {
-                    formData.set("slug", form.name.value.toLowerCase().replace(/\s+/g, "-"));
-                }
-
-                try {
-                    const res = await fetch("/api/admin/products", {
-                        method: "POST",
-                        body: formData
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        alert("✅ Product added successfully!");
-                        form.reset();
-                        selectedSizes = [];
-                        renderSizes();
-                        document.getElementById("variantsContainer").innerHTML = "";
-                    } else {
-                        alert("❌ Error: " + (data.message || "Unknown error"));
-                        console.error(data);
-                    }
-                } catch (err) {
-                    console.error("⚠️ Fetch error:", err);
-                    alert("⚠️ Failed to add product. See console.");
-                }
-            });
-        });
-    </script> -->
-    <script>document.addEventListener("DOMContentLoaded", () => {
             const form = document.getElementById("addProductForm");
 
             // --- Sizes ---
@@ -1336,7 +1052,6 @@
             function renderSizes() {
                 selectedSizesDiv.innerHTML = "";
                 selectedSizesDiv.classList.toggle("mt-10", selectedSizes.length > 0);
-
                 selectedSizes.forEach(size => {
                     const div = document.createElement("div");
                     div.className = "box-value-item";
@@ -1351,135 +1066,204 @@
                 renderSizes();
             }
 
-            // --- Color Variations ---
+            // --- Variations (Colors & Attributes) ---
             const variationsHidden = document.getElementById("variationsHidden");
-            const variationsContainer = document.getElementById("variationsContainer");
+            const variationsContainer = document.getElementById("variantsContainer");
             let variationList = [];
+            let attributeVariants = {};
+            let attributes = [];
 
-            document.getElementById("addColorBtn").addEventListener("click", () => {
+            document.getElementById("addColorBtn")?.addEventListener("click", () => {
                 const colorName = prompt("Enter color name:");
                 if (!colorName) return;
                 const colorCode = prompt("Enter hex code (e.g. #DB4444):", "#000000");
                 if (!colorCode) return;
-
                 variationList.push({ color: colorName, colorCode, colorImage: null });
-                renderColorVariations();
+                renderVariations();
             });
 
-            function renderColorVariations() {
+            function renderVariations() {
                 variationsContainer.innerHTML = "";
+
+                // Render colors
                 variationList.forEach(v => {
                     const div = document.createElement("div");
                     div.className = "variation-item mb-10";
                     div.innerHTML = `
-                <div class="body-text">
-                    ${v.color}
-                    <span style="background:${v.colorCode};padding:0 10px;margin-left:10px;border-radius:3px;">&nbsp;</span>
-                    <button type="button" onclick="removeColorVariation('${v.color}', '${v.colorCode}')">Remove</button>
-                </div>`;
+        <div class="body-text">
+          ${v.color} 
+          <span style="background:${v.colorCode};padding:0 10px;margin-left:10px;border-radius:3px;">&nbsp;</span>
+          <button type="button" onclick="removeColorVariation('${v.color}', '${v.colorCode}')">Remove</button>
+        </div>`;
                     variationsContainer.appendChild(div);
                 });
-                variationsHidden.value = JSON.stringify(variationList);
+
+                // Render attributes
+                Object.keys(attributeVariants).forEach(attrName => {
+                    const wrapperDiv = document.createElement("div");
+                    wrapperDiv.className = "attribute-group mb-10";
+                    wrapperDiv.innerHTML = `<strong>${attrName}:</strong>`;
+
+                    attributeVariants[attrName].forEach(value => {
+                        const id = `attr-${attrName}-${value}`;
+                        const checkbox = document.createElement("input");
+                        checkbox.type = "checkbox";
+                        checkbox.id = id;
+                        checkbox.value = value;
+                        checkbox.dataset.attribute = attrName;
+                        checkbox.className = "variant-checkbox";
+
+                        const label = document.createElement("label");
+                        label.htmlFor = id;
+                        label.textContent = value;
+                        label.style.marginLeft = "5px";
+
+                        const span = document.createElement("span");
+                        span.style.marginRight = "10px";
+                        span.appendChild(checkbox);
+                        span.appendChild(label);
+
+                        wrapperDiv.appendChild(span);
+                    });
+
+                    variationsContainer.appendChild(wrapperDiv);
+                });
+
+                variationsHidden.value = JSON.stringify({ colors: variationList, attributes: attributeVariants });
             }
 
             window.removeColorVariation = function (colorName, colorCode) {
                 variationList = variationList.filter(v => !(v.color === colorName && v.colorCode === colorCode));
-                renderColorVariations();
+                renderVariations();
             }
 
-            // --- Attributes & Variants ---
-            const variantsContainer = document.getElementById("variantsContainer");
-
+            // --- Load Attributes ---
+            const attributeSelect = document.getElementById("attributeSelect");
             async function loadAttributes() {
                 try {
                     const res = await fetch("/api/admin/attributes");
-                    const attributes = await res.json();
+                    attributes = await res.json();
 
-                    const select = document.getElementById("attributeSelect");
                     const uniqueNames = [...new Set(attributes.map(a => a.attribute_name))];
+                    attributeSelect.innerHTML = `<option value="">-- Choose Attribute --</option>`;
                     uniqueNames.forEach(name => {
                         const option = document.createElement("option");
                         option.value = name;
                         option.textContent = name;
-                        select.appendChild(option);
+                        attributeSelect.appendChild(option);
                     });
 
-                    select.addEventListener("change", () => displayVariants(select.value, attributes));
+                    attributeSelect.addEventListener("change", () => {
+                        const attrName = attributeSelect.value;
+                        const attrObj = attributes.find(a => a.attribute_name === attrName);
+                        if (attrObj && attrObj.attribute_value) {
+                            const values = attrObj.attribute_value.split(",").map(v => v.trim());
+                            attributeVariants[attrName] = values;
+                            renderVariations();
+                        }
+                    });
                 } catch (err) {
-                    console.error("Error loading attributes:", err);
+                    console.error("Failed to load attributes:", err);
                 }
             }
 
-            function displayVariants(attributeName, attributes) {
-                variantsContainer.innerHTML = "";
-                const attrObj = attributes.find(a => a.attribute_name === attributeName);
-                if (!attrObj || !attrObj.attribute_value) return;
+            // --- Load Categories ---
+            async function loadCategories() {
+                try {
+                    const res = await fetch("/api/admin/categories/public");
+                    const categories = await res.json();
 
-                const variants = attrObj.attribute_value.split(",");
-                variants.forEach(value => {
-                    const wrapper = document.createElement("div");
-                    wrapper.style.display = "inline-block";
-                    wrapper.style.marginRight = "10px";
-
-                    const checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-                    checkbox.value = value.trim();
-                    checkbox.dataset.attribute = attributeName;
-                    checkbox.className = "variant-checkbox";
-
-                    const label = document.createElement("label");
-                    label.textContent = value.trim();
-                    label.style.marginLeft = "5px";
-
-                    wrapper.appendChild(checkbox);
-                    wrapper.appendChild(label);
-                    variantsContainer.appendChild(wrapper);
-                });
+                    const select = document.getElementById("product-category");
+                    select.innerHTML = `<option value="">Choose category</option>`;
+                    categories.forEach(cat => {
+                        const option = document.createElement("option");
+                        option.value = cat.name;
+                        option.textContent = cat.name;
+                        select.appendChild(option);
+                    });
+                } catch (err) {
+                    console.error("Failed to load categories:", err);
+                }
             }
 
-            loadAttributes();
+            // --- Cloudinary Upload ---
+            const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dknjr0tj2/upload";
+            const UPLOAD_PRESET = "unsigned_products";
+
+            async function uploadFileToCloudinary(file) {
+                const data = new FormData();
+                data.append("file", file);
+                data.append("upload_preset", UPLOAD_PRESET);
+                const res = await fetch(CLOUDINARY_URL, { method: "POST", body: data });
+                const json = await res.json();
+                return json.secure_url;
+            }
+
+            const mainFileInput = document.querySelector('input[name="mainImage"]');
+            const galleryFileInput = document.querySelector('input[name="gallery"]');
+
+            let uploadedMainImage = "";
+            let uploadedGallery = [];
+
+            mainFileInput.addEventListener("change", async e => {
+                if (!e.target.files[0]) return;
+                uploadedMainImage = await uploadFileToCloudinary(e.target.files[0]);
+            });
+
+            galleryFileInput.addEventListener("change", async e => {
+                if (!e.target.files.length) return;
+                uploadedGallery = [];
+                for (const file of e.target.files) {
+                    const url = await uploadFileToCloudinary(file);
+                    uploadedGallery.push(url);
+                }
+            });
 
             // --- Form Submission ---
             form.addEventListener("submit", async e => {
                 e.preventDefault();
+                const rawForm = new FormData(form);
+                const payload = Object.fromEntries(rawForm.entries());
 
-                // Collect selected variants
-                const checkboxes = document.querySelectorAll(".variant-checkbox:checked");
-                const selectedVariants = {};
-                checkboxes.forEach(cb => {
-                    const attr = cb.dataset.attribute;
-                    if (!selectedVariants[attr]) selectedVariants[attr] = [];
-                    selectedVariants[attr].push(cb.value);
-                });
-                variationsHidden.value = JSON.stringify({ colors: variationList, attributes: selectedVariants });
+                // Flags
+                payload.is_new = form.is_new?.checked ? 1 : 0;
+                payload.on_sale = form.on_sale?.checked ? 1 : 0;
 
-                const formData = new FormData(form);
-
-                // Checkboxes
-                formData.set("is_new", form.is_new?.checked ? 1 : 0);
-                formData.set("on_sale", form.on_sale?.checked ? 1 : 0);
-
-                // Convert empty numbers to 0
+                // Numbers default
                 ["price", "origin_price", "quantity", "sold", "quantity_purchase", "rate"].forEach(f => {
-                    if (form[f] && !form[f].value) formData.set(f, 0);
+                    payload[f] = Number(payload[f]) || 0;
                 });
 
-                // Auto-generate slug
-                if (form.slug && !form.slug.value && form.name.value) {
-                    formData.set("slug", form.name.value.toLowerCase().replace(/\s+/g, "-"));
+                // Sizes & Variations
+                payload.sizes = sizesHidden.value;
+                payload.variations = variationsHidden.value;
+
+                // Images
+                payload.main_image = uploadedMainImage || "";
+                payload.gallery = uploadedGallery || [];
+
+                // Auto-slug
+                if (!payload.slug && payload.name) {
+                    payload.slug = payload.name.toLowerCase().replace(/\s+/g, "-");
                 }
 
                 try {
-                    const res = await fetch("/api/admin/products", { method: "POST", body: formData });
+                    const res = await fetch("/api/admin/products", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
                     const data = await res.json();
                     if (res.ok) {
                         alert("✅ Product added successfully!");
                         form.reset();
                         selectedSizes = [];
                         variationList = [];
+                        attributeVariants = {};
+                        uploadedMainImage = "";
+                        uploadedGallery = [];
                         renderSizes();
-                        renderColorVariations();
-                        variantsContainer.innerHTML = "";
+                        renderVariations();
                     } else {
                         alert("❌ Error: " + (data.message || "Unknown error"));
                         console.error(data);
@@ -1490,27 +1274,13 @@
                 }
             });
 
-            // --- Load Categories ---
-            async function loadCategories() {
-                try {
-                    const res = await fetch("/api/admin/categories");
-                    const categories = await res.json();
-
-                    const select = document.getElementById("product-category");
-                    categories.forEach(cat => {
-                        const option = document.createElement("option");
-                        option.value = cat.name;
-                        option.textContent = cat.name;
-                        select.appendChild(option);
-                    });
-                } catch (err) {
-                    console.error("Error loading categories:", err);
-                }
-            }
-
+            // --- Initialize ---
             loadCategories();
+            loadAttributes();
         });
     </script>
+
+
     <!-- <script src="/admin/js/function/addProducts.js" type="module"></script> -->
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
