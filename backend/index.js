@@ -63,7 +63,7 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
 
 // --- Export for serverless ---
-export { app };
+export default app;
 export const handler = serverless(app);
 
 // --- Local dev ---
