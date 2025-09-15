@@ -1135,40 +1135,31 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const loginForm = document.getElementById("loginForm");
-
             loginForm.addEventListener("submit", async (e) => {
                 e.preventDefault();
-
                 const loginButton = loginForm.querySelector('button[type="submit"]');
                 const email = document.getElementById("email").value.trim();
                 const password = document.getElementById("password").value;
-
                 loginButton.disabled = true;
                 loginButton.textContent = "Logging in...";
-
                 try {
-                    const res = await fetch("/api/auth/login", {
+                    // ✅ Corrected API endpoint for admin login
+                    const res = await fetch("/api/admin/auth/login", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ email, password })
                     });
-
                     const data = await res.json();
-
                     if (!res.ok) {
                         throw new Error(data.message || "Invalid email or password");
                     }
-
                     // Store login state
                     localStorage.setItem("isLoggedIn", "true");
-
                     // ✅ Success state
                     loginButton.textContent = "Logged in ✅";
-
                     setTimeout(() => {
                         window.location.assign("index.html");
                     }, 1500);
-
                 } catch (err) {
                     console.error("❌ Login failed:", err);
                     alert("❌ " + err.message);
@@ -1176,7 +1167,7 @@
                     loginButton.textContent = "Login";
                 }
             });
-        });
+        })
     </script>
 
     <script src="./assets/js/login.js"></script>
