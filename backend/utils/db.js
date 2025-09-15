@@ -7,12 +7,15 @@ import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Create the connection pool
+// Create the connection pool with explicit SSL settings
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
+  ssl: {
+      rejectUnauthorized: true, // This is often required for cloud databases
+  },
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
