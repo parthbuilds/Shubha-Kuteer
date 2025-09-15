@@ -22,7 +22,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // --- Middleware ---
 app.use(express.json());
@@ -32,15 +31,11 @@ app.use(cookieParser());
 // --- DYNAMIC CORS CONFIGURATION ---
 const corsOptions = {
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-
-        // Define a list of allowed origins
         const allowedOrigins = [
             "http://localhost:3000",
             "https://www.shubhakuteer.in"
         ];
-        
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
@@ -83,11 +78,11 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
 
 // --- Export for serverless ---
-export default app;
 export const handler = serverless(app);
 
 // --- Local dev ---
 if (process.env.NODE_ENV !== "production") {
+    const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
         console.log(`🚀 Server running at http://localhost:${PORT}`);
     });
