@@ -17,7 +17,7 @@ import ordersRoutes from "./routes/orders.js";
 import productRoutes from "./routes/productRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
-// --- Define __dirname ---
+// --- Define __dirname for ES Modules ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -28,7 +28,28 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+
+// --- DYNAMIC CORS CONFIGURATION ---
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+
+        // Define a list of allowed origins
+        const allowedOrigins = [
+            "http://localhost:3000",
+            "https://www.shubhakuteer.in"
+        ];
+        
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+};
+app.use(cors(corsOptions));
 
 // --- ADMIN LOGIN PAGE (public) ---
 app.get("/admin/login.html", (req, res) => {
@@ -49,7 +70,6 @@ app.use("/api/admin/products", productRoutes);
 app.use("/api/users", userRoutes);
 
 // --- PROTECTED ADMIN PAGES ---
-// Use /admin/pages/:page instead of /admin/:page
 app.get("/admin/pages/:page", adminAuth, (req, res) => {
     const page = req.params.page;
     if (!page.endsWith(".html")) return res.status(404).send("Page not found");
