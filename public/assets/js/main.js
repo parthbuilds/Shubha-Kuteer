@@ -3458,51 +3458,122 @@ if (paymentCheckbox) {
   });
 }
 
-// faqs
-const menuTab = document.querySelector(".menu-tab");
-const listQuestion = document.querySelector(".list-question");
-const tabQuestions = document.querySelectorAll(".tab-question");
-const questionItems = document.querySelectorAll(".question-item");
+// // faqs
+// const menuTab = document.querySelector(".menu-tab");
+// const listQuestion = document.querySelector(".list-question");
+// const tabQuestions = document.querySelectorAll(".tab-question");
+// const questionItems = document.querySelectorAll(".question-item");
 
-if (tabItems) {
-  tabItems.forEach((tabItem) => {
-    tabQuestions.forEach((tabQuestion) => {
-      let activeMenuTab = menuTab.querySelector(".active");
+// if (tabItems) {
+//   tabItems.forEach((tabItem) => {
+//     tabQuestions.forEach((tabQuestion) => {
+//       let activeMenuTab = menuTab.querySelector(".active");
 
-      if (
-        activeMenuTab.getAttribute("data-item") ===
-        tabQuestion.getAttribute("data-item")
-      ) {
-        tabQuestion.classList.add("active");
-      }
+//       if (
+//         activeMenuTab.getAttribute("data-item") ===
+//         tabQuestion.getAttribute("data-item")
+//       ) {
+//         tabQuestion.classList.add("active");
+//       }
 
-      tabItem.addEventListener("click", () => {
-        if (
-          tabItem.getAttribute("data-item") ===
-          tabQuestion.getAttribute("data-item")
-        ) {
-          listQuestion.querySelector(".active").classList.remove("active");
-          tabQuestion.classList.add("active");
-        }
-      });
-    });
-  });
-}
+//       tabItem.addEventListener("click", () => {
+//         if (
+//           tabItem.getAttribute("data-item") ===
+//           tabQuestion.getAttribute("data-item")
+//         ) {
+//           listQuestion.querySelector(".active").classList.remove("active");
+//           tabQuestion.classList.add("active");
+//         }
+//       });
+//     });
+//   });
+// }
 
-if (questionItems) {
-  questionItems.forEach((item, index) => {
-    item.addEventListener("click", () => {
-      item.classList.toggle("open");
+// if (questionItems) {
+//   questionItems.forEach((item, index) => {
+//     item.addEventListener("click", () => {
+//       item.classList.toggle("open");
 
-      removeOpen(index);
-    });
-  });
-}
+//       removeOpen(index);
+//     });
+//   });
+// }
 
-function removeOpen(index1) {
-  questionItems.forEach((item2, index2) => {
-    if (index1 != index2) {
-      item2.classList.remove("open");
+// function removeOpen(index1) {
+//   questionItems.forEach((item2, index2) => {
+//     if (index1 != index2) {
+//       item2.classList.remove("open");
+//     }
+//   });
+// }
+
+
+// // Function to remove the "open" class from all question items except the one at the specified index.
+// function removeOpen(index1) {
+//     // Get all elements with the class 'question-item'.
+//     const questionItems = document.querySelectorAll(".question-item");
+    
+//     // Check if the 'questionItems' NodeList exists and contains elements.
+//     if (questionItems && questionItems.length > 0) {
+//         // Iterate through each 'questionItem'.
+//         questionItems.forEach((item2, index2) => {
+//             // If the current element's index is not the one to keep open, remove the 'open' class.
+//             if (index1 !== index2) {
+//                 item2.classList.remove("open");
+//             }
+//         });
+//     }
+// }
+
+// Ensure the DOM is fully loaded before running the script.
+document.addEventListener("DOMContentLoaded", () => {
+    // Select all elements that are part of the FAQs section.
+    const menuTab = document.querySelector(".menu-tab");
+    const listQuestion = document.querySelector(".list-question");
+    const tabItems = document.querySelectorAll(".tab-item");
+    const tabQuestions = document.querySelectorAll(".tab-question");
+    const questionItems = document.querySelectorAll(".question-item");
+
+    // Only proceed with the FAQs logic if the required elements are found on the page.
+    if (menuTab && listQuestion && tabItems.length > 0 && tabQuestions.length > 0) {
+        // Loop through each tab item.
+        tabItems.forEach((tabItem) => {
+            // Loop through each set of tab questions.
+            tabQuestions.forEach((tabQuestion) => {
+                // Find the currently active menu tab.
+                const activeMenuTab = menuTab.querySelector(".active");
+
+                // If an active tab is found and its data attribute matches the current tab question, activate the tab question.
+                if (activeMenuTab && activeMenuTab.getAttribute("data-item") === tabQuestion.getAttribute("data-item")) {
+                    tabQuestion.classList.add("active");
+                }
+
+                // Add a click event listener to each tab item.
+                tabItem.addEventListener("click", () => {
+                    // If the tab item's data attribute matches the tab question's, handle the UI change.
+                    if (tabItem.getAttribute("data-item") === tabQuestion.getAttribute("data-item")) {
+                        // Find the currently active question list and remove its active class.
+                        const currentActiveList = listQuestion.querySelector(".active");
+                        if (currentActiveList) {
+                            currentActiveList.classList.remove("active");
+                        }
+                        // Add the 'active' class to the new tab question.
+                        tabQuestion.classList.add("active");
+                    }
+                });
+            });
+        });
     }
-  });
-}
+
+    // Only proceed with the question items logic if they are found on the page.
+    if (questionItems && questionItems.length > 0) {
+        // Loop through each question item.
+        questionItems.forEach((item, index) => {
+            // Add a click event listener to toggle the 'open' class.
+            item.addEventListener("click", () => {
+                item.classList.toggle("open");
+                removeOpen(index);
+            });
+        });
+    }
+});
