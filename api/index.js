@@ -473,8 +473,18 @@ export default async function handler(req, res) {
         // Orders routes
         if (pathname.startsWith('/api/orders')) {
             try {
-                const Razorpay = await import("razorpay");
                 const pool = await import("../backend/utils/db.js");
+                
+                // Check if Razorpay credentials are available
+                if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+                    console.error("Razorpay credentials not found in environment variables");
+                    return res.status(500).json({
+                        success: false,
+                        error: "Payment gateway configuration error"
+                    });
+                }
+                
+                const Razorpay = await import("razorpay");
                 
                 // Initialize Razorpay
                 const razorpay = new Razorpay.default({
@@ -497,12 +507,16 @@ export default async function handler(req, res) {
                     }
                     
                     try {
+                        console.log("Creating Razorpay order with amount:", amount);
+                        
                         // Create Razorpay order
                         const razorpayOrder = await razorpay.orders.create({
                             amount: amount * 100, // Convert to paise
                             currency: "INR",
                             receipt: `order_${Date.now()}`,
                         });
+                        
+                        console.log("Razorpay order created:", razorpayOrder.id);
                         
                         // Save order to database
                         const [result] = await pool.default.query(`
@@ -516,6 +530,8 @@ export default async function handler(req, res) {
                             razorpayOrder.id, 'pending'
                         ]);
                         
+                        console.log("Order saved to database with ID:", result.insertId);
+                        
                         return res.status(200).json({
                             success: true,
                             key: process.env.RAZORPAY_KEY_ID,
@@ -523,10 +539,14 @@ export default async function handler(req, res) {
                             order_id: result.insertId
                         });
                     } catch (error) {
-                        console.error("Razorpay error:", error);
+                        console.error("Razorpay error details:", error);
+                        console.error("Error message:", error.message);
+                        console.error("Error code:", error.error?.code);
+                        console.error("Error description:", error.error?.description);
+                        
                         return res.status(500).json({
                             success: false,
-                            error: "Payment gateway error"
+                            error: `Payment gateway error: ${error.message || 'Unknown error'}`
                         });
                     }
                 }
@@ -567,6 +587,17 @@ export default async function handler(req, res) {
                         ORDER BY created_at DESC
                     `);
                     return res.status(200).json(rows);
+                }
+                
+                // GET /api/orders/test - Test endpoint
+                if (pathname === '/api/orders/test' && req.method === 'GET') {
+                    return res.status(200).json({
+                        success: true,
+                        message: "Orders API is working",
+                        hasRazorpayKey: !!process.env.RAZORPAY_KEY_ID,
+                        hasRazorpaySecret: !!process.env.RAZORPAY_KEY_SECRET,
+                        timestamp: new Date().toISOString()
+                    });
                 }
                 
                 return res.status(404).json({ message: "Order endpoint not found" });
