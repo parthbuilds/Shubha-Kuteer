@@ -1198,11 +1198,13 @@
             const UPLOAD_PRESET = "unsigned_products";
 
             async function uploadFileToCloudinary(file) {
+                console.log("Uploading file:", file.name); // Debug log
                 const data = new FormData();
                 data.append("file", file);
                 data.append("upload_preset", UPLOAD_PRESET);
                 const res = await fetch(CLOUDINARY_URL, { method: "POST", body: data });
                 const json = await res.json();
+                console.log("Upload result:", json.secure_url); // Debug log
                 return json.secure_url;
             }
 
@@ -1212,18 +1214,39 @@
             let uploadedMainImage = "";
             let uploadedGallery = [];
 
+            // Add visual indicators
+            const mainImagePreview = document.createElement('div');
+            mainImagePreview.className = 'upload-preview mt-10';
+            mainFileInput.parentNode.parentNode.appendChild(mainImagePreview);
+
+            const galleryPreview = document.createElement('div');
+            galleryPreview.className = 'upload-preview mt-10';
+            galleryFileInput.parentNode.parentNode.appendChild(galleryPreview);
+
             mainFileInput.addEventListener("change", async e => {
                 if (!e.target.files[0]) return;
+                mainImagePreview.innerHTML = '<div class="text-tiny">Uploading main image...</div>';
                 uploadedMainImage = await uploadFileToCloudinary(e.target.files[0]);
+                mainImagePreview.innerHTML = `
+                    <div class="text-tiny text-green">✅ Main image uploaded</div>
+                    <img src="${uploadedMainImage}" style="max-width: 100px; max-height: 100px; margin-top: 5px;" alt="Main image preview">
+                `;
             });
 
             galleryFileInput.addEventListener("change", async e => {
                 if (!e.target.files.length) return;
+                galleryPreview.innerHTML = '<div class="text-tiny">Uploading gallery images...</div>';
                 uploadedGallery = [];
                 for (const file of e.target.files) {
                     const url = await uploadFileToCloudinary(file);
                     uploadedGallery.push(url);
                 }
+                galleryPreview.innerHTML = `
+                    <div class="text-tiny text-green">✅ ${uploadedGallery.length} gallery images uploaded</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">
+                        ${uploadedGallery.map(url => `<img src="${url}" style="max-width: 80px; max-height: 80px;" alt="Gallery preview">`).join('')}
+                    </div>
+                `;
             });
 
             // --- Form Submission ---

@@ -972,7 +972,14 @@
             orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">Loading orders...</div></li>`;
 
             try {
-                const res = await fetch("http://localhost:3000/api/orders");
+                // Check admin authentication first
+                const authRes = await fetch("/api/admin/auth/check");
+                if (!authRes.ok) {
+                    window.location.href = "/admin/login.html";
+                    return;
+                }
+
+                const res = await fetch("/api/orders"); // Fixed: removed localhost:3000
                 if (!res.ok) throw new Error("Server error " + res.status);
                 const orders = await res.json();
 
@@ -997,12 +1004,12 @@
                     <a href="#!" class="body-title-2">${order.first_name} ${order.last_name}</a>
                 </div>
                 <div class="body-text">#${order.razorpay_order_id || order.id}</div>
-                <div class="body-text">-</div>
-                <div class="body-text">${order.quantity}</div>
-                <div class="body-text">${order.payment_method}</div>
+                <div class="body-text">₹${order.amount}</div>
+                <div class="body-text">1</div>
+                <div class="body-text">Razorpay</div>
                 <div>
-                    <div class="block-available ${order.payment_status === 'completed' ? 'success' : 'pending'}">
-                        ${order.payment_status}
+                    <div class="block-available ${order.status === 'completed' ? 'success' : 'pending'}">
+                        ${order.status}
                     </div>
                 </div>
                 <div>
@@ -1018,7 +1025,7 @@
 
                     // 👁️ View order (redirect to order detail page)
                     li.querySelector(".eye").addEventListener("click", () => {
-                        window.location.href = `order-detail.html?id=${order.id}`;
+                        window.location.href = `/admin/oder-detail.html?id=${order.id}`;
                     });
 
                     // 🗑️ Delete handler
@@ -1037,7 +1044,7 @@
         async function deleteOrder(id) {
             if (!confirm("Are you sure you want to delete this order?")) return;
             try {
-                const res = await fetch(`http://localhost:3000/api/orders/${id}`, { method: "DELETE" });
+                const res = await fetch(`/api/orders/${id}`, { method: "DELETE" }); // Fixed: removed localhost:3000
                 const data = await res.json();
                 if (res.ok) {
                     alert("✅ " + data.message);
