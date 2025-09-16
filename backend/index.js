@@ -64,6 +64,27 @@ app.use("/api/orders", ordersRoutes);
 app.use("/api/admin/products", productRoutes);
 app.use("/api/users", userRoutes);
 
+// --- HEALTH CHECK ENDPOINT ---
+app.get("/api/health", async (req, res) => {
+    try {
+        const { testConnection } = await import("./utils/testConnection.js");
+        const result = await testConnection();
+        res.status(result.success ? 200 : 500).json({
+            status: result.success ? "healthy" : "unhealthy",
+            database: result.success ? "connected" : "disconnected",
+            timestamp: new Date().toISOString(),
+            ...result
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: "unhealthy",
+            database: "error",
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // --- PROTECTED ADMIN PAGES ---
 app.get("/admin/pages/:page", adminAuth, (req, res) => {
     const page = req.params.page;
