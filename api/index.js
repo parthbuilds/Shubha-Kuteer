@@ -319,15 +319,51 @@ export default async function handler(req, res) {
         // Attributes routes
         if (pathname.startsWith('/api/admin/attributes')) {
             try {
-                const attributeRoutes = await import("../backend/routes/attributeRoutes.js");
-                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
-                const mockRes = {
-                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
-                    json: (data) => res.status(200).json(data)
-                };
-                await attributeRoutes.default(mockReq, mockRes);
-                return;
+                const pool = await import("../backend/utils/db.js");
+                
+                // GET all attributes
+                if (pathname === '/api/admin/attributes' && req.method === 'GET') {
+                    const [rows] = await pool.default.query(`
+                        SELECT a.id, a.category_id, a.attribute_name, a.attribute_value, 
+                               a.attribute_hash, a.created_at, c.name as category_name
+                        FROM attributes a
+                        LEFT JOIN categories c ON a.category_id = c.id
+                        ORDER BY a.created_at DESC
+                    `);
+                    return res.status(200).json(rows);
+                }
+                
+                // POST new attribute
+                if (pathname === '/api/admin/attributes' && req.method === 'POST') {
+                    const { category_id, attribute_name, attribute_value, attribute_hash } = req.body;
+                    
+                    if (!category_id || !attribute_name || !attribute_value) {
+                        return res.status(400).json({
+                            message: "Missing required fields: category_id, attribute_name, attribute_value"
+                        });
+                    }
+                    
+                    const [result] = await pool.default.query(`
+                        INSERT INTO attributes (category_id, attribute_name, attribute_value, attribute_hash) 
+                        VALUES (?, ?, ?, ?)
+                    `, [category_id, attribute_name, attribute_value, attribute_hash || null]);
+                    
+                    return res.status(200).json({
+                        message: "Attribute added successfully!",
+                        data: { id: result.insertId, category_id, attribute_name, attribute_value }
+                    });
+                }
+                
+                // DELETE attribute
+                if (pathname.startsWith('/api/admin/attributes/') && req.method === 'DELETE') {
+                    const id = pathname.split('/').pop();
+                    await pool.default.query("DELETE FROM attributes WHERE id = ?", [id]);
+                    return res.status(200).json({ message: "Attribute deleted successfully!" });
+                }
+                
+                return res.status(404).json({ message: "Attribute endpoint not found" });
             } catch (error) {
+                console.error("Attribute operation error:", error);
                 return res.status(500).json({ message: "Attribute operation failed", error: error.message });
             }
         }
@@ -335,15 +371,62 @@ export default async function handler(req, res) {
         // Users routes
         if (pathname.startsWith('/api/admin/users')) {
             try {
-                const userRoutes = await import("../backend/routes/adminUserRoutes.js");
-                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
-                const mockRes = {
-                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
-                    json: (data) => res.status(200).json(data)
-                };
-                await userRoutes.default(mockReq, mockRes);
-                return;
+                const pool = await import("../backend/utils/db.js");
+                const bcrypt = await import("bcrypt");
+                
+                // GET all users
+                if (pathname === '/api/admin/users' && req.method === 'GET') {
+                    const [rows] = await pool.default.query(`
+                        SELECT id, name, email, created_at
+                        FROM users
+                        ORDER BY created_at DESC
+                    `);
+                    return res.status(200).json(rows);
+                }
+                
+                // POST new user (admin creating user)
+                if (pathname === '/api/admin/users' && req.method === 'POST') {
+                    const { name, email, password } = req.body;
+                    
+                    if (!name || !email || !password) {
+                        return res.status(400).json({
+                            message: "Name, email, and password are required!"
+                        });
+                    }
+                    
+                    // Check if user already exists
+                    const [existing] = await pool.default.query(
+                        "SELECT id FROM users WHERE email = ?", [email]
+                    );
+                    
+                    if (existing.length > 0) {
+                        return res.status(409).json({ message: "User with this email already exists!" });
+                    }
+                    
+                    // Hash password
+                    const password_hash = await bcrypt.default.hash(password, 10);
+                    
+                    const [result] = await pool.default.query(`
+                        INSERT INTO users (name, email, password_hash) 
+                        VALUES (?, ?, ?)
+                    `, [name, email, password_hash]);
+                    
+                    return res.status(200).json({
+                        message: "User created successfully!",
+                        data: { id: result.insertId, name, email }
+                    });
+                }
+                
+                // DELETE user
+                if (pathname.startsWith('/api/admin/users/') && req.method === 'DELETE') {
+                    const id = pathname.split('/').pop();
+                    await pool.default.query("DELETE FROM users WHERE id = ?", [id]);
+                    return res.status(200).json({ message: "User deleted successfully!" });
+                }
+                
+                return res.status(404).json({ message: "User endpoint not found" });
             } catch (error) {
+                console.error("User operation error:", error);
                 return res.status(500).json({ message: "User operation failed", error: error.message });
             }
         }
