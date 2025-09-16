@@ -1061,17 +1061,27 @@
                 return;
             }
 
-            // Build user data
-            const userData = {
+            // Build admin data
+            const adminData = {
                 name: name,
                 email: email,
-                password: password
+                password: password,
+                role: "admin"
             };
 
             // Add phone if provided
             if (phone) {
-                userData.phone = phone;
+                adminData.phone = phone;
             }
+
+            // Add permissions from form
+            adminData.permissions = {
+                addProduct: form.querySelector("#add-product1").checked,
+                updateProduct: form.querySelector("#update-product1").checked,
+                deleteProduct: form.querySelector("#delete-product1").checked,
+                applyDiscount: form.querySelector("#apply-product1").checked,
+                createCoupon: form.querySelector("#create-product1").checked,
+            };
 
             try {
                 const res = await fetch("/api/admin/users", {
@@ -1079,13 +1089,13 @@
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify(userData)
+                    body: JSON.stringify(adminData)
                 });
 
                 const data = await res.json();
 
                 if (res.ok) {
-                    alert("User added successfully ✅");
+                    alert("Admin added successfully ✅");
                     form.reset();
                     // Redirect to users list
                     window.location.href = "/admin/all-user.html";

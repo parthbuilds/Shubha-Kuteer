@@ -368,25 +368,25 @@ export default async function handler(req, res) {
             }
         }
 
-        // Users routes
+        // Admin Users routes (for managing admins)
         if (pathname.startsWith('/api/admin/users')) {
             try {
                 const pool = await import("../backend/utils/db.js");
                 const bcrypt = await import("bcrypt");
                 
-                // GET all users
+                // GET all admins
                 if (pathname === '/api/admin/users' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
-                        SELECT id, name, email, created_at
-                        FROM users
+                        SELECT id, name, email, phone, role, permissions, created_at
+                        FROM admins
                         ORDER BY created_at DESC
                     `);
                     return res.status(200).json(rows);
                 }
                 
-                // POST new user (admin creating user)
+                // POST new admin
                 if (pathname === '/api/admin/users' && req.method === 'POST') {
-                    const { name, email, password } = req.body;
+                    const { name, email, password, phone, role, permissions } = req.body;
                     
                     if (!name || !email || !password) {
                         return res.status(400).json({
@@ -394,30 +394,30 @@ export default async function handler(req, res) {
                         });
                     }
                     
-                    // Check if user already exists
+                    // Check if admin already exists
                     const [existing] = await pool.default.query(
-                        "SELECT id FROM users WHERE email = ?", [email]
+                        "SELECT id FROM admins WHERE email = ?", [email]
                     );
                     
                     if (existing.length > 0) {
-                        return res.status(409).json({ message: "User with this email already exists!" });
+                        return res.status(409).json({ message: "Admin with this email already exists!" });
                     }
                     
                     // Hash password
                     const password_hash = await bcrypt.default.hash(password, 10);
                     
                     const [result] = await pool.default.query(`
-                        INSERT INTO users (name, email, password_hash) 
-                        VALUES (?, ?, ?)
-                    `, [name, email, password_hash]);
+                        INSERT INTO admins (name, email, password_hash, phone, role, permissions) 
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    `, [name, email, password_hash, phone || null, role || 'admin', JSON.stringify(permissions || {})]);
                     
                     return res.status(200).json({
-                        message: "User created successfully!",
-                        data: { id: result.insertId, name, email }
+                        message: "Admin created successfully!",
+                        data: { id: result.insertId, name, email, role: role || 'admin' }
                     });
                 }
                 
-                // PUT update user
+                // PUT update admin
                 if (pathname.startsWith('/api/admin/users/') && req.method === 'PUT') {
                     const id = pathname.split('/').pop();
                     const { name, email, phone } = req.body;
@@ -428,45 +428,45 @@ export default async function handler(req, res) {
                         });
                     }
                     
-                    // Check if email already exists for another user
+                    // Check if email already exists for another admin
                     const [existing] = await pool.default.query(
-                        "SELECT id FROM users WHERE email = ? AND id != ?", [email, id]
+                        "SELECT id FROM admins WHERE email = ? AND id != ?", [email, id]
                     );
                     
                     if (existing.length > 0) {
-                        return res.status(409).json({ message: "Email already exists for another user!" });
+                        return res.status(409).json({ message: "Email already exists for another admin!" });
                     }
                     
                     const [result] = await pool.default.query(`
-                        UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?
+                        UPDATE admins SET name = ?, email = ?, phone = ? WHERE id = ?
                     `, [name, email, phone || null, id]);
                     
                     if (result.affectedRows === 0) {
-                        return res.status(404).json({ message: "User not found!" });
+                        return res.status(404).json({ message: "Admin not found!" });
                     }
                     
                     return res.status(200).json({
-                        message: "User updated successfully!",
+                        message: "Admin updated successfully!",
                         data: { id, name, email, phone }
                     });
                 }
                 
-                // DELETE user
+                // DELETE admin
                 if (pathname.startsWith('/api/admin/users/') && req.method === 'DELETE') {
                     const id = pathname.split('/').pop();
-                    const [result] = await pool.default.query("DELETE FROM users WHERE id = ?", [id]);
+                    const [result] = await pool.default.query("DELETE FROM admins WHERE id = ?", [id]);
                     
                     if (result.affectedRows === 0) {
-                        return res.status(404).json({ message: "User not found!" });
+                        return res.status(404).json({ message: "Admin not found!" });
                     }
                     
-                    return res.status(200).json({ message: "User deleted successfully!" });
+                    return res.status(200).json({ message: "Admin deleted successfully!" });
                 }
                 
-                return res.status(404).json({ message: "User endpoint not found" });
+                return res.status(404).json({ message: "Admin endpoint not found" });
             } catch (error) {
-                console.error("User operation error:", error);
-                return res.status(500).json({ message: "User operation failed", error: error.message });
+                console.error("Admin operation error:", error);
+                return res.status(500).json({ message: "Admin operation failed", error: error.message });
             }
         }
 
