@@ -2238,10 +2238,23 @@
 
                 if (!isLoggedIn) {
                     alert("Please log in to your account before making a payment.");
-                    // You can also redirect to the login page
-                    // window.location.href = 'login.html';
-                    return; // Stop the function from proceeding
+                    return;
                 }
+
+                // Get cart items from localStorage
+                const cartStore = localStorage.getItem("cartStore");
+                const cartItems = cartStore ? JSON.parse(cartStore) : [];
+                
+                if (cartItems.length === 0) {
+                    alert("Your cart is empty. Please add some products first.");
+                    return;
+                }
+
+                // Calculate total amount from cart
+                let totalAmount = 0;
+                cartItems.forEach(item => {
+                    totalAmount += item.price * (item.quantity || 1);
+                });
 
                 const formData = {
                     first_name: document.getElementById("firstName").value,
@@ -2252,7 +2265,8 @@
                     apartment: document.getElementById("apartment").value,
                     postal_code: document.getElementById("postal").value,
                     note: document.getElementById("note").value,
-                    amount: calculateCartTotal() // ✅ Use actual cart total
+                    amount: totalAmount, // Use calculated cart total
+                    cart_items: cartItems // Include cart items for order details
                 };
 
                 try {
@@ -2275,7 +2289,7 @@
                         amount: orderData.razorpay_order.amount,
                         currency: "INR",
                         name: "Shubha Kuteer",
-                        description: "Test Transaction",
+                        description: `Order for ${cartItems.length} item(s) - Total: ₹${totalAmount}`,
                         order_id: orderData.razorpay_order.id,
                         handler: async function (response) {
                             // Send payment capture to backend
@@ -2288,7 +2302,13 @@
                                     payment_status: "completed"
                                 })
                             });
-                            alert("✅ Payment Successful!");
+                            
+                            // Clear cart after successful payment
+                            localStorage.removeItem("cartStore");
+                            
+                            alert("✅ Payment Successful! Your order has been placed.");
+                            // Redirect to order tracking or thank you page
+                            window.location.href = "/order-tracking.html";
                         },
                         prefill: {
                             name: formData.first_name + " " + formData.last_name,

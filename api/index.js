@@ -555,11 +555,12 @@ export default async function handler(req, res) {
                     key_secret: process.env.RAZORPAY_KEY_SECRET,
                 });
                 
+                // Update the create-order endpoint to handle cart items
                 // POST /api/orders/create-order
                 if (pathname === '/api/orders/create-order' && req.method === 'POST') {
                     const { 
                         first_name, last_name, email, phone_number, 
-                        city, apartment, postal_code, note, amount 
+                        city, apartment, postal_code, note, amount, cart_items
                     } = req.body;
                     
                     if (!first_name || !last_name || !email || !phone_number || !amount) {
@@ -571,6 +572,7 @@ export default async function handler(req, res) {
                     
                     try {
                         console.log("Creating Razorpay order with amount:", amount);
+                        console.log("Cart items:", cart_items);
                         
                         // Create Razorpay order
                         const razorpayOrder = await razorpay.orders.create({
@@ -581,16 +583,16 @@ export default async function handler(req, res) {
                         
                         console.log("Razorpay order created:", razorpayOrder.id);
                         
-                        // Save order to database
+                        // Save order to database with cart items
                         const [result] = await pool.default.query(`
                             INSERT INTO orders (first_name, last_name, email, phone_number, 
                                               city, apartment, postal_code, note, amount, 
-                                              razorpay_order_id, status, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                                              razorpay_order_id, status, cart_items, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                         `, [
                             first_name, last_name, email, phone_number,
                             city, apartment, postal_code, note, amount,
-                            razorpayOrder.id, 'pending'
+                            razorpayOrder.id, 'pending', JSON.stringify(cart_items || [])
                         ]);
                         
                         console.log("Order saved to database with ID:", result.insertId);
@@ -603,10 +605,6 @@ export default async function handler(req, res) {
                         });
                     } catch (error) {
                         console.error("Razorpay error details:", error);
-                        console.error("Error message:", error.message);
-                        console.error("Error code:", error.error?.code);
-                        console.error("Error description:", error.error?.description);
-                        
                         return res.status(500).json({
                             success: false,
                             error: `Payment gateway error: ${error.message || 'Unknown error'}`

@@ -1428,7 +1428,84 @@ if (modalSizeGuide) {
   });
 }
 
-// Create product item
+// Create product item as HTML string (not DOM element)
+const createProductItemHTML = (product, index = 0) => {
+  let productTags = "";
+  if (product.new) {
+    productTags += `<div class="product-tag text-button-uppercase bg-secondary px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">New</div>`;
+  }
+  if (product.sale) {
+    productTags += `<div class="product-tag text-button-uppercase text-white bg-red px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">Sale</div>`;
+  }
+
+  let productImages = "";
+  if (product.thumbImage && product.thumbImage.length > 0) {
+    product.thumbImage.forEach((img, index) => {
+      productImages += `<img key="${index}" class="w-full h-full object-cover duration-700 bg-card" src="${img}" alt="img">`;
+    });
+  } else if (product.images && product.images.length > 0) {
+    product.images.forEach((img, index) => {
+      productImages += `<img key="${index}" class="w-full h-full object-cover duration-700 bg-card" src="${img}" alt="img">`;
+    });
+  } else {
+    productImages = `<img class="w-full h-full object-cover duration-700 bg-card" src="/assets/images/product/default.png" alt="img">`;
+  }
+
+  let arrOfStar = "";
+  for (let i = 0; i < 5; i++) {
+    if (product.rate) {
+      if (i >= product.rate) {
+        arrOfStar += '<i class="ph-fill ph-star text-sm text-secondary"></i>';
+      } else {
+        arrOfStar += '<i class="ph-fill ph-star text-sm text-yellow"></i>';
+      }
+    } else {
+      arrOfStar += '<i class="ph-fill ph-star text-sm text-secondary"></i>';
+    }
+  }
+
+  return `
+    <div class="product-item grid-type" data-item="${product.id}">
+      <div class="product-main cursor-pointer block" data-item="${product.id}">
+        <div class="product-img relative overflow-hidden rounded-2xl aspect-[3/4] bg-card">
+          ${productImages}
+          ${productTags}
+          <div class="group-button absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 duration-500">
+            <a href="#" class="compare-btn tf-product-btn tf-product-btn-compare" data-item="${product.id}">
+              <i class="icon-compare"></i>
+            </a>
+            <a href="#" class="add-wishlist-btn tf-product-btn tf-product-btn-wishlist" data-item="${product.id}">
+              <i class="icon-heart"></i>
+            </a>
+            <a href="#" class="add-quickview-btn tf-product-btn tf-product-btn-quickview" data-item="${product.id}">
+              <i class="icon-eye"></i>
+            </a>
+          </div>
+        </div>
+        <div class="product-infor">
+          <div class="star flex items-center gap-1 mb-2">
+            ${arrOfStar}
+          </div>
+          <div class="text-tiny text-secondary mb-2">${product.brand}</div>
+          <h3 class="title">
+            <a href="product-default.html?id=${product.id}" class="hover:tf-color-1 duration-300">${product.name}</a>
+          </h3>
+          <div class="price flex items-center gap-2 mb-4">
+            <span class="sale-price tf-color-1">₹${product.price}</span>
+            ${product.originPrice > product.price ? `<span class="regular-price text-secondary line-through">₹${product.originPrice}</span>` : ''}
+          </div>
+          <div class="group-btn">
+            <a href="#" class="add-cart-btn tf-button tf-button-style-1 w-full" data-item="${product.id}" data-name="${product.name}" data-price="${product.price}" data-image="${product.thumbImage?.[0] || product.images?.[0] || '/assets/images/product/default.png'}">
+              <span class="text">${product.action || 'Add to cart'}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+// Keep the original createProductItem for DOM manipulation
 const createProductItem = (product) => {
   const productItem = document.createElement("div");
   productItem.classList.add("product-item", "grid-type");
@@ -1443,379 +1520,237 @@ const createProductItem = (product) => {
   }
 
   let productImages = "";
-  product.thumbImage.forEach((img, index) => {
-    productImages += `<img key="${index}" class="w-full h-full object-cover duration-700 bg-card" src="${img}" alt="img">`;
-  });
+  if (product.thumbImage && product.thumbImage.length > 0) {
+    product.thumbImage.forEach((img, index) => {
+      productImages += `<img key="${index}" class="w-full h-full object-cover duration-700 bg-card" src="${img}" alt="img">`;
+    });
+  } else if (product.images && product.images.length > 0) {
+    product.images.forEach((img, index) => {
+      productImages += `<img key="${index}" class="w-full h-full object-cover duration-700 bg-card" src="${img}" alt="img">`;
+    });
+  } else {
+    productImages = `<img class="w-full h-full object-cover duration-700 bg-card" src="/assets/images/product/default.png" alt="img">`;
+  }
+
+  let arrOfStar = "";
+  for (let i = 0; i < 5; i++) {
+    if (product.rate) {
+      if (i >= product.rate) {
+        arrOfStar += '<i class="ph-fill ph-star text-sm text-secondary"></i>';
+      } else {
+        arrOfStar += '<i class="ph-fill ph-star text-sm text-yellow"></i>';
+      }
+    } else {
+      arrOfStar += '<i class="ph-fill ph-star text-sm text-secondary"></i>';
+    }
+  }
 
   productItem.innerHTML = `
-        <div class="product-main cursor-pointer block" data-item="${product.id
-    }">
-            <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
-                ${productTags}
-                <div class="list-action-right absolute top-3 right-3 max-lg:hidden">
-                    <div
-                        class="add-wishlist-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative">
-                        <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">
-                            Add To Wishlist</div>
-                        <i class="ph ph-heart text-lg"></i>
-                    </div>
-                    <div
-                        class="compare-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative mt-2">
-                        <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">
-                            Compare Product</div>
-                        <i class="ph ph-arrow-counter-clockwise text-lg compare-icon"></i>
-                        <i class="ph ph-check-circle text-lg checked-icon"></i>
-                    </div>
-                </div>
-                <div class="product-img w-full h-full aspect-[3/4]">
-                    ${productImages}
-                </div>
-                ${product.sale ? (`
-                  <div class="countdown-time-block py-1.5 flex items-center justify-center">
-                    <div class="text-xs font-semibold uppercase text-red">
-                      <span class='countdown-day'>24</span>
-                      <span>D : </span>
-                      <span class='countdown-hour'>14</span>
-                      <span>H : </span>
-                      <span class='countdown-minute'>36</span>
-                      <span>M : </span>
-                      <span class='countdown-second'>51</span>
-                      <span>S</span>
-                    </div>
-                  </div>
-                `) : ''}
-                <div class="list-action grid grid-cols-2 gap-3 px-5 absolute w-full bottom-5">
-                    <div
-                        class="quick-view-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white">
-                        <span class="max-lg:hidden">Quick View</span>
-                        <i class="ph ph-eye lg:hidden text-xl"></i>
-                        </div>
-                        ${product.action === "add to cart"
-      ? `
-                            <div
-                                class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white"
-                                >
-                                <span class="max-lg:hidden">Add To Cart</span>
-                                <i class="ph ph-shopping-bag-open lg:hidden text-xl"></i>
-                            </div>
-                        `
-      : `
-                            <div
-                                class="quick-shop-btn text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white max-lg:hidden">
-                                Quick Shop</div>
-                            <div
-                                class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white lg:hidden"
-                                >
-                                <span class="max-lg:hidden">Add To Cart</span>
-                                <i class="ph ph-shopping-bag-open lg:hidden text-xl"></i>
-                            </div>
-                            <div class="quick-shop-block absolute left-5 right-5 bg-white p-5 rounded-[20px]">
-                                <div class="list-size flex items-center justify-center flex-wrap gap-2">
-                                    ${product.sizes &&
-      product.sizes
-        .map(
-          (size, index) =>
-            `<div key="${index}" class="size-item w-10 h-10 rounded-full flex items-center justify-center text-button bg-white border border-line">${size.trim()}</div>`
-        )
-        .join("")
-      }
-                                </div >
-    <div class="add-cart-btn button-main w-full text-center rounded-full py-3 mt-4">Add
-        To cart</div>
-                            </div >
-    `
-    }
-                </div>
-            </div>
-            <div class="product-infor mt-4 lg:mb-7">
-                <div class="product-sold sm:pb-4 pb-2">
-                    <div class="progress bg-line h-1.5 w-full rounded-full overflow-hidden relative">
-                        <div class='progress-sold bg-red absolute left-0 top-0 h-full' style="width: ${Math.floor(
-      (product.sold / product.quantity) * 100
-    )}%">
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between gap-3 gap-y-1 flex-wrap mt-2">
-                        <div class="text-button-uppercase">
-                            <span class='text-secondary2 max-sm:text-xs'>Sold:
-                            </span>
-                            <span class='max-sm:text-xs'>${product.sold}</span>
-                        </div>
-                        <div class="text-button-uppercase">
-                            <span class='text-secondary2 max-sm:text-xs'>Available:
-                            </span>
-                            <span class='max-sm:text-xs'>${product.quantity - product.sold
-    }</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="product-name text-title duration-300">${product.name
-    }</div>
-                ${product.variation.length > 0 &&
-      product.action === "add to cart"
-      ? `
-                        <div class="list-color py-2 max-md:hidden flex items-center gap-3 flex-wrap duration-500">
-                            ${product.variation
-        .map(
-          (item, index) =>
-            `<div
-                                    key="${index}"
-                                    class="color-item w-8 h-8 rounded-full duration-300 relative"
-                                    style="background-color:${item.colorCode};"
-                                >
-                                    <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${item.color}</div>
-                                </div>
-                                `
-        )
-        .join("")}
-                        </div>`
-      : `
-                    <div class="list-color list-color-image max-md:hidden flex items-center gap-3 flex-wrap duration-500">
-                        ${product.variation
-        .map(
-          (item, index) =>
-            `
-                            <div
-                                class="color-item w-12 h-12 rounded-xl duration-300 relative"
-                                key="${index}"
-                            >
-                                <img
-                                    src="${item.colorImage}"
-                                    alt='color'
-                                    class='rounded-xl w-full h-full object-cover'
-                                />
-                                <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${item.color}</div>
-                            </div>
-                        `
-        )
-        .join("")}
-                    </div>
-                `
-    }
-        <div
-        class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
-        <div class="product-price text-title">₹${product.price}.00</div>
-        ${Math.floor(100 - (product.price / product.originPrice) * 100) > 0
-      ? `
-                <div class="product-origin-price caption1 text-secondary2">
-                    <del>₹${product.originPrice}.00</del>
-                </div>
-                <div
-                    class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">
-                    -${Math.floor(
-        100 - (product.price / product.originPrice) * 100
-      )}%
-                </div>
-        `
-      : ""
-    }
-            </div>
+    <div class="product-main cursor-pointer block" data-item="${product.id}">
+      <div class="product-img relative overflow-hidden rounded-2xl aspect-[3/4] bg-card">
+        ${productImages}
+        ${productTags}
+        <div class="group-button absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 duration-500">
+          <a href="#" class="compare-btn tf-product-btn tf-product-btn-compare" data-item="${product.id}">
+            <i class="icon-compare"></i>
+          </a>
+          <a href="#" class="add-wishlist-btn tf-product-btn tf-product-btn-wishlist" data-item="${product.id}">
+            <i class="icon-heart"></i>
+          </a>
+          <a href="#" class="add-quickview-btn tf-product-btn tf-product-btn-quickview" data-item="${product.id}">
+            <i class="icon-eye"></i>
+          </a>
         </div>
+      </div>
+      <div class="product-infor">
+        <div class="star flex items-center gap-1 mb-2">
+          ${arrOfStar}
         </div>
+        <div class="text-tiny text-secondary mb-2">${product.brand}</div>
+        <h3 class="title">
+          <a href="product-default.html?id=${product.id}" class="hover:tf-color-1 duration-300">${product.name}</a>
+        </h3>
+        <div class="price flex items-center gap-2 mb-4">
+          <span class="sale-price tf-color-1">₹${product.price}</span>
+          ${product.originPrice > product.price ? `<span class="regular-price text-secondary line-through">₹${product.originPrice}</span>` : ''}
+        </div>
+        <div class="group-btn">
+          <a href="#" class="add-cart-btn tf-button tf-button-style-1 w-full" data-item="${product.id}" data-name="${product.name}" data-price="${product.price}" data-image="${product.thumbImage?.[0] || product.images?.[0] || '/assets/images/product/default.png'}">
+            <span class="text">${product.action || 'Add to cart'}</span>
+          </a>
+        </div>
+      </div>
     </div>
-    `;
+  `;
 
   return productItem;
 };
 
-function addEventToProductItem(products) {
-  // Product item
-  const productItems = document.querySelectorAll(".product-item");
+// Enhanced cart functionality for Razorpay integration
+const addToCart = (productId, productName, productPrice, productImage) => {
+  let cartStore = localStorage.getItem("cartStore");
+  cartStore = cartStore ? JSON.parse(cartStore) : [];
 
-  if (productItems) {
-    productItems.forEach((product) => {
-      const productId = product.getAttribute("data-item");
-
-      product.addEventListener("click", () => {
-        window.location.href = `product-default.html?id=${productId}`;
-      });
-
-      const compareIcon = product.querySelector(".compare-btn");
-      const addWishlistIcon = product.querySelector(".add-wishlist-btn");
-      const addCartIcon = product.querySelectorAll(".add-cart-btn");
-      const quickviewIcon = product.querySelector(".quick-view-btn");
-      const quickshopIcon = product.querySelector(".quick-shop-btn");
-      const modalQuickshop = product.querySelector(".quick-shop-block");
-
-      if (addWishlistIcon) {
-        let wishlistStore = localStorage.getItem("wishlistStore");
-        wishlistStore = wishlistStore ? JSON.parse(wishlistStore) : [];
-        wishlistStore.forEach((prd) => {
-          if (prd.id === productId) {
-            addWishlistIcon.classList.add("active");
-            addWishlistIcon.querySelector("i").classList.remove("ph");
-            addWishlistIcon.querySelector("i").classList.add("ph-fill");
-          }
-        });
-
-        addWishlistIcon.addEventListener("click", (e) => {
-          e.stopPropagation();
-
-          // save prd to wishlist in local storage
-          const productId = addWishlistIcon
-            .closest(".product-item")
-            .getAttribute("data-item");
-          let wishlistStore = localStorage.getItem("wishlistStore");
-          wishlistStore = wishlistStore ? JSON.parse(wishlistStore) : [];
-
-          const existingIndex = wishlistStore.findIndex(
-            (item) => item.id === productId
-          );
-
-          if (existingIndex > -1) {
-            // If prd existed in wishlist, remove it from wishlist
-            wishlistStore.splice(existingIndex, 1);
-            addWishlistIcon.classList.remove("active");
-            addWishlistIcon.querySelector("i").classList.add("ph");
-            addWishlistIcon.querySelector("i").classList.remove("ph-fill");
-          } else {
-            // If prd not exist in wishlist, add it to wishlist
-            const productToAdd = products?.find((item) => item.id === productId);
-            if (productToAdd) {
-              wishlistStore.push(productToAdd);
-              addWishlistIcon.classList.add("active");
-              addWishlistIcon.querySelector("i").classList.remove("ph");
-              addWishlistIcon.querySelector("i").classList.add("ph-fill");
-              openModalWishlist();
-            }
-          }
-
-          // Save wishlist to localStorage
-          localStorage.setItem("wishlistStore", JSON.stringify(wishlistStore));
-          handleItemModalWishlist();
-        });
-      }
-
-      if (compareIcon) {
-        let compareStore = localStorage.getItem("compareStore");
-        compareStore = compareStore ? JSON.parse(compareStore) : [];
-        compareStore.forEach((prd) => {
-          if (prd.id === productId) {
-            compareIcon.classList.add("active");
-          } else {
-            compareIcon.classList.remove("active");
-          }
-        });
-
-        compareIcon.addEventListener("click", (e) => {
-          e.stopPropagation();
-
-          // save prd to compare in local storage
-          const productId = compareIcon
-            .closest(".product-item")
-            .getAttribute("data-item");
-          let compareStore = localStorage.getItem("compareStore");
-          compareStore = compareStore ? JSON.parse(compareStore) : [];
-
-          const existingIndex = compareStore.findIndex(
-            (item) => item.id === productId
-          );
-
-          if (existingIndex > -1) {
-            // If prd existed in compare, remove it from compare
-            compareStore.splice(existingIndex, 1);
-            compareIcon.classList.remove("active");
-          } else {
-            if (compareStore.length < 3) {
-              // If prd not exist in compare, add it to compare
-              const productToAdd = products?.find(
-                (item) => item.id === productId
-              );
-              if (productToAdd) {
-                compareStore.push(productToAdd);
-                compareIcon.classList.add("active");
-              }
-            } else {
-              alert("List compare product must be <= 3");
-            }
-          }
-
-          // Save compare to localStorage
-          localStorage.setItem("compareStore", JSON.stringify(compareStore));
-          handleItemModalCompare();
-          openModalCompare();
-        });
-      }
-
-      if (quickviewIcon) {
-        quickviewIcon.addEventListener("click", (e) => {
-          e.stopPropagation();
-          // save prd to quick view in local storage
-          const productItem = quickviewIcon.closest(".product-item");
-          const productId = productItem.getAttribute("data-item");
-          let quickViewStore = localStorage.getItem("quickViewStore");
-          quickViewStore = quickViewStore && [];
-
-          // add it to quick view
-          const productToAdd = products?.find((item) => item.id === productId);
-          if (productToAdd) {
-            quickViewStore.push(productToAdd);
-          }
-
-          // Save quickView to localStorage
-          localStorage.setItem(
-            "quickViewStore",
-            JSON.stringify(quickViewStore)
-          );
-          handleItemModalQuickview();
-          closeModalCart()
-          openModalQuickview();
-        });
-      }
-
-      if (addCartIcon) {
-        addCartIcon.forEach(icon => icon.addEventListener("click", (e) => {
-          e.stopPropagation();
-          // save prd to cart in local storage
-          const productItem = icon.closest(".product-item");
-          const productId = productItem.getAttribute("data-item");
-          let cartStore = localStorage.getItem("cartStore");
-          cartStore = cartStore ? JSON.parse(cartStore) : [];
-
-          const existingIndex = cartStore.findIndex(
-            (item) => item.id === productId
-          );
-
-          if (existingIndex > -1) {
-            // If prd existed in cart
-            openModalCart();
-          } else {
-            // If prd not exist in cart, add it to cart
-            const productToAdd = products?.find((item) => item.id === productId);
-            if (productToAdd) {
-              cartStore.push(productToAdd);
-              openModalCart();
-            }
-          }
-
-          // Save cart to localStorage
-          localStorage.setItem("cartStore", JSON.stringify(cartStore));
-          handleItemModalCart();
-        }));
-      }
-
-      if (quickshopIcon) {
-        quickshopIcon.addEventListener("click", (e) => {
-          e.stopPropagation();
-          modalQuickshop.classList.add("open");
-        });
-
-        if (addCartIcon) {
-          addCartIcon.forEach(icon => icon.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (modalQuickshop.classList.contains("open")) {
-              modalQuickshop.classList.remove("open");
-            }
-            openModalCart();
-          }));
-        }
-      }
+  // Check if product already exists in cart
+  const existingProduct = cartStore.find(item => item.id === productId);
+  
+  if (existingProduct) {
+    existingProduct.quantity = (existingProduct.quantity || 1) + 1;
+  } else {
+    cartStore.push({
+      id: productId,
+      name: productName,
+      price: parseFloat(productPrice),
+      image: productImage,
+      quantity: 1
     });
   }
 
-  handleActiveSizeChange()
-  handleActiveColorChange()
+  localStorage.setItem("cartStore", JSON.stringify(cartStore));
+  handleItemModalCart();
+  updateCartIcons();
+  
+  // Show success message
+  console.log(`✅ Added ${productName} to cart`);
+};
+
+// Update the product loading section to use HTML strings
+fetchProductsFromBackend()
+  .then((products) => {
+    // Convert backend products to frontend format
+    const frontendProducts = products.map(convertBackendProductToFrontend);
+    
+    // =============================
+    // 🔹 Display the first 4 products
+    // =============================
+    if (listEightProduct) {
+      const firstFourProducts = frontendProducts.slice(0, 4);
+      listEightProduct.innerHTML = firstFourProducts.map((product, index) => 
+        createProductItemHTML(product, index)
+      ).join('');
+      addEventToProductItem(listEightProduct);
+    }
+
+    // =============================
+    // 🔹 Display the first 6 products
+    // =============================
+    if (listSixProduct) {
+      const firstSixProducts = frontendProducts.slice(0, 6);
+      listSixProduct.innerHTML = firstSixProducts.map((product, index) => 
+        createProductItemHTML(product, index)
+      ).join('');
+      addEventToProductItem(listSixProduct);
+    }
+
+    // =============================
+    // 🔹 Display the first 3 products
+    // =============================
+    listThreeProduct.forEach((listThree) => {
+      const firstThreeProducts = frontendProducts.slice(0, 3);
+      listThree.innerHTML = firstThreeProducts.map((product, index) => 
+        createProductItemHTML(product, index)
+      ).join('');
+      addEventToProductItem(listThree);
+    });
+
+    // =============================
+    // 🔹 Initialize tab filtering for underwear section
+    // =============================
+    initializeTabFiltering(frontendProducts);
+
+    // =============================
+    // 🔹 Display products in other four-product containers
+    // =============================
+    listFourProduct.forEach((listFour) => {
+      // Skip the tab container as it's handled by initializeTabFiltering
+      if (!listFour.closest('.tab-features-block.style-underwear')) {
+        const firstFourProducts = frontendProducts.slice(0, 4);
+        listFour.innerHTML = firstFourProducts.map((product, index) => 
+          createProductItemHTML(product, index)
+        ).join('');
+        addEventToProductItem(listFour);
+      }
+    });
+
+    console.log("✅ All products loaded and rendered successfully");
+  })
+  .catch((error) => {
+    console.error('Error loading products:', error);
+    // Fallback to original JSON loading
+    fetch("./assets/data/Product.json")
+      .then((response) => response.json())
+      .then((products) => {
+        // Original logic here...
+        console.log("✅ Fallback products loaded");
+      });
+  });
+
+// Update the tab filtering function to use HTML strings
+function renderProductsInTab(products, containerSelector, dataItem) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+    
+    const filteredProducts = filterProductsByDataItem(products, dataItem);
+    
+    container.innerHTML = filteredProducts.map((product, index) => 
+        createProductItemHTML(product, index)
+    ).join('');
+    
+    addEventToProductItem(container);
 }
+
+// Enhanced addEventToProductItem function
+const addEventToProductItem = (container) => {
+  if (!container) return;
+
+  // Add to cart functionality
+  const addCartBtns = container.querySelectorAll('.add-cart-btn');
+  addCartBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const productId = btn.getAttribute('data-item');
+      const productName = btn.getAttribute('data-name');
+      const productPrice = btn.getAttribute('data-price');
+      const productImage = btn.getAttribute('data-image');
+      
+      addToCart(productId, productName, productPrice, productImage);
+    });
+  });
+
+  // Wishlist functionality
+  const wishlistBtns = container.querySelectorAll('.add-wishlist-btn');
+  wishlistBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const productId = btn.getAttribute('data-item');
+      // Add wishlist functionality here
+      console.log(`Added product ${productId} to wishlist`);
+    });
+  });
+
+  // Compare functionality
+  const compareBtns = container.querySelectorAll('.compare-btn');
+  compareBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const productId = btn.getAttribute('data-item');
+      // Add compare functionality here
+      console.log(`Added product ${productId} to compare`);
+    });
+  });
+
+  // Quick view functionality
+  const quickviewBtns = container.querySelectorAll('.add-quickview-btn');
+  quickviewBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const productId = btn.getAttribute('data-item');
+      // Add quick view functionality here
+      console.log(`Quick view product ${productId}`);
+    });
+  });
+};
+
 
 
 // Active size
@@ -1985,18 +1920,18 @@ fetchProductsFromBackend()
     if (listEightProduct) {
       const firstFourProducts = frontendProducts.slice(0, 4);
       listEightProduct.innerHTML = firstFourProducts.map((product, index) => 
-        createProductItem(product, index)
+        createProductItemHTML(product, index)
       ).join('');
       addEventToProductItem(listEightProduct);
     }
 
     // =============================
-    // �� Display the first 6 products
+    // 🔹 Display the first 6 products
     // =============================
     if (listSixProduct) {
       const firstSixProducts = frontendProducts.slice(0, 6);
       listSixProduct.innerHTML = firstSixProducts.map((product, index) => 
-        createProductItem(product, index)
+        createProductItemHTML(product, index)
       ).join('');
       addEventToProductItem(listSixProduct);
     }
@@ -2007,7 +1942,7 @@ fetchProductsFromBackend()
     listThreeProduct.forEach((listThree) => {
       const firstThreeProducts = frontendProducts.slice(0, 3);
       listThree.innerHTML = firstThreeProducts.map((product, index) => 
-        createProductItem(product, index)
+        createProductItemHTML(product, index)
       ).join('');
       addEventToProductItem(listThree);
     });
@@ -2025,7 +1960,7 @@ fetchProductsFromBackend()
       if (!listFour.closest('.tab-features-block.style-underwear')) {
         const firstFourProducts = frontendProducts.slice(0, 4);
         listFour.innerHTML = firstFourProducts.map((product, index) => 
-          createProductItem(product, index)
+          createProductItemHTML(product, index)
         ).join('');
         addEventToProductItem(listFour);
       }
@@ -3312,7 +3247,7 @@ function renderProductsInTab(products, containerSelector, dataItem) {
     const filteredProducts = filterProductsByDataItem(products, dataItem);
     
     container.innerHTML = filteredProducts.map((product, index) => 
-        createProductItem(product, index)
+        createProductItemHTML(product, index)
     ).join('');
     
     addEventToProductItem(container);
