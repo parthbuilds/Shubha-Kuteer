@@ -417,10 +417,49 @@ export default async function handler(req, res) {
                     });
                 }
                 
+                // PUT update user
+                if (pathname.startsWith('/api/admin/users/') && req.method === 'PUT') {
+                    const id = pathname.split('/').pop();
+                    const { name, email, phone } = req.body;
+                    
+                    if (!name || !email) {
+                        return res.status(400).json({
+                            message: "Name and email are required!"
+                        });
+                    }
+                    
+                    // Check if email already exists for another user
+                    const [existing] = await pool.default.query(
+                        "SELECT id FROM users WHERE email = ? AND id != ?", [email, id]
+                    );
+                    
+                    if (existing.length > 0) {
+                        return res.status(409).json({ message: "Email already exists for another user!" });
+                    }
+                    
+                    const [result] = await pool.default.query(`
+                        UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?
+                    `, [name, email, phone || null, id]);
+                    
+                    if (result.affectedRows === 0) {
+                        return res.status(404).json({ message: "User not found!" });
+                    }
+                    
+                    return res.status(200).json({
+                        message: "User updated successfully!",
+                        data: { id, name, email, phone }
+                    });
+                }
+                
                 // DELETE user
                 if (pathname.startsWith('/api/admin/users/') && req.method === 'DELETE') {
                     const id = pathname.split('/').pop();
-                    await pool.default.query("DELETE FROM users WHERE id = ?", [id]);
+                    const [result] = await pool.default.query("DELETE FROM users WHERE id = ?", [id]);
+                    
+                    if (result.affectedRows === 0) {
+                        return res.status(404).json({ message: "User not found!" });
+                    }
+                    
                     return res.status(200).json({ message: "User deleted successfully!" });
                 }
                 

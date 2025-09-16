@@ -924,9 +924,9 @@
     <!-- Javascript -->
 
     <script>
-        let admins = []; // store admins globally
+        let users = []; // store users globally
 
-        async function loadAdmins() {
+        async function loadUsers() {
             try {
                 const token = localStorage.getItem("adminToken");
                 if (!token) {
@@ -938,14 +938,29 @@
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
-                admins = await res.json(); // store globally
+                if (!res.ok) {
+                    throw new Error("Failed to fetch users");
+                }
+
+                users = await res.json(); // store globally
                 const list = document.getElementById("adminUserList");
                 list.innerHTML = ""; // clear old data
 
-                admins.forEach(admin => {
+                if (users.length === 0) {
+                    list.innerHTML = `
+                        <li class="user-item gap14">
+                            <div class="flex items-center justify-center w-full">
+                                <div class="body-text">No users found</div>
+                            </div>
+                        </li>
+                    `;
+                    return;
+                }
+
+                users.forEach(user => {
                     const li = document.createElement("li");
                     li.className = "user-item gap14";
-                    li.id = `admin-row-${admin.id}`;
+                    li.id = `user-row-${user.id}`;
 
                     li.innerHTML = `
                     <div class="image">
@@ -953,19 +968,19 @@
                     </div>
                     <div class="flex items-center justify-between gap20 flex-grow">
                         <div class="name">
-                            <a href="#" class="body-title-2">${admin.name}</a>
-                            <div class="text-tiny mt-3">${admin.role || "Admin"}</div>
+                            <a href="#" class="body-title-2">${user.name || "N/A"}</a>
+                            <div class="text-tiny mt-3">User</div>
                         </div>
-                        <div class="body-text">${admin.phone || "-"}</div>
-                        <div class="body-text">${admin.email}</div>
+                        <div class="body-text">${user.phone || "-"}</div>
+                        <div class="body-text">${user.email || "N/A"}</div>
                         <div class="list-icon-function">
-                            <div class="item eye" onclick="viewAdmin(${admin.id})">
+                            <div class="item eye" onclick="viewUser(${user.id})">
                                 <i class="icon-eye"></i>
                             </div>
-                            <div class="item edit" onclick="editAdmin(${admin.id})">
+                            <div class="item edit" onclick="editUser(${user.id})">
                                 <i class="icon-edit-3"></i>
                             </div>
-                            <div class="item trash" onclick="deleteAdmin(${admin.id})">
+                            <div class="item trash" onclick="deleteUser(${user.id})">
                                 <i class="icon-trash-2"></i>
                             </div>
                         </div>
@@ -974,48 +989,42 @@
                     list.appendChild(li);
                 });
             } catch (err) {
-                console.error("Failed to load admins:", err);
+                console.error("Failed to load users:", err);
+                const list = document.getElementById("adminUserList");
+                list.innerHTML = `
+                    <li class="user-item gap14">
+                        <div class="flex items-center justify-center w-full">
+                            <div class="body-text text-red">Error loading users</div>
+                        </div>
+                    </li>
+                `;
             }
         }
 
-        // View admin
-        function viewAdmin(id) {
-            const admin = admins.find(a => a.id === id);
-            if (!admin) return alert("Admin not found!");
+        // View user
+        function viewUser(id) {
+            const user = users.find(u => u.id === id);
+            if (!user) return alert("User not found!");
 
-            document.getElementById("viewAdminName").innerText = "Name: " + admin.name;
-            document.getElementById("viewAdminEmail").innerText = "Email: " + admin.email;
-            document.getElementById("viewAdminPhone").innerText = "Phone: " + (admin.phone || "-");
-
-            document.getElementById("viewAdminModal").style.display = "block";
-        }
-        function closeViewModal() {
-            document.getElementById("viewAdminModal").style.display = "none";
+            alert(`User Details:\nName: ${user.name || "N/A"}\nEmail: ${user.email || "N/A"}\nPhone: ${user.phone || "N/A"}\nCreated: ${new Date(user.created_at).toLocaleDateString()}`);
         }
 
-        // Edit admin
-        function editAdmin(id) {
-            const admin = admins.find(a => a.id === id);
-            if (!admin) return alert("Admin not found!");
+        // Edit user
+        function editUser(id) {
+            const user = users.find(u => u.id === id);
+            if (!user) return alert("User not found!");
 
-            document.getElementById("editAdminId").value = admin.id;
-            document.getElementById("editAdminName").value = admin.name;
-            document.getElementById("editAdminEmail").value = admin.email;
-            document.getElementById("editAdminPhone").value = admin.phone || "";
+            const newName = prompt("Enter new name:", user.name || "");
+            const newEmail = prompt("Enter new email:", user.email || "");
+            const newPhone = prompt("Enter new phone:", user.phone || "");
 
-            document.getElementById("editAdminModal").style.display = "block";
-        }
-        function closeEditModal() {
-            document.getElementById("editAdminModal").style.display = "none";
+            if (newName === null || newEmail === null) return; // User cancelled
+
+            updateUser(id, { name: newName, email: newEmail, phone: newPhone });
         }
 
-        // Save edited admin (PUT request)
-        async function submitEditAdmin() {
-            const id = document.getElementById("editAdminId").value;
-            const name = document.getElementById("editAdminName").value;
-            const email = document.getElementById("editAdminEmail").value;
-            const phone = document.getElementById("editAdminPhone").value;
-
+        // Update user
+        async function updateUser(id, userData) {
             const token = localStorage.getItem("adminToken");
 
             try {
@@ -1025,15 +1034,14 @@
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${token}`
                     },
-                    body: JSON.stringify({ name, email, phone })
+                    body: JSON.stringify(userData)
                 });
 
                 const data = await res.json();
 
                 if (res.ok) {
-                    alert("Admin updated successfully ✅");
-                    closeEditModal();
-                    loadAdmins(); // reload list
+                    alert("User updated successfully ✅");
+                    loadUsers(); // reload list
                 } else {
                     alert("Error: " + data.message);
                 }
@@ -1043,9 +1051,9 @@
             }
         }
 
-        // Delete admin (DELETE request)
-        async function deleteAdmin(id) {
-            if (!confirm("Are you sure you want to delete this admin?")) return;
+        // Delete user (DELETE request)
+        async function deleteUser(id) {
+            if (!confirm("Are you sure you want to delete this user?")) return;
 
             const token = localStorage.getItem("adminToken");
 
@@ -1060,8 +1068,8 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    alert("Admin deleted successfully ✅");
-                    document.getElementById(`admin-row-${id}`).remove();
+                    alert("User deleted successfully ✅");
+                    document.getElementById(`user-row-${id}`).remove();
                 } else {
                     alert("Error: " + data.message);
                 }
@@ -1072,7 +1080,7 @@
         }
 
         // Load on page ready
-        document.addEventListener("DOMContentLoaded", loadAdmins);
+        document.addEventListener("DOMContentLoaded", loadUsers);
     </script>
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
