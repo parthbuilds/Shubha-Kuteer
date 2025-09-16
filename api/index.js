@@ -220,15 +220,54 @@ export default async function handler(req, res) {
         // Products routes
         if (pathname.startsWith('/api/admin/products')) {
             try {
-                const productRoutes = await import("../backend/routes/productRoutes.js");
-                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
-                const mockRes = {
-                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
-                    json: (data) => res.status(200).json(data)
-                };
-                await productRoutes.default(mockReq, mockRes);
-                return;
+                const pool = await import("../backend/utils/db.js");
+                
+                // GET all products
+                if (pathname === '/api/admin/products' && req.method === 'GET') {
+                    const [rows] = await pool.default.query(`
+                        SELECT id, name, slug, price, origin_price, quantity, sold, 
+                               rate, is_new, on_sale, category, description, type, brand, 
+                               main_image, created_at
+                        FROM products
+                        ORDER BY created_at DESC
+                    `);
+                    return res.status(200).json(rows);
+                }
+                
+                // POST new product
+                if (pathname === '/api/admin/products' && req.method === 'POST') {
+                    const {
+                        name, slug, price, origin_price, quantity, sold, quantity_purchase,
+                        rate, is_new, on_sale, sizes, variations, category, description,
+                        type, brand, main_image, gallery
+                    } = req.body;
+                    
+                    if (!name || !price) {
+                        return res.status(400).json({ message: "Name and price are required!" });
+                    }
+                    
+                    const [result] = await pool.default.query(`
+                        INSERT INTO products (name, slug, price, origin_price, quantity, sold, 
+                                            quantity_purchase, rate, is_new, on_sale, sizes, 
+                                            variations, category, description, type, brand, 
+                                            main_image, gallery)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        name, slug, price, origin_price, quantity || 0, sold || 0,
+                        quantity_purchase || 0, rate || 0, is_new || 0, on_sale || 0,
+                        JSON.stringify(sizes || []), JSON.stringify(variations || []),
+                        category, description, type, brand, main_image, JSON.stringify(gallery || [])
+                    ]);
+                    
+                    return res.status(200).json({
+                        message: "Product added successfully!",
+                        data: { id: result.insertId, name, price }
+                    });
+                }
+                
+                return res.status(404).json({ message: "Product endpoint not found" });
             } catch (error) {
+                console.error("Product operation error:", error);
                 return res.status(500).json({ message: "Product operation failed", error: error.message });
             }
         }
@@ -236,15 +275,43 @@ export default async function handler(req, res) {
         // Categories routes
         if (pathname.startsWith('/api/admin/categories')) {
             try {
-                const categoryRoutes = await import("../backend/routes/categoryRoutes.js");
-                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
-                const mockRes = {
-                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
-                    json: (data) => res.status(200).json(data)
-                };
-                await categoryRoutes.default(mockReq, mockRes);
-                return;
+                const pool = await import("../backend/utils/db.js");
+                
+                // Handle different category endpoints
+                if (pathname === '/api/admin/categories/public' && req.method === 'GET') {
+                    const [rows] = await pool.default.query(`
+                        SELECT id, name, data_item, sale, created_at
+                        FROM categories
+                        ORDER BY created_at DESC
+                    `);
+                    return res.status(200).json(rows);
+                }
+                
+                if (pathname === '/api/admin/categories' && req.method === 'POST') {
+                    const { name, sale, data_item } = req.body;
+                    if (!name) {
+                        return res.status(400).json({ message: "Category name is required!" });
+                    }
+                    const finalDataItem = data_item?.trim() || name.toLowerCase().replace(/\s+/g, "");
+                    const [result] = await pool.default.query(
+                        "INSERT INTO categories (name, data_item, sale) VALUES (?, ?, ?)",
+                        [name, finalDataItem, sale || 0]
+                    );
+                    return res.status(200).json({
+                        message: "Category added successfully!",
+                        data: { id: result.insertId, name, data_item: finalDataItem, sale: sale || 0 }
+                    });
+                }
+                
+                if (pathname.startsWith('/api/admin/categories/') && req.method === 'DELETE') {
+                    const id = pathname.split('/').pop();
+                    await pool.default.query("DELETE FROM categories WHERE id = ?", [id]);
+                    return res.status(200).json({ message: "Category deleted successfully!" });
+                }
+                
+                return res.status(404).json({ message: "Category endpoint not found" });
             } catch (error) {
+                console.error("Category operation error:", error);
                 return res.status(500).json({ message: "Category operation failed", error: error.message });
             }
         }
