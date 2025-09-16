@@ -215,7 +215,7 @@
                                                 </a>
                                             </li>
                                             <li class="sub-menu-item">
-                                                <a href="add-new-user.html" class="active">
+                                                <a href="/admin/add-new-user.html" class="active">
                                                     <div class="text">Add new user</div>
                                                 </a>
                                             </li>
@@ -1017,9 +1017,16 @@
         document.querySelector(".form-add-new-user").addEventListener("submit", async (e) => {
             e.preventDefault();
 
-            const token = localStorage.getItem("adminToken");
-            if (!token) {
-                return window.location.href = "/admin/login.html";
+            // Check admin authentication first
+            try {
+                const authRes = await fetch("/api/admin/auth/check");
+                if (!authRes.ok) {
+                    window.location.href = "/admin/login.html";
+                    return;
+                }
+            } catch (err) {
+                window.location.href = "/admin/login.html";
+                return;
             }
 
             const form = e.target;
@@ -1070,8 +1077,7 @@
                 const res = await fetch("/api/admin/users", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify(userData)
                 });
@@ -1091,6 +1097,22 @@
                 alert("Something went wrong ❌");
             }
         });
+
+        // Check authentication on page load
+        async function checkAuth() {
+            try {
+                const authRes = await fetch("/api/admin/auth/check");
+                if (!authRes.ok) {
+                    window.location.href = "/admin/login.html";
+                    return;
+                }
+            } catch (err) {
+                window.location.href = "/admin/login.html";
+            }
+        }
+
+        // Check auth on page load
+        document.addEventListener("DOMContentLoaded", checkAuth);
     </script>
 
 

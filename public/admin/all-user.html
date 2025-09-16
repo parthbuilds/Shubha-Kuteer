@@ -210,7 +210,7 @@
                                         </a>
                                         <ul class="sub-menu" style="display: block;">
                                             <li class="sub-menu-item">
-                                                <a href="all-user.html" class="active">
+                                                <a href="/admin/all-user.html" class="active">
                                                     <div class="text">All user</div>
                                                 </a>
                                             </li>
@@ -928,15 +928,14 @@
 
         async function loadUsers() {
             try {
-                const token = localStorage.getItem("adminToken");
-                if (!token) {
+                // Check admin authentication first
+                const authRes = await fetch("/api/admin/auth/check");
+                if (!authRes.ok) {
                     window.location.href = "/admin/login.html";
                     return;
                 }
 
-                const res = await fetch("/api/admin/users", {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
+                const res = await fetch("/api/admin/users");
 
                 if (!res.ok) {
                     throw new Error("Failed to fetch users");
@@ -1025,14 +1024,11 @@
 
         // Update user
         async function updateUser(id, userData) {
-            const token = localStorage.getItem("adminToken");
-
             try {
                 const res = await fetch(`/api/admin/users/${id}`, {
                     method: "PUT",
                     headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify(userData)
                 });
@@ -1055,14 +1051,9 @@
         async function deleteUser(id) {
             if (!confirm("Are you sure you want to delete this user?")) return;
 
-            const token = localStorage.getItem("adminToken");
-
             try {
                 const res = await fetch(`/api/admin/users/${id}`, {
-                    method: "DELETE",
-                    headers: {
-                        "Authorization": `Bearer ${token}`
-                    }
+                    method: "DELETE"
                 });
 
                 const data = await res.json();
@@ -1079,8 +1070,23 @@
             }
         }
 
+        // Check authentication on page load
+        async function checkAuthAndLoad() {
+            try {
+                const authRes = await fetch("/api/admin/auth/check");
+                if (!authRes.ok) {
+                    window.location.href = "/admin/login.html";
+                    return;
+                }
+                // If authenticated, load users
+                loadUsers();
+            } catch (err) {
+                window.location.href = "/admin/login.html";
+            }
+        }
+
         // Load on page ready
-        document.addEventListener("DOMContentLoaded", loadUsers);
+        document.addEventListener("DOMContentLoaded", checkAuthAndLoad);
     </script>
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
