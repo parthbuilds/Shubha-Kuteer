@@ -291,6 +291,50 @@ export default async function handler(req, res) {
             }
         }
 
+        // Public Products routes (for frontend)
+        if (pathname === '/api/products' && req.method === 'GET') {
+            try {
+                const pool = await import("../backend/utils/db.js");
+                
+                const [rows] = await pool.default.query(`
+                    SELECT id, name, slug, price, origin_price, quantity, sold, 
+                           rate, is_new, on_sale, category, description, type, brand, 
+                           main_image, thumb_image, gallery, action, sizes, variations
+                    FROM products
+                    ORDER BY created_at DESC
+                `);
+                
+                // Transform data to match frontend JSON structure
+                const transformedProducts = rows.map(product => ({
+                    id: product.id.toString(),
+                    category: product.category || "fashion",
+                    type: product.type || "product",
+                    name: product.name,
+                    new: Boolean(product.is_new),
+                    sale: Boolean(product.on_sale),
+                    rate: product.rate || 0,
+                    price: product.price || 0,
+                    originPrice: product.origin_price || product.price || 0,
+                    brand: product.brand || "SHUBHA KUTEER",
+                    sold: product.sold || 0,
+                    quantity: product.quantity || 0,
+                    quantityPurchase: 1,
+                    sizes: product.sizes ? JSON.parse(product.sizes) : [],
+                    variation: product.variations ? JSON.parse(product.variations) : [],
+                    thumbImage: product.thumb_image ? [product.thumb_image] : [],
+                    images: product.gallery ? JSON.parse(product.gallery) : (product.main_image ? [product.main_image] : []),
+                    description: product.description || "",
+                    action: product.action || "add to cart",
+                    slug: product.slug || product.name.toLowerCase().replace(/\s+/g, "-")
+                }));
+                
+                return res.status(200).json(transformedProducts);
+            } catch (error) {
+                console.error("Public products error:", error);
+                return res.status(500).json({ message: "Failed to fetch products", error: error.message });
+            }
+        }
+
         // Categories routes
         if (pathname.startsWith('/api/admin/categories')) {
             try {

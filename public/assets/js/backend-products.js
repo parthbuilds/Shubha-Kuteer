@@ -11,196 +11,196 @@ async function fetchProductsFromBackend() {
             return cachedProducts;
         }
 
-        const response = await fetch('/api/admin/products');
+        console.log("🔄 Fetching products from backend API...");
+        const response = await fetch('/api/products');
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const products = await response.json();
+        console.log(`✅ Loaded ${products.length} products from backend`);
+        
+        // Cache the products
         cachedProducts = products;
         return products;
     } catch (error) {
-        console.error('Error fetching products from backend:', error);
+        console.error("❌ Error fetching products from backend:", error);
+        
         // Fallback to static JSON if backend fails
+        console.log("🔄 Falling back to static Product.json...");
         try {
-            const response = await fetch('./assets/data/Product.json');
+            const response = await fetch('/assets/data/Product.json');
             const fallbackProducts = await response.json();
-            console.log('Using fallback products from JSON');
+            console.log(`✅ Loaded ${fallbackProducts.length} products from fallback`);
             return fallbackProducts;
         } catch (fallbackError) {
-            console.error('Fallback also failed:', fallbackError);
+            console.error("❌ Fallback also failed:", fallbackError);
             return [];
         }
     }
 }
 
-// Function to convert backend product format to frontend format
-function convertBackendProductToFrontend(backendProduct) {
-    return {
-        id: backendProduct.id.toString(),
-        category: backendProduct.category || 'fashion',
-        type: backendProduct.type || 'product',
-        name: backendProduct.name,
-        new: backendProduct.is_new === 1,
-        sale: backendProduct.on_sale === 1,
-        rate: backendProduct.rate || 4,
-        price: parseFloat(backendProduct.price) || 0,
-        originPrice: parseFloat(backendProduct.origin_price) || parseFloat(backendProduct.price) || 0,
-        brand: backendProduct.brand || 'SHUBHA KUTEER',
-        sold: backendProduct.sold || 0,
-        quantity: backendProduct.quantity || 100,
-        quantityPurchase: 1,
-        sizes: backendProduct.sizes ? JSON.parse(backendProduct.sizes) : ['M', 'L', 'XL'],
-        variation: [
-            {
-                color: "default",
-                colorCode: "#DB4444",
-                colorImage: "./assets/images/product/color/48x48.png",
-                image: backendProduct.main_image || "./assets/images/product/bag-1.png"
-            }
-        ],
-        thumbImage: [
-            backendProduct.thumb_image || backendProduct.main_image || "./assets/images/product/bag-1.png"
-        ],
-        images: backendProduct.gallery ? JSON.parse(backendProduct.gallery) : [
-            backendProduct.main_image || "./assets/images/product/bag-1.png"
-        ],
-        description: backendProduct.description || "Quality product from Shubha Kuteer",
-        action: backendProduct.action || "add to cart",
-        slug: backendProduct.slug || backendProduct.name.toLowerCase().replace(/\s+/g, '-')
-    };
-}
+// Function to render products in 4-card layout
+function renderProducts4Card(products, containerSelector, limit = 4) {
+    const container = document.querySelector(containerSelector);
+    if (!container) {
+        console.warn(`Container ${containerSelector} not found`);
+        return;
+    }
 
-// Function to create product item HTML (updated to use backend data)
-function createProductItem(product, index = 0) {
-    const isNew = product.new ? 'bg-green' : '';
-    const isSale = product.sale ? 'bg-red' : '';
-    const tagClass = isNew || isSale;
-    const tagText = product.new ? 'New' : product.sale ? 'Sale' : '';
+    const limitedProducts = products.slice(0, limit);
     
-    const discountPercent = product.originPrice > product.price ? 
-        Math.round(((product.originPrice - product.price) / product.originPrice) * 100) : 0;
-
-    return `
-        <div class="product-item grid-type" data-item="${product.id}">
-            <div class="product-main cursor-pointer block">
-                <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
-                    ${tagClass ? `<div class="product-tag text-button-uppercase ${tagClass} px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">${tagText}</div>` : ''}
-                    <div class="product-image relative">
-                        <img src="${product.thumbImage[0] || product.images[0] || './assets/images/product/bag-1.png'}" 
-                             alt="${product.name}" 
-                             class="w-full aspect-square object-cover" />
+    container.innerHTML = limitedProducts.map(product => `
+        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6 col-12">
+            <div class="tf-product tf-product-style-1">
+                <div class="image">
+                    <img src="${product.thumbImage?.[0] || product.images?.[0] || '/assets/images/product/default.png'}" alt="${product.name}">
+                    <div class="badge">
+                        ${product.new ? '<span class="tf-product-label tf-product-label-new">New</span>' : ''}
+                        ${product.sale ? '<span class="tf-product-label tf-product-label-sale">Sale</span>' : ''}
                     </div>
-                    <div class="product-action absolute top-3 right-3 flex flex-col gap-2">
-                        <div class="action-item w-8 h-8 bg-white rounded-full flex items-center justify-center cursor-pointer hover:bg-green hover:text-white transition-all">
-                            <i class="ph ph-heart text-sm"></i>
-                        </div>
-                        <div class="action-item w-8 h-8 bg-white rounded-full flex items-center justify-center cursor-pointer hover:bg-green hover:text-white transition-all">
-                            <i class="ph ph-eye text-sm"></i>
-                        </div>
+                    <div class="group-button">
+                        <a href="#" class="tf-product-btn tf-product-btn-compare"><i class="icon-compare"></i></a>
+                        <a href="#" class="tf-product-btn tf-product-btn-wishlist"><i class="icon-heart"></i></a>
+                        <a href="#" class="tf-product-btn tf-product-btn-quickview"><i class="icon-eye"></i></a>
                     </div>
                 </div>
-                <div class="product-infor p-4">
-                    <div class="product-name text-button mb-2 line-clamp-2">${product.name}</div>
-                    <div class="product-category caption1 text-secondary2 mb-2">${product.type}</div>
-                    
-                    <div class="product-rating flex items-center gap-1 mb-2">
-                        <div class="list-star flex items-center gap-1">
+                <div class="content">
+                    <div class="info">
+                        <div class="star">
                             ${Array.from({length: 5}, (_, i) => 
-                                `<i class="ph ph-star ${i < product.rate ? 'text-yellow' : 'text-gray-300'} text-xs"></i>`
+                                `<i class="icon-star ${i < (product.rate || 0) ? 'active' : ''}"></i>`
                             ).join('')}
                         </div>
-                        <div class="caption1 text-secondary2">(${product.sold})</div>
+                        <div class="text-tiny">${product.brand}</div>
                     </div>
-
-                    <div class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
-                        <div class="product-price text-title">₹${product.price.toFixed(2)}</div>
-                        ${product.originPrice > product.price ? 
-                            `<div class="product-origin-price caption1 text-secondary2"><del>₹${product.originPrice.toFixed(2)}</del></div>` : ''
-                        }
-                        ${discountPercent > 0 ? 
-                            `<div class="product-discount caption1 text-green font-semibold">-${discountPercent}%</div>` : ''
-                        }
+                    <h3 class="title"><a href="product-default.html?id=${product.id}">${product.name}</a></h3>
+                    <div class="price">
+                        <span class="sale-price">₹${product.price}</span>
+                        ${product.originPrice > product.price ? `<span class="regular-price">₹${product.originPrice}</span>` : ''}
+                    </div>
+                    <div class="group-btn">
+                        <a href="#" class="tf-button tf-button-style-1" data-product-id="${product.id}">
+                            <span class="text">${product.action || 'Add to cart'}</span>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
-    `;
+    `).join('');
 }
 
-// Function to load products into a specific container
-async function loadProductsIntoContainer(containerSelector, limit = null, gridCols = 'grid-cols-2') {
+// Function to render products in 6-card layout
+function renderProducts6Card(products, containerSelector, limit = 6) {
     const container = document.querySelector(containerSelector);
     if (!container) {
-        console.warn(`Container not found: ${containerSelector}`);
+        console.warn(`Container ${containerSelector} not found`);
         return;
     }
 
-    try {
-        // Show loading state
-        container.innerHTML = '<div class="col-span-full text-center py-8">Loading products...</div>';
-        
-        const backendProducts = await fetchProductsFromBackend();
-        const products = backendProducts.map(convertBackendProductToFrontend);
-        
-        // Limit products if specified
-        const displayProducts = limit ? products.slice(0, limit) : products;
-        
-        if (displayProducts.length === 0) {
-            container.innerHTML = '<div class="col-span-full text-center py-8">No products found</div>';
-            return;
-        }
-
-        // Update grid classes
-        container.className = container.className.replace(/grid-cols-\d+/, gridCols);
-        
-        // Generate product HTML
-        const productsHTML = displayProducts.map((product, index) => 
-            createProductItem(product, index)
-        ).join('');
-
-        container.innerHTML = productsHTML;
-        
-        // Add event listeners to the new product items
-        addEventToProductItem(container);
-        
-        console.log(`Loaded ${displayProducts.length} products into ${containerSelector}`);
-        
-    } catch (error) {
-        console.error('Error loading products:', error);
-        container.innerHTML = '<div class="col-span-full text-center py-8 text-red-500">Error loading products</div>';
-    }
+    const limitedProducts = products.slice(0, limit);
+    
+    container.innerHTML = limitedProducts.map(product => `
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-12">
+            <div class="tf-product tf-product-style-1">
+                <div class="image">
+                    <img src="${product.thumbImage?.[0] || product.images?.[0] || '/assets/images/product/default.png'}" alt="${product.name}">
+                    <div class="badge">
+                        ${product.new ? '<span class="tf-product-label tf-product-label-new">New</span>' : ''}
+                        ${product.sale ? '<span class="tf-product-label tf-product-label-sale">Sale</span>' : ''}
+                    </div>
+                    <div class="group-button">
+                        <a href="#" class="tf-product-btn tf-product-btn-compare"><i class="icon-compare"></i></a>
+                        <a href="#" class="tf-product-btn tf-product-btn-wishlist"><i class="icon-heart"></i></a>
+                        <a href="#" class="tf-product-btn tf-product-btn-quickview"><i class="icon-eye"></i></a>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="info">
+                        <div class="star">
+                            ${Array.from({length: 5}, (_, i) => 
+                                `<i class="icon-star ${i < (product.rate || 0) ? 'active' : ''}"></i>`
+                            ).join('')}
+                        </div>
+                        <div class="text-tiny">${product.brand}</div>
+                    </div>
+                    <h3 class="title"><a href="product-default.html?id=${product.id}">${product.name}</a></h3>
+                    <div class="price">
+                        <span class="sale-price">₹${product.price}</span>
+                        ${product.originPrice > product.price ? `<span class="regular-price">₹${product.originPrice}</span>` : ''}
+                    </div>
+                    <div class="group-btn">
+                        <a href="#" class="tf-button tf-button-style-1" data-product-id="${product.id}">
+                            <span class="text">${product.action || 'Add to cart'}</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
 }
 
-// Initialize product loading for different sections
-document.addEventListener('DOMContentLoaded', async () => {
-    // Load products for different sections based on page
-    const currentPage = window.location.pathname.split('/').pop();
-    
-    if (currentPage === 'index.html' || currentPage === '') {
-        // Home page - load recent products (2x2 grid)
-        await loadProductsIntoContainer('.list-product.hide-product-sold', 4, 'grid-cols-2');
+// Function to render products in shop grid
+function renderProductsShop(products, containerSelector) {
+    const container = document.querySelector(containerSelector);
+    if (!container) {
+        console.warn(`Container ${containerSelector} not found`);
+        return;
+    }
+
+    container.innerHTML = products.map(product => `
+        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6 col-12">
+            <div class="tf-product tf-product-style-1">
+                <div class="image">
+                    <img src="${product.thumbImage?.[0] || product.images?.[0] || '/assets/images/product/default.png'}" alt="${product.name}">
+                    <div class="badge">
+                        ${product.new ? '<span class="tf-product-label tf-product-label-new">New</span>' : ''}
+                        ${product.sale ? '<span class="tf-product-label tf-product-label-sale">Sale</span>' : ''}
+                    </div>
+                    <div class="group-button">
+                        <a href="#" class="tf-product-btn tf-product-btn-compare"><i class="icon-compare"></i></a>
+                        <a href="#" class="tf-product-btn tf-product-btn-wishlist"><i class="icon-heart"></i></a>
+                        <a href="#" class="tf-product-btn tf-product-btn-quickview"><i class="icon-eye"></i></a>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="info">
+                        <div class="star">
+                            ${Array.from({length: 5}, (_, i) => 
+                                `<i class="icon-star ${i < (product.rate || 0) ? 'active' : ''}"></i>`
+                            ).join('')}
+                        </div>
+                        <div class="text-tiny">${product.brand}</div>
+                    </div>
+                    <h3 class="title"><a href="product-default.html?id=${product.id}">${product.name}</a></h3>
+                    <div class="price">
+                        <span class="sale-price">₹${product.price}</span>
+                        ${product.originPrice > product.price ? `<span class="regular-price">₹${product.originPrice}</span>` : ''}
+                    </div>
+                    <div class="group-btn">
+                        <a href="#" class="tf-button tf-button-style-1" data-product-id="${product.id}">
+                            <span class="text">${product.action || 'Add to cart'}</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Initialize products when DOM is loaded
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const products = await fetchProductsFromBackend();
         
-        // Load "You May Also Like" products (4 items)
-        await loadProductsIntoContainer('.list-product:not(.hide-product-sold)', 4, 'xl:grid-cols-4 sm:grid-cols-3 grid-cols-2');
+        // Render products in different layouts
+        renderProducts4Card(products, '.product-grid-4', 4);
+        renderProducts6Card(products, '.product-grid-6', 6);
+        renderProductsShop(products, '.shop-product-grid');
         
-    } else if (currentPage === 'shop.html') {
-        // Shop page - load all products (3 columns)
-        await loadProductsIntoContainer('.list-product.hide-product-sold[data-item="12"]', null, 'sm:grid-cols-3 grid-cols-2');
-        
-        // Load recently viewed products (4 columns)
-        await loadProductsIntoContainer('.list-product.hide-product-sold.grid.xl\\:grid-cols-4', 4, 'xl:grid-cols-4 sm:grid-cols-3 grid-cols-2');
-        
-    } else if (currentPage === 'new-collection.html') {
-        // New collection page
-        await loadProductsIntoContainer('.list-product', null, 'sm:grid-cols-3 grid-cols-2');
+        console.log("✅ All product grids rendered successfully");
+    } catch (error) {
+        console.error("❌ Error initializing products:", error);
     }
 });
-
-// Export functions for use in other files
-window.BackendProducts = {
-    fetchProductsFromBackend,
-    convertBackendProductToFrontend,
-    createProductItem,
-    loadProductsIntoContainer
-};

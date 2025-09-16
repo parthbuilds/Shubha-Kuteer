@@ -1058,7 +1058,13 @@
                     orderHeading.innerHTML = `Order <span class="highlight">#${order.id}</span>`;
                 }
 
-                // Update order items section
+                // Update breadcrumb
+                const breadcrumbEl = document.querySelector(".breadcrumbs li:last-child .text-tiny");
+                if (breadcrumbEl) {
+                    breadcrumbEl.textContent = `Order #${order.id}`;
+                }
+
+                // Update order items section - show actual order data
                 const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
                 if (itemsContainer) {
                     itemsContainer.innerHTML = `
@@ -1068,16 +1074,16 @@
                             </div>
                             <div class="flex items-center justify-between gap40 flex-grow">
                                 <div class="name">
-                                    <div class="text-tiny mb-1">Product name</div>
-                                    <a href="#!" class="body-title-2">Order #${order.id}</a>
+                                    <div class="text-tiny mb-1">Customer</div>
+                                    <a href="#!" class="body-title-2">${order.first_name} ${order.last_name}</a>
                                 </div>
                                 <div class="name">
-                                    <div class="text-tiny mb-1">Quantity</div>
-                                    <div class="body-title-2">1</div>
+                                    <div class="text-tiny mb-1">Email</div>
+                                    <div class="body-title-2">${order.email}</div>
                                 </div>
                                 <div class="name">
-                                    <div class="text-tiny mb-1">Price</div>
-                                    <div class="body-title-2">₹${order.amount}</div>
+                                    <div class="text-tiny mb-1">Phone</div>
+                                    <div class="body-title-2">${order.phone_number}</div>
                                 </div>
                             </div>
                         </li>
@@ -1104,13 +1110,16 @@
                 if (dateEl) dateEl.textContent = new Date(order.created_at).toLocaleDateString();
                 if (totalSummaryEl) totalSummaryEl.textContent = `₹${order.amount}`;
 
-                // Update shipping address
+                // ✅ Fix shipping address - use correct data
                 const shippingAddressEl = document.querySelector(".wg-box:nth-child(2) .body-text");
                 if (shippingAddressEl) {
                     shippingAddressEl.innerHTML = `
+                        <strong>${order.first_name} ${order.last_name}</strong><br>
                         ${order.apartment || ''}<br>
                         ${order.city || ''}<br>
-                        ${order.postal_code || ''}
+                        ${order.postal_code || ''}<br>
+                        <strong>Phone:</strong> ${order.phone_number}<br>
+                        <strong>Email:</strong> ${order.email}
                     `;
                 }
 
@@ -1118,9 +1127,11 @@
                 const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
                 if (paymentMethodEl) {
                     paymentMethodEl.innerHTML = `
-                        Razorpay Payment<br>
-                        Payment ID: ${order.razorpay_payment_id || 'Pending'}<br>
-                        Order ID: ${order.razorpay_order_id || 'N/A'}
+                        <strong>Payment Method:</strong> Razorpay<br>
+                        <strong>Status:</strong> ${order.status}<br>
+                        <strong>Payment ID:</strong> ${order.razorpay_payment_id || 'Pending'}<br>
+                        <strong>Order ID:</strong> ${order.razorpay_order_id || 'N/A'}<br>
+                        <strong>Note:</strong> ${order.note || 'No additional notes'}
                     `;
                 }
 
