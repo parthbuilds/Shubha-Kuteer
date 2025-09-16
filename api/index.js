@@ -217,6 +217,86 @@ export default async function handler(req, res) {
             }
         }
 
+        // Products routes
+        if (pathname.startsWith('/api/admin/products')) {
+            try {
+                const productRoutes = await import("../backend/routes/productRoutes.js");
+                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
+                const mockRes = {
+                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
+                    json: (data) => res.status(200).json(data)
+                };
+                await productRoutes.default(mockReq, mockRes);
+                return;
+            } catch (error) {
+                return res.status(500).json({ message: "Product operation failed", error: error.message });
+            }
+        }
+
+        // Categories routes
+        if (pathname.startsWith('/api/admin/categories')) {
+            try {
+                const categoryRoutes = await import("../backend/routes/categoryRoutes.js");
+                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
+                const mockRes = {
+                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
+                    json: (data) => res.status(200).json(data)
+                };
+                await categoryRoutes.default(mockReq, mockRes);
+                return;
+            } catch (error) {
+                return res.status(500).json({ message: "Category operation failed", error: error.message });
+            }
+        }
+
+        // Attributes routes
+        if (pathname.startsWith('/api/admin/attributes')) {
+            try {
+                const attributeRoutes = await import("../backend/routes/attributeRoutes.js");
+                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
+                const mockRes = {
+                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
+                    json: (data) => res.status(200).json(data)
+                };
+                await attributeRoutes.default(mockReq, mockRes);
+                return;
+            } catch (error) {
+                return res.status(500).json({ message: "Attribute operation failed", error: error.message });
+            }
+        }
+
+        // Users routes
+        if (pathname.startsWith('/api/admin/users')) {
+            try {
+                const userRoutes = await import("../backend/routes/adminUserRoutes.js");
+                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
+                const mockRes = {
+                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
+                    json: (data) => res.status(200).json(data)
+                };
+                await userRoutes.default(mockReq, mockRes);
+                return;
+            } catch (error) {
+                return res.status(500).json({ message: "User operation failed", error: error.message });
+            }
+        }
+
+        // Orders routes
+        if (pathname.startsWith('/api/orders')) {
+            try {
+                const orderRoutes = await import("../backend/routes/orders.js");
+                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
+                const mockRes = {
+                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
+                    json: (data) => res.status(200).json(data)
+                };
+                await orderRoutes.default(mockReq, mockRes);
+                return;
+            } catch (error) {
+                return res.status(500).json({ message: "Order operation failed", error: error.message });
+            }
+        }
+
         // Default response
         return res.status(200).json({
             message: "API function is running",
