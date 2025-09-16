@@ -1058,52 +1058,54 @@
                     orderHeading.innerHTML = `Order <span class="highlight">#${order.id}</span>`;
                 }
 
-                // Update order details in the UI
+                // Update order items section
                 const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
-                const subtotalEl = document.querySelector(".table-cart-totals .cart-totals-item:nth-child(1) .body-title-2");
-                const shippingEl = document.querySelector(".table-cart-totals .cart-totals-item:nth-child(3) .body-title-2");
-                const taxEl = document.querySelector(".table-cart-totals .cart-totals-item:nth-child(5) .body-title-2");
-                const totalEl = document.querySelector(".table-cart-totals .cart-totals-item:nth-child(7) .body-title-2");
-
-                // Clear existing items
                 if (itemsContainer) {
-                    itemsContainer.innerHTML = "";
-                }
-
-                // Add order item (since we don't have separate product items, we'll show the order as a single item)
-                if (itemsContainer) {
-                    const li = document.createElement("li");
-                    li.className = "product-item gap14";
-                    li.innerHTML = `
-                        <div class="image no-bg">
-                            <img src="/admin/images/products/default-order.png" alt="Order">
-                        </div>
-                        <div class="flex items-center justify-between gap20 flex-grow">
-                            <div class="name">
-                                <a href="#!" class="body-title-2">Order #${order.id}</a>
-                                <div class="text-tiny mt-3">${order.note || 'No additional notes'}</div>
+                    itemsContainer.innerHTML = `
+                        <li class="product-item gap14">
+                            <div class="image no-bg">
+                                <img src="/admin/images/products/default-order.png" alt="Order">
                             </div>
-                            <div class="body-text">1</div>
-                            <div class="body-text">₹${order.amount}</div>
-                        </div>
+                            <div class="flex items-center justify-between gap40 flex-grow">
+                                <div class="name">
+                                    <div class="text-tiny mb-1">Product name</div>
+                                    <a href="#!" class="body-title-2">Order #${order.id}</a>
+                                </div>
+                                <div class="name">
+                                    <div class="text-tiny mb-1">Quantity</div>
+                                    <div class="body-title-2">1</div>
+                                </div>
+                                <div class="name">
+                                    <div class="text-tiny mb-1">Price</div>
+                                    <div class="body-title-2">₹${order.amount}</div>
+                                </div>
+                            </div>
+                        </li>
                     `;
-                    itemsContainer.appendChild(li);
                 }
 
-                // Update totals
+                // Update cart totals section
+                const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
+                const shippingEl = document.querySelector(".cart-totals-item:nth-child(3) .body-title-2");
+                const taxEl = document.querySelector(".cart-totals-item:nth-child(5) .body-title-2");
+                const totalEl = document.querySelector(".cart-totals-item:nth-child(7) .body-title-2");
+
                 if (subtotalEl) subtotalEl.textContent = `₹${order.amount}`;
                 if (shippingEl) shippingEl.textContent = "₹0.00";
                 if (taxEl) taxEl.textContent = "₹0.00";
                 if (totalEl) totalEl.textContent = `₹${order.amount}`;
 
-                // Update customer information
-                const customerNameEl = document.querySelector(".wg-user .body-title");
-                const customerEmailEl = document.querySelector(".wg-user .text-tiny");
-                if (customerNameEl) customerNameEl.textContent = `${order.first_name} ${order.last_name}`;
-                if (customerEmailEl) customerEmailEl.textContent = order.email;
+                // Update summary section (right sidebar)
+                const orderIdEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
+                const dateEl = document.querySelector(".summary-item:nth-child(3) .body-title-2");
+                const totalSummaryEl = document.querySelector(".summary-item:nth-child(4) .body-title-2");
+
+                if (orderIdEl) orderIdEl.textContent = `#${order.id}`;
+                if (dateEl) dateEl.textContent = new Date(order.created_at).toLocaleDateString();
+                if (totalSummaryEl) totalSummaryEl.textContent = `₹${order.amount}`;
 
                 // Update shipping address
-                const shippingAddressEl = document.querySelector(".wg-address .body-text");
+                const shippingAddressEl = document.querySelector(".wg-box:nth-child(2) .body-text");
                 if (shippingAddressEl) {
                     shippingAddressEl.innerHTML = `
                         ${order.apartment || ''}<br>
@@ -1112,24 +1114,23 @@
                     `;
                 }
 
-                // Update order status
-                const statusEl = document.querySelector(".block-available");
-                if (statusEl) {
-                    statusEl.textContent = order.status;
-                    statusEl.className = `block-available ${order.status === 'completed' ? 'success' : 'pending'}`;
+                // Update payment method
+                const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
+                if (paymentMethodEl) {
+                    paymentMethodEl.innerHTML = `
+                        Razorpay Payment<br>
+                        Payment ID: ${order.razorpay_payment_id || 'Pending'}<br>
+                        Order ID: ${order.razorpay_order_id || 'N/A'}
+                    `;
                 }
 
-                // Update payment information
-                const paymentMethodEl = document.querySelector(".payment-method .body-text");
-                const paymentIdEl = document.querySelector(".payment-id .body-text");
-                if (paymentMethodEl) paymentMethodEl.textContent = "Razorpay";
-                if (paymentIdEl) paymentIdEl.textContent = order.razorpay_payment_id || "Pending";
-
-                // Update order dates
-                const orderDateEl = document.querySelector(".order-date .body-text");
-                const updateDateEl = document.querySelector(".update-date .body-text");
-                if (orderDateEl) orderDateEl.textContent = new Date(order.created_at).toLocaleDateString();
-                if (updateDateEl) updateDateEl.textContent = new Date(order.updated_at).toLocaleDateString();
+                // Update expected delivery date
+                const deliveryDateEl = document.querySelector(".wg-box:nth-child(4) .body-title-2");
+                if (deliveryDateEl) {
+                    const deliveryDate = new Date(order.created_at);
+                    deliveryDate.setDate(deliveryDate.getDate() + 3); // 3 days from order date
+                    deliveryDateEl.textContent = deliveryDate.toLocaleDateString();
+                }
 
             } catch (err) {
                 console.error("⚠️ Error loading order details:", err);

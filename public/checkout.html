@@ -569,7 +569,7 @@
                                     </button>
 
                                     <div class="text-secondary text-center mt-3 pb-4" id="registerBlock">
-                                        Don’t have an account?
+                                        Don't have an account?
                                         <a href="register.html" class="text-black pl-1 hover:underline">Register</a>
                                     </div>
 
@@ -2210,6 +2210,26 @@
         </div>
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
         <script>
+            // Calculate actual cart total instead of fixed amount
+            function calculateCartTotal() {
+                let total = 0;
+                
+                // Get all product prices from the cart
+                const priceElements = document.querySelectorAll('.product-price');
+                priceElements.forEach(priceEl => {
+                    const priceText = priceEl.textContent.replace('₹', '').replace('$', '');
+                    const price = parseFloat(priceText) || 0;
+                    total += price;
+                });
+                
+                // If no products found, use a default amount for testing
+                if (total === 0) {
+                    total = 100; // Default test amount
+                }
+                
+                return total;
+            }
+
             document.getElementById("checkout-form").addEventListener("submit", async function (e) {
                 e.preventDefault();
 
@@ -2232,7 +2252,7 @@
                     apartment: document.getElementById("apartment").value,
                     postal_code: document.getElementById("postal").value,
                     note: document.getElementById("note").value,
-                    amount: 100 // 👈 Rs.100 test payment instead of 50,000
+                    amount: calculateCartTotal() // ✅ Use actual cart total
                 };
 
                 try {
