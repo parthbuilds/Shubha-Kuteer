@@ -2798,6 +2798,22 @@
     <!-- Add this before the closing </body> tag -->
     <script src="./assets/js/backend-products.js"></script>
     <script src="./assets/js/main.js"></script>
+    <script>
+    // Initialize products when DOM is loaded
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            const products = await fetchProductsFromBackend();
+            
+            // Render products in different layouts
+            renderProducts4Card(products, '.product-grid-4', 4);
+            renderProducts6Card(products, '.product-grid-6', 6);
+            
+            console.log("✅ All product grids rendered successfully");
+        } catch (error) {
+            console.error("❌ Error initializing products:", error);
+        }
+    });
+    </script>
 </body>
 
 </html>

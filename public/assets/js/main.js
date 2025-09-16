@@ -1991,7 +1991,18 @@ fetchProductsFromBackend()
     }
 
     // =============================
-    // 🔹 Display the first 3 products for three-product sections
+    // �� Display the first 6 products
+    // =============================
+    if (listSixProduct) {
+      const firstSixProducts = frontendProducts.slice(0, 6);
+      listSixProduct.innerHTML = firstSixProducts.map((product, index) => 
+        createProductItem(product, index)
+      ).join('');
+      addEventToProductItem(listSixProduct);
+    }
+
+    // =============================
+    // 🔹 Display the first 3 products
     // =============================
     listThreeProduct.forEach((listThree) => {
       const firstThreeProducts = frontendProducts.slice(0, 3);
@@ -2000,6 +2011,27 @@ fetchProductsFromBackend()
       ).join('');
       addEventToProductItem(listThree);
     });
+
+    // =============================
+    // 🔹 Initialize tab filtering for underwear section
+    // =============================
+    initializeTabFiltering(frontendProducts);
+
+    // =============================
+    // 🔹 Display products in other four-product containers
+    // =============================
+    listFourProduct.forEach((listFour) => {
+      // Skip the tab container as it's handled by initializeTabFiltering
+      if (!listFour.closest('.tab-features-block.style-underwear')) {
+        const firstFourProducts = frontendProducts.slice(0, 4);
+        listFour.innerHTML = firstFourProducts.map((product, index) => 
+          createProductItem(product, index)
+        ).join('');
+        addEventToProductItem(listFour);
+      }
+    });
+
+    console.log("✅ All products loaded and rendered successfully");
   })
   .catch((error) => {
     console.error('Error loading products:', error);
@@ -2008,6 +2040,7 @@ fetchProductsFromBackend()
       .then((response) => response.json())
       .then((products) => {
         // Original logic here...
+        console.log("✅ Fallback products loaded");
       });
   });
 
@@ -3200,3 +3233,119 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// Backend Product Integration Functions
+async function fetchProductsFromBackend() {
+    try {
+        console.log("🔄 Fetching products from backend API...");
+        const response = await fetch('/api/products');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const products = await response.json();
+        console.log(`✅ Loaded ${products.length} products from backend`);
+        return products;
+    } catch (error) {
+        console.error("❌ Error fetching products from backend:", error);
+        
+        // Fallback to static JSON if backend fails
+        console.log("🔄 Falling back to static Product.json...");
+        try {
+            const response = await fetch('./assets/data/Product.json');
+            const fallbackProducts = await response.json();
+            console.log(`✅ Loaded ${fallbackProducts.length} products from fallback`);
+            return fallbackProducts;
+        } catch (fallbackError) {
+            console.error("❌ Fallback also failed:", fallbackError);
+            return [];
+        }
+    }
+}
+
+// Convert backend product format to frontend format
+function convertBackendProductToFrontend(product) {
+    return {
+        id: product.id,
+        category: product.category || "fashion",
+        type: product.type || "product",
+        name: product.name,
+        new: product.new || false,
+        sale: product.sale || false,
+        rate: product.rate || 0,
+        price: product.price || 0,
+        originPrice: product.originPrice || product.price || 0,
+        brand: product.brand || "SHUBHA KUTEER",
+        sold: product.sold || 0,
+        quantity: product.quantity || 0,
+        quantityPurchase: product.quantityPurchase || 1,
+        sizes: product.sizes || [],
+        variation: product.variation || [],
+        thumbImage: product.thumbImage || [],
+        images: product.images || [],
+        description: product.description || "",
+        action: product.action || "add to cart",
+        slug: product.slug || product.name.toLowerCase().replace(/\s+/g, "-")
+    };
+}
+
+// Filter products by data-item (best seller, on sale, new arrivals)
+function filterProductsByDataItem(products, dataItem) {
+    switch (dataItem) {
+        case 'best sellers':
+            return products.filter(product => product.sold > 10).slice(0, 4);
+        case 'on sale':
+            return products.filter(product => product.sale === true).slice(0, 4);
+        case 'new arrivals':
+            return products.filter(product => product.new === true).slice(0, 4);
+        default:
+            return products.slice(0, 4);
+    }
+}
+
+// Render products in tab container
+function renderProductsInTab(products, containerSelector, dataItem) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+    
+    const filteredProducts = filterProductsByDataItem(products, dataItem);
+    
+    container.innerHTML = filteredProducts.map((product, index) => 
+        createProductItem(product, index)
+    ).join('');
+    
+    addEventToProductItem(container);
+}
+
+// Initialize tab filtering for underwear section
+function initializeTabFiltering(products) {
+    const tabContainer = document.querySelector('.tab-features-block.style-underwear');
+    if (!tabContainer) return;
+    
+    const tabItems = tabContainer.querySelectorAll('.tab-item');
+    const productContainer = tabContainer.querySelector('.list-product.four-product');
+    
+    if (!productContainer) return;
+    
+    // Set initial active tab
+    const activeTab = tabContainer.querySelector('.tab-item.active');
+    if (activeTab) {
+        const dataItem = activeTab.getAttribute('data-item');
+        renderProductsInTab(products, '.tab-features-block.style-underwear .list-product.four-product', dataItem);
+    }
+    
+    // Add click event listeners to tab items
+    tabItems.forEach(tabItem => {
+        tabItem.addEventListener('click', () => {
+            // Remove active class from all tabs
+            tabItems.forEach(item => item.classList.remove('active'));
+            // Add active class to clicked tab
+            tabItem.classList.add('active');
+            
+            // Get data-item and render products
+            const dataItem = tabItem.getAttribute('data-item');
+            renderProductsInTab(products, '.tab-features-block.style-underwear .list-product.four-product', dataItem);
+        });
+    });
+}

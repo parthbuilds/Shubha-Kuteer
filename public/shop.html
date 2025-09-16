@@ -2204,6 +2204,114 @@
         <!-- Add this before the closing </body> tag -->
         <script src="./assets/js/backend-products.js"></script>
         <script src="./assets/js/main.js"></script>
+        <!-- Add this script before the closing </body> tag -->
+        <script>
+        // Shop page product loading
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const products = await fetchProductsFromBackend();
+                const frontendProducts = products.map(convertBackendProductToFrontend);
+                
+                // Render products in shop grid
+                const shopGrid = document.querySelector('.shop-product-grid');
+                if (shopGrid) {
+                    shopGrid.innerHTML = frontendProducts.map((product, index) => 
+                        createProductItem(product, index)
+                    ).join('');
+                    addEventToProductItem(shopGrid);
+                }
+                
+                // Initialize category filtering
+                initializeCategoryFiltering(frontendProducts);
+                
+                console.log("✅ Shop products loaded successfully");
+            } catch (error) {
+                console.error("❌ Error loading shop products:", error);
+            }
+        });
+
+        // Category filtering for shop page
+        function initializeCategoryFiltering(products) {
+            const categoryLinks = document.querySelectorAll('.sub-nav-mobile .nav-link a');
+            
+            categoryLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    const category = link.textContent.trim().toLowerCase();
+                    const filteredProducts = products.filter(product => 
+                        product.category.toLowerCase().includes(category) ||
+                        product.type.toLowerCase().includes(category) ||
+                        product.name.toLowerCase().includes(category)
+                    );
+                    
+                    // Render filtered products
+                    const shopGrid = document.querySelector('.shop-product-grid');
+                    if (shopGrid) {
+                        shopGrid.innerHTML = filteredProducts.map((product, index) => 
+                            createProductItem(product, index)
+                        ).join('');
+                        addEventToProductItem(shopGrid);
+                    }
+                });
+            });
+        }
+
+        // Backend Product Integration Functions (same as in main.js)
+        async function fetchProductsFromBackend() {
+            try {
+                console.log("🔄 Fetching products from backend API...");
+                const response = await fetch('/api/products');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const products = await response.json();
+                console.log(`✅ Loaded ${products.length} products from backend`);
+                return products;
+            } catch (error) {
+                console.error("❌ Error fetching products from backend:", error);
+                
+                // Fallback to static JSON if backend fails
+                console.log("🔄 Falling back to static Product.json...");
+                try {
+                    const response = await fetch('./assets/data/Product.json');
+                    const fallbackProducts = await response.json();
+                    console.log(`✅ Loaded ${fallbackProducts.length} products from fallback`);
+                    return fallbackProducts;
+                } catch (fallbackError) {
+                    console.error("❌ Fallback also failed:", fallbackError);
+                    return [];
+                }
+            }
+        }
+
+        function convertBackendProductToFrontend(product) {
+            return {
+                id: product.id,
+                category: product.category || "fashion",
+                type: product.type || "product",
+                name: product.name,
+                new: product.new || false,
+                sale: product.sale || false,
+                rate: product.rate || 0,
+                price: product.price || 0,
+                originPrice: product.originPrice || product.price || 0,
+                brand: product.brand || "SHUBHA KUTEER",
+                sold: product.sold || 0,
+                quantity: product.quantity || 0,
+                quantityPurchase: product.quantityPurchase || 1,
+                sizes: product.sizes || [],
+                variation: product.variation || [],
+                thumbImage: product.thumbImage || [],
+                images: product.images || [],
+                description: product.description || "",
+                action: product.action || "add to cart",
+                slug: product.slug || product.name.toLowerCase().replace(/\s+/g, "-")
+            };
+        }
+        </script>
 </body>
 
 </html>
