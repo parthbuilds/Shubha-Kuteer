@@ -1039,87 +1039,98 @@
     <script>
         async function loadOrderDetails(orderId) {
             try {
+                // Check admin authentication first
+                const authRes = await fetch("/api/admin/auth/check");
+                if (!authRes.ok) {
+                    window.location.href = "/admin/login.html";
+                    return;
+                }
+
                 // ✅ Fetch order details from backend
                 const res = await fetch(`/api/orders/${orderId}`);
                 if (!res.ok) throw new Error(`Order ${orderId} not found (status ${res.status})`);
                 const order = await res.json();
 
-                // ✅ Elements (safe selectors)
-                const orderHeading = document.querySelector("h3.order-title");
+                // Update page title and heading
+                document.title = `Order #${order.id} - Shubha Kuteer Admin`;
+                const orderHeading = document.querySelector("h3");
                 if (orderHeading) {
                     orderHeading.innerHTML = `Order <span class="highlight">#${order.id}</span>`;
                 }
+
+                // Update order details in the UI
                 const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
                 const subtotalEl = document.querySelector(".table-cart-totals .cart-totals-item:nth-child(1) .body-title-2");
                 const shippingEl = document.querySelector(".table-cart-totals .cart-totals-item:nth-child(3) .body-title-2");
                 const taxEl = document.querySelector(".table-cart-totals .cart-totals-item:nth-child(5) .body-title-2");
-                const totalEl = document.querySelector(".table-cart-totals .cart-totals-item:last-child .body-title.tf-color-1");
+                const totalEl = document.querySelector(".table-cart-totals .cart-totals-item:nth-child(7) .body-title-2");
 
-                const orderIdEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
-                const orderDateEl = document.querySelector(".summary-item:nth-child(3) .body-title-2");
-                const orderTotalEl = document.querySelector(".summary-item:nth-child(4) .body-title-2");
-                const shippingAddrEl = document.querySelector(".wg-box.mb-20.gap10 .body-text");
-                const paymentMethodEl = document.querySelector(".wg-box.mb-20.gap10:nth-of-type(2) .body-text");
-
-                // ✅ Reset container
-                if (itemsContainer) itemsContainer.innerHTML = "";
-
-                // ✅ Subtotal = price * quantity
-                const price = parseFloat(order.price) || 0;
-                const quantity = order.quantity || 1;
-                const subtotal = price * quantity;
-
-                // ✅ Create item row
-                const li = document.createElement("li");
-                li.className = "product-item gap14";
-                li.innerHTML = `
-        <div class="image no-bg">
-          <img src="/admin/images/products/default-order.png" alt="Product">
-        </div>
-        <div class="flex items-center justify-between gap40 flex-grow">
-          <div class="name">
-            <div class="text-tiny mb-1">Order</div>
-            <span class="body-title-2">#${order.id}</span>
-          </div>
-          <div class="name">
-            <div class="text-tiny mb-1">Quantity</div>
-            <div class="body-title-2">${quantity}</div>
-          </div>
-          <div class="name">
-            <div class="text-tiny mb-1">Price</div>
-            <div class="body-title-2">₹${price.toFixed(2)}</div>
-          </div>
-        </div>
-      `;
-                if (itemsContainer) itemsContainer.appendChild(li);
-
-                // ✅ Totals
-                const shipping = 0; // you can calculate later
-                const tax = 0;
-                const total = subtotal + shipping + tax;
-
-                if (subtotalEl) subtotalEl.textContent = `₹${subtotal.toFixed(2)}`;
-                if (shippingEl) shippingEl.textContent = `₹${shipping.toFixed(2)}`;
-                if (taxEl) taxEl.textContent = `₹${tax.toFixed(2)}`;
-                if (totalEl) totalEl.textContent = `₹${total.toFixed(2)}`;
-
-                // ✅ Summary section
-                if (orderIdEl) orderIdEl.textContent = `#${order.id}`;
-                if (orderDateEl) {
-                    orderDateEl.textContent = order.created_at
-                        ? new Date(order.created_at).toLocaleDateString()
-                        : "-";
-                }
-                if (orderTotalEl) orderTotalEl.textContent = `₹${total.toFixed(2)}`;
-
-                if (shippingAddrEl) {
-                    shippingAddrEl.textContent =
-                        order.apartment || order.city || order.region || order.country || order.postal_code
-                            ? `${order.apartment || ""}, ${order.city || ""}, ${order.region || ""}, ${order.country || ""}, ${order.postal_code || ""}`
-                            : "No shipping address provided";
+                // Clear existing items
+                if (itemsContainer) {
+                    itemsContainer.innerHTML = "";
                 }
 
-                if (paymentMethodEl) paymentMethodEl.textContent = order.payment_method || "N/A";
+                // Add order item (since we don't have separate product items, we'll show the order as a single item)
+                if (itemsContainer) {
+                    const li = document.createElement("li");
+                    li.className = "product-item gap14";
+                    li.innerHTML = `
+                        <div class="image no-bg">
+                            <img src="/admin/images/products/default-order.png" alt="Order">
+                        </div>
+                        <div class="flex items-center justify-between gap20 flex-grow">
+                            <div class="name">
+                                <a href="#!" class="body-title-2">Order #${order.id}</a>
+                                <div class="text-tiny mt-3">${order.note || 'No additional notes'}</div>
+                            </div>
+                            <div class="body-text">1</div>
+                            <div class="body-text">₹${order.amount}</div>
+                        </div>
+                    `;
+                    itemsContainer.appendChild(li);
+                }
+
+                // Update totals
+                if (subtotalEl) subtotalEl.textContent = `₹${order.amount}`;
+                if (shippingEl) shippingEl.textContent = "₹0.00";
+                if (taxEl) taxEl.textContent = "₹0.00";
+                if (totalEl) totalEl.textContent = `₹${order.amount}`;
+
+                // Update customer information
+                const customerNameEl = document.querySelector(".wg-user .body-title");
+                const customerEmailEl = document.querySelector(".wg-user .text-tiny");
+                if (customerNameEl) customerNameEl.textContent = `${order.first_name} ${order.last_name}`;
+                if (customerEmailEl) customerEmailEl.textContent = order.email;
+
+                // Update shipping address
+                const shippingAddressEl = document.querySelector(".wg-address .body-text");
+                if (shippingAddressEl) {
+                    shippingAddressEl.innerHTML = `
+                        ${order.apartment || ''}<br>
+                        ${order.city || ''}<br>
+                        ${order.postal_code || ''}
+                    `;
+                }
+
+                // Update order status
+                const statusEl = document.querySelector(".block-available");
+                if (statusEl) {
+                    statusEl.textContent = order.status;
+                    statusEl.className = `block-available ${order.status === 'completed' ? 'success' : 'pending'}`;
+                }
+
+                // Update payment information
+                const paymentMethodEl = document.querySelector(".payment-method .body-text");
+                const paymentIdEl = document.querySelector(".payment-id .body-text");
+                if (paymentMethodEl) paymentMethodEl.textContent = "Razorpay";
+                if (paymentIdEl) paymentIdEl.textContent = order.razorpay_payment_id || "Pending";
+
+                // Update order dates
+                const orderDateEl = document.querySelector(".order-date .body-text");
+                const updateDateEl = document.querySelector(".update-date .body-text");
+                if (orderDateEl) orderDateEl.textContent = new Date(order.created_at).toLocaleDateString();
+                if (updateDateEl) updateDateEl.textContent = new Date(order.updated_at).toLocaleDateString();
+
             } catch (err) {
                 console.error("⚠️ Error loading order details:", err);
                 alert("Failed to load order details");

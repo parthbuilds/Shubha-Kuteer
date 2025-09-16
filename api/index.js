@@ -277,6 +277,13 @@ export default async function handler(req, res) {
                     });
                 }
                 
+                // DELETE product
+                if (pathname.startsWith('/api/admin/products/') && req.method === 'DELETE') {
+                    const id = pathname.split('/').pop();
+                    await pool.default.query("DELETE FROM products WHERE id = ?", [id]);
+                    return res.status(200).json({ message: "Product deleted successfully!" });
+                }
+                
                 return res.status(404).json({ message: "Product endpoint not found" });
             } catch (error) {
                 console.error("Product operation error:", error);
@@ -588,7 +595,7 @@ export default async function handler(req, res) {
                     }
                 }
                 
-                // GET /api/orders
+                // GET /api/orders - Get all orders
                 if (pathname === '/api/orders' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
                         SELECT id, first_name, last_name, email, phone_number, 
@@ -599,6 +606,37 @@ export default async function handler(req, res) {
                         ORDER BY created_at DESC
                     `);
                     return res.status(200).json(rows);
+                }
+                
+                // GET /api/orders/:id - Get single order
+                if (pathname.startsWith('/api/orders/') && req.method === 'GET') {
+                    const id = pathname.split('/').pop();
+                    const [rows] = await pool.default.query(`
+                        SELECT id, first_name, last_name, email, phone_number, 
+                               city, apartment, postal_code, note, amount, 
+                               razorpay_order_id, razorpay_payment_id, status, 
+                               created_at, updated_at
+                        FROM orders
+                        WHERE id = ?
+                    `, [id]);
+                    
+                    if (rows.length === 0) {
+                        return res.status(404).json({ message: "Order not found" });
+                    }
+                    
+                    return res.status(200).json(rows[0]);
+                }
+                
+                // DELETE /api/orders/:id - Delete order
+                if (pathname.startsWith('/api/orders/') && req.method === 'DELETE') {
+                    const id = pathname.split('/').pop();
+                    const [result] = await pool.default.query("DELETE FROM orders WHERE id = ?", [id]);
+                    
+                    if (result.affectedRows === 0) {
+                        return res.status(404).json({ message: "Order not found" });
+                    }
+                    
+                    return res.status(200).json({ message: "Order deleted successfully" });
                 }
                 
                 // GET /api/orders/test - Test endpoint
