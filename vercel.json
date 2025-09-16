@@ -1,7 +1,11 @@
 {
+    "version": 2,
     "functions": {
         "api/index.js": {
             "maxDuration": 30
+        },
+        "api/hello.js": {
+            "maxDuration": 10
         }
     },
     "rewrites": [
@@ -9,5 +13,8 @@
             "source": "/api/(.*)",
             "destination": "/api"
         }
-    ]
+    ],
+    "env": {
+        "NODE_ENV": "production"
+    }
 }
