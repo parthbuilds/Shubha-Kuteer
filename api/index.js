@@ -473,15 +473,105 @@ export default async function handler(req, res) {
         // Orders routes
         if (pathname.startsWith('/api/orders')) {
             try {
-                const orderRoutes = await import("../backend/routes/orders.js");
-                const mockReq = { ...req, body: req.body, method: req.method, url: req.url };
-                const mockRes = {
-                    status: (code) => ({ json: (data) => res.status(code).json(data) }),
-                    json: (data) => res.status(200).json(data)
-                };
-                await orderRoutes.default(mockReq, mockRes);
-                return;
+                const Razorpay = await import("razorpay");
+                const pool = await import("../backend/utils/db.js");
+                
+                // Initialize Razorpay
+                const razorpay = new Razorpay.default({
+                    key_id: process.env.RAZORPAY_KEY_ID,
+                    key_secret: process.env.RAZORPAY_KEY_SECRET,
+                });
+                
+                // POST /api/orders/create-order
+                if (pathname === '/api/orders/create-order' && req.method === 'POST') {
+                    const { 
+                        first_name, last_name, email, phone_number, 
+                        city, apartment, postal_code, note, amount 
+                    } = req.body;
+                    
+                    if (!first_name || !last_name || !email || !phone_number || !amount) {
+                        return res.status(400).json({
+                            success: false,
+                            error: "Missing required fields"
+                        });
+                    }
+                    
+                    try {
+                        // Create Razorpay order
+                        const razorpayOrder = await razorpay.orders.create({
+                            amount: amount * 100, // Convert to paise
+                            currency: "INR",
+                            receipt: `order_${Date.now()}`,
+                        });
+                        
+                        // Save order to database
+                        const [result] = await pool.default.query(`
+                            INSERT INTO orders (first_name, last_name, email, phone_number, 
+                                              city, apartment, postal_code, note, amount, 
+                                              razorpay_order_id, status, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                        `, [
+                            first_name, last_name, email, phone_number,
+                            city, apartment, postal_code, note, amount,
+                            razorpayOrder.id, 'pending'
+                        ]);
+                        
+                        return res.status(200).json({
+                            success: true,
+                            key: process.env.RAZORPAY_KEY_ID,
+                            razorpay_order: razorpayOrder,
+                            order_id: result.insertId
+                        });
+                    } catch (error) {
+                        console.error("Razorpay error:", error);
+                        return res.status(500).json({
+                            success: false,
+                            error: "Payment gateway error"
+                        });
+                    }
+                }
+                
+                // POST /api/orders/capture-order
+                if (pathname === '/api/orders/capture-order' && req.method === 'POST') {
+                    const { razorpay_order_id, razorpay_payment_id, payment_status } = req.body;
+                    
+                    try {
+                        // Update order status in database
+                        await pool.default.query(`
+                            UPDATE orders 
+                            SET razorpay_payment_id = ?, status = ?, updated_at = NOW()
+                            WHERE razorpay_order_id = ?
+                        `, [razorpay_payment_id, payment_status, razorpay_order_id]);
+                        
+                        return res.status(200).json({
+                            success: true,
+                            message: "Payment captured successfully"
+                        });
+                    } catch (error) {
+                        console.error("Payment capture error:", error);
+                        return res.status(500).json({
+                            success: false,
+                            error: "Payment capture failed"
+                        });
+                    }
+                }
+                
+                // GET /api/orders
+                if (pathname === '/api/orders' && req.method === 'GET') {
+                    const [rows] = await pool.default.query(`
+                        SELECT id, first_name, last_name, email, phone_number, 
+                               city, apartment, postal_code, note, amount, 
+                               razorpay_order_id, razorpay_payment_id, status, 
+                               created_at, updated_at
+                        FROM orders
+                        ORDER BY created_at DESC
+                    `);
+                    return res.status(200).json(rows);
+                }
+                
+                return res.status(404).json({ message: "Order endpoint not found" });
             } catch (error) {
+                console.error("Order operation error:", error);
                 return res.status(500).json({ message: "Order operation failed", error: error.message });
             }
         }
