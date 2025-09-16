@@ -48,11 +48,16 @@ app.use(cors(corsOptions));
 
 // --- ADMIN LOGIN PAGE (public) ---
 app.get("/admin/login.html", (req, res) => {
-    res.sendFile(path.join(__dirname, "..", "public/admin/login.html"));
+    try {
+        res.sendFile(path.join(process.cwd(), "public/admin/login.html"));
+    } catch (error) {
+        console.error("Error serving admin login:", error);
+        res.status(500).send("Error loading page");
+    }
 });
 
 // --- ADMIN STATIC ASSETS ---
-app.use("/admin/assets", express.static(path.join(__dirname, "..", "public/admin/assets")));
+app.use("/admin/assets", express.static(path.join(process.cwd(), "public/admin/assets")));
 
 // --- API ROUTES (must come BEFORE admin page routes) ---
 app.use("/api/admin/auth", adminAuthRoutes);
@@ -64,21 +69,32 @@ app.use("/api/orders", ordersRoutes);
 app.use("/api/admin/products", productRoutes);
 app.use("/api/users", userRoutes);
 
+// --- SIMPLE TEST ENDPOINT ---
+app.get("/api/test", (req, res) => {
+    res.json({ 
+        message: "API is working", 
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || "development"
+    });
+});
+
 // --- HEALTH CHECK ENDPOINT ---
 app.get("/api/health", async (req, res) => {
     try {
-        const { testConnection } = await import("./utils/testConnection.js");
-        const result = await testConnection();
-        res.status(result.success ? 200 : 500).json({
-            status: result.success ? "healthy" : "unhealthy",
-            database: result.success ? "connected" : "disconnected",
+        // Simple health check without dynamic imports
+        const pool = await import("./utils/db.js");
+        const [rows] = await pool.default.query("SELECT 1 as test");
+        res.status(200).json({
+            status: "healthy",
+            database: "connected",
             timestamp: new Date().toISOString(),
-            ...result
+            test: rows[0]
         });
     } catch (error) {
+        console.error("Health check error:", error);
         res.status(500).json({
             status: "unhealthy",
-            database: "error",
+            database: "disconnected",
             error: error.message,
             timestamp: new Date().toISOString()
         });
@@ -87,13 +103,18 @@ app.get("/api/health", async (req, res) => {
 
 // --- PROTECTED ADMIN PAGES ---
 app.get("/admin/pages/:page", adminAuth, (req, res) => {
-    const page = req.params.page;
-    if (!page.endsWith(".html")) return res.status(404).send("Page not found");
-    res.sendFile(path.join(__dirname, "..", "public/admin", page));
+    try {
+        const page = req.params.page;
+        if (!page.endsWith(".html")) return res.status(404).send("Page not found");
+        res.sendFile(path.join(process.cwd(), "public/admin", page));
+    } catch (error) {
+        console.error("Error serving admin page:", error);
+        res.status(500).send("Error loading page");
+    }
 });
 
 // --- USER-FACING PAGES ---
-app.use(express.static(path.join(__dirname, "..", "public")));
+app.use(express.static(path.join(process.cwd(), "public")));
 
 // --- Uploads ---
 app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
@@ -108,3 +129,6 @@ if (process.env.NODE_ENV !== "production") {
         console.log(`🚀 Server running at http://localhost:${PORT}`);
     });
 }
+
+// --- Default export for ES modules ---
+export default app;
