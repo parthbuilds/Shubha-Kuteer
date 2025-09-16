@@ -227,7 +227,7 @@ export default async function handler(req, res) {
                     const [rows] = await pool.default.query(`
                         SELECT id, name, slug, price, origin_price, quantity, sold, 
                                rate, is_new, on_sale, category, description, type, brand, 
-                               main_image, created_at
+                               main_image, thumb_image, gallery, action, created_at
                         FROM products
                         ORDER BY created_at DESC
                     `);
@@ -239,29 +239,41 @@ export default async function handler(req, res) {
                     const {
                         name, slug, price, origin_price, quantity, sold, quantity_purchase,
                         rate, is_new, on_sale, sizes, variations, category, description,
-                        type, brand, main_image, gallery
+                        type, brand, main_image, gallery, action
                     } = req.body;
                     
                     if (!name || !price) {
                         return res.status(400).json({ message: "Name and price are required!" });
                     }
                     
+                    // Set thumb_image to same as main_image (as requested)
+                    const thumb_image = main_image || "";
+                    
                     const [result] = await pool.default.query(`
                         INSERT INTO products (name, slug, price, origin_price, quantity, sold, 
                                             quantity_purchase, rate, is_new, on_sale, sizes, 
                                             variations, category, description, type, brand, 
-                                            main_image, gallery)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                            main_image, thumb_image, gallery, action)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `, [
                         name, slug, price, origin_price, quantity || 0, sold || 0,
                         quantity_purchase || 0, rate || 0, is_new || 0, on_sale || 0,
                         JSON.stringify(sizes || []), JSON.stringify(variations || []),
-                        category, description, type, brand, main_image, JSON.stringify(gallery || [])
+                        category, description, type, brand, 
+                        main_image, thumb_image, JSON.stringify(gallery || []), 
+                        action || "add to cart"
                     ]);
                     
                     return res.status(200).json({
                         message: "Product added successfully!",
-                        data: { id: result.insertId, name, price }
+                        data: { 
+                            id: result.insertId, 
+                            name, 
+                            price, 
+                            main_image, 
+                            thumb_image,
+                            action: action || "add to cart"
+                        }
                     });
                 }
                 

@@ -925,6 +925,13 @@
                                                 name="slug">
                                         </fieldset>
 
+                                        <!-- Action -->
+                                        <fieldset class="action">
+                                            <div class="body-title mb-10">Action</div>
+                                            <input class="mb-10" type="text" placeholder="e.g. add to cart"
+                                                name="action" value="add to cart">
+                                        </fieldset>
+
                                         <!-- Sizes -->
                                         <fieldset class="size">
                                             <div class="body-title mb-10">Sizes</div>
@@ -1245,6 +1252,11 @@
                 // Auto-slug
                 if (!payload.slug && payload.name) {
                     payload.slug = payload.name.toLowerCase().replace(/\s+/g, "-");
+                }
+
+                // Set default action if not provided
+                if (!payload.action) {
+                    payload.action = "add to cart";
                 }
 
                 try {
