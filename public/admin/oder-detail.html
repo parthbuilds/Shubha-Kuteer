@@ -191,11 +191,11 @@
                                                     <div class="text">Order list</div>
                                                 </a>
                                             </li>
-                                            <li class="sub-menu-item">
+                                            <!-- <li class="sub-menu-item">
                                                 <a href="oder-detail.html" class="active">
                                                     <div class="text">Order detail</div>
                                                 </a>
-                                            </li>
+                                            </li> -->
                                             <li class="sub-menu-item">
                                                 <a href="/admin/oder-tracking.html" class="">
                                                     <div class="text">Order tracking</div>
@@ -384,7 +384,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Dog Food
+                                                                <a href="/admin/product-list.html" class="body-text">Dog
+                                                                    Food
                                                                     Rachael Ray Nutrish®</a>
                                                             </div>
                                                         </div>
@@ -398,7 +399,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Natural
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Natural
                                                                     Dog Food Healthy Dog Food</a>
                                                             </div>
                                                         </div>
@@ -412,7 +414,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Freshpet
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Freshpet
                                                                     Healthy Dog Food and Cat</a>
                                                             </div>
                                                         </div>
@@ -435,7 +438,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Sojos
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Sojos
                                                                     Crunchy Natural Grain Free...</a>
                                                             </div>
                                                         </div>
@@ -449,7 +453,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Kristin
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Kristin
                                                                     Watson</a>
                                                             </div>
                                                         </div>
@@ -463,7 +468,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Mega
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Mega
                                                                     Pumpkin Bone</a>
                                                             </div>
                                                         </div>
@@ -477,7 +483,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Mega
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Mega
                                                                     Pumpkin Bone</a>
                                                             </div>
                                                         </div>
@@ -885,7 +892,8 @@
                                                         <div class="flex items-center justify-between gap40 flex-grow">
                                                             <div class="name">
                                                                 <div class="text-tiny mb-1">Product name</div>
-                                                                <a href="/admin/product-list.html" class="body-title-2">Kristin
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-title-2">Kristin
                                                                     Watson</a>
                                                             </div>
                                                             <div class="name">
@@ -905,7 +913,8 @@
                                                         <div class="flex items-center justify-between gap40 flex-grow">
                                                             <div class="name">
                                                                 <div class="text-tiny mb-1">Product name</div>
-                                                                <a href="/admin/product-list.html" class="body-title-2">Kristin
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-title-2">Kristin
                                                                     Watson</a>
                                                             </div>
                                                             <div class="name">
@@ -925,7 +934,8 @@
                                                         <div class="flex items-center justify-between gap40 flex-grow">
                                                             <div class="name">
                                                                 <div class="text-tiny mb-1">Product name</div>
-                                                                <a href="/admin/product-list.html" class="body-title-2">Kristin
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-title-2">Kristin
                                                                     Watson</a>
                                                             </div>
                                                             <div class="name">
@@ -1111,17 +1121,18 @@
                 if (totalSummaryEl) totalSummaryEl.textContent = `₹${order.amount}`;
 
                 // ✅ Fix shipping address - use correct data
-                const shippingAddressEl = document.querySelector(".wg-box:nth-child(2) .body-text");
+                const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
                 if (shippingAddressEl) {
                     shippingAddressEl.innerHTML = `
-                        <strong>${order.first_name} ${order.last_name}</strong><br>
-                        ${order.apartment || ''}<br>
-                        ${order.city || ''}<br>
-                        ${order.postal_code || ''}<br>
-                        <strong>Phone:</strong> ${order.phone_number}<br>
-                        <strong>Email:</strong> ${order.email}
-                    `;
+                    <strong>${order.first_name} ${order.last_name}</strong><br>
+                    ${order.apartment || ''}<br>
+                    ${order.city || ''}<br>
+                    ${order.postal_code || ''}<br>
+                    <strong>Phone:</strong> ${order.phone_number}<br>
+                    <strong>Email:</strong> ${order.email}
+                `;
                 }
+
 
                 // Update payment method
                 const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
