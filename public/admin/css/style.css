@@ -29,8 +29,8 @@
 /**
   * Name: Shubha Kuteer Admin
   * Version: 1.0.1
-  * Author: Themesflat
-  * Author URI: http://www.themesflat.com
+  * Author: APT Media
+  * Author URI: http://www.APT Media.com
 */
 /**
 
@@ -41,7 +41,7 @@
 	* Typography
 	* Extra classes
     * link style
-    * themesflat-container
+    * APT Media-container
 
 */
 /* Reset Browsers
@@ -934,9 +934,9 @@ a:hover, a:focus {
   transition: all 0.3s ease;
 }
 
-/* themesflat-container
+/* APT Media-container
 -------------------------------------------------------------- */
-.themesflat-container {
+.APT Media-container {
   position: relative;
   margin-left: auto;
   margin-right: auto;
@@ -945,16 +945,16 @@ a:hover, a:focus {
   width: 1200px;
   max-width: 100%;
 }
-.themesflat-container .row {
+.APT Media-container .row {
   margin-left: -15px !important;
   margin-right: -15px !important;
 }
-.themesflat-container .row > * {
+.APT Media-container .row > * {
   padding-left: 15px !important;
   padding-right: 15px !important;
 }
 
-.themesflat-container.full {
+.APT Media-container.full {
   width: 100%;
 }
 
