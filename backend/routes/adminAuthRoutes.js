@@ -57,16 +57,26 @@ router.get("/check", (req, res) => {
 
 // GET /admin/me → return logged in admin details
 router.get("/me/:id", async (req, res) => {
-    const { id } = req.params;
     try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ message: "Admin ID is required ❌" });
+        }
+
         const [rows] = await pool.query(
-            "SELECT id, name, role FROM admins WHERE id = ?",
+            "SELECT id, name, role FROM admins WHERE id = ? LIMIT 1",
             [id]
         );
-        if (rows.length === 0) {
+
+        if (!rows || rows.length === 0) {
             return res.status(404).json({ message: "Admin not found ❌" });
         }
-        res.json(rows[0]); // return { id, name, role }
+
+        res.status(200).json({
+            success: true,
+            admin: rows[0] // { id, name, role }
+        });
     } catch (err) {
         console.error("DB error:", err);
         res.status(500).json({ message: "Database error ❌" });
