@@ -1973,76 +1973,420 @@ const listThreeProduct = document.querySelectorAll(
   ".list-product.three-product"
 );
 
-// Fetch products from backend API instead of JSON
-fetchProductsFromBackend()
+// Fetch products from JSON file (assuming products.json)
+fetch("./assets/data/Product.json")
+  .then((response) => response.json())
   .then((products) => {
-    // Convert backend products to frontend format
-    const frontendProducts = products.map(convertBackendProductToFrontend);
-    
     // =============================
     // 🔹 Display the first 4 products
     // =============================
-    if (listEightProduct) {
-      const firstFourProducts = frontendProducts.slice(0, 4);
-      listEightProduct.innerHTML = firstFourProducts.map((product, index) => 
-        createProductItem(product, index)
-      ).join('');
-      addEventToProductItem(listEightProduct);
-    }
+    if (listFourProduct) {
+      listFourProduct.forEach((list) => {
+        const parent = list.parentElement;
+        if (parent.querySelector(".menu-tab .active")) {
+          const menuItemActive = parent
+            .querySelector(".menu-tab .active")
+            .getAttribute("data-item");
+          const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
 
-    // =============================
-    // �� Display the first 6 products
-    // =============================
-    if (listSixProduct) {
-      const firstSixProducts = frontendProducts.slice(0, 6);
-      listSixProduct.innerHTML = firstSixProducts.map((product, index) => 
-        createProductItem(product, index)
-      ).join('');
-      addEventToProductItem(listSixProduct);
-    }
+          // ✅ Handle initial active tab
+          if (menuItemActive === "best sellers") {
+            products
+              .sort((a, b) => b.sold - a.sold)
+              .slice(0, 4)
+              .forEach((product) => {
+                const productElement = createProductItem(product);
+                list.appendChild(productElement);
+              });
+          } else if (menuItemActive === "on sale") {
+            products
+              .filter((product) => product.sale === true)
+              .slice(0, 4)
+              .forEach((product) => {
+                const productElement = createProductItem(product);
+                list.appendChild(productElement);
+              });
+          } else if (menuItemActive === "new arrivals") {
+            products
+              .filter((product) => product.new === true)
+              .slice(0, 4)
+              .forEach((product) => {
+                const productElement = createProductItem(product);
+                list.appendChild(productElement);
+              });
+          } else {
+            products
+              .filter((product) => product.type === menuItemActive)
+              .slice(0, 4)
+              .forEach((product) => {
+                const productElement = createProductItem(product);
+                list.appendChild(productElement);
+              });
+          }
 
-    // =============================
-    // 🔹 Display the first 3 products
-    // =============================
-    listThreeProduct.forEach((listThree) => {
-      const firstThreeProducts = frontendProducts.slice(0, 3);
-      listThree.innerHTML = firstThreeProducts.map((product, index) => 
-        createProductItem(product, index)
-      ).join('');
-      addEventToProductItem(listThree);
-    });
+          // ✅ Tab click handler
+          menuItems.forEach((item) => {
+            item.addEventListener("click", () => {
+              list.querySelectorAll(".product-item").forEach((prd) => prd.remove());
 
-    // =============================
-    // 🔹 Initialize tab filtering for underwear section
-    // =============================
-    initializeTabFiltering(frontendProducts);
+              const tab = item.getAttribute("data-item");
 
-    // =============================
-    // 🔹 Display products in other four-product containers
-    // =============================
-    listFourProduct.forEach((listFour) => {
-      // Skip the tab container as it's handled by initializeTabFiltering
-      if (!listFour.closest('.tab-features-block.style-underwear')) {
-        const firstFourProducts = frontendProducts.slice(0, 4);
-        listFour.innerHTML = firstFourProducts.map((product, index) => 
-          createProductItem(product, index)
-        ).join('');
-        addEventToProductItem(listFour);
-      }
-    });
+              if (tab === "best sellers") {
+                products
+                  .sort((a, b) => b.sold - a.sold)
+                  .slice(0, 4)
+                  .forEach((product) => {
+                    const productElement = createProductItem(product);
+                    list.appendChild(productElement);
+                  });
+              } else if (tab === "on sale") {
+                products
+                  .filter((product) => product.sale === true)
+                  .slice(0, 4)
+                  .forEach((product) => {
+                    const productElement = createProductItem(product);
+                    list.appendChild(productElement);
+                  });
+              } else if (tab === "new arrivals") {
+                products
+                  .filter((product) => product.new === true)
+                  .slice(0, 4)
+                  .forEach((product) => {
+                    const productElement = createProductItem(product);
+                    list.appendChild(productElement);
+                  });
+              } else {
+                products
+                  .filter((product) => product.type === tab)
+                  .slice(0, 4)
+                  .forEach((product) => {
+                    const productElement = createProductItem(product);
+                    list.appendChild(productElement);
+                  });
+              }
 
-    console.log("✅ All products loaded and rendered successfully");
-  })
-  .catch((error) => {
-    console.error('Error loading products:', error);
-    // Fallback to original JSON loading
-    fetch("./assets/data/Product.json")
-      .then((response) => response.json())
-      .then((products) => {
-        // Original logic here...
-        console.log("✅ Fallback products loaded");
+              handleActiveImgWhenColorChange(products);
+              addEventToProductItem(products);
+            });
+          });
+        } else {
+          // No active tab -> fallback
+          products.slice(0, 4).forEach((product) => {
+            const productElement = createProductItem(product);
+            list.appendChild(productElement);
+          });
+        }
       });
-  });
+    }
+
+
+
+    // Display the first 6 products
+    if (listSixProduct) {
+      const parent = listSixProduct.parentElement.parentElement.parentElement;
+      if (parent.querySelector(".menu-tab .active")) {
+        const menuItemActive = parent
+          .querySelector(".menu-tab .active")
+          .getAttribute("data-item");
+        const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
+
+        if (menuItemActive === "best sellers") {
+          if (listSixProduct.getAttribute("data-type")) {
+            products
+              .filter(
+                (product) =>
+                  product.category === listSixProduct.getAttribute("data-type")
+              )
+              .sort((a, b) => b.sold - a.sold)
+              .slice(0, 6)
+              .forEach((product) => {
+                const swiperSlide = document.createElement("div");
+                swiperSlide.classList.add("swiper-slide");
+                swiperSlide.appendChild(createProductItem(product));
+                listSixProduct.appendChild(swiperSlide);
+              });
+          } else {
+            products
+              .filter((product) => product.category === "fashion")
+              .sort((a, b) => b.sold - a.sold)
+              .slice(0, 6)
+              .forEach((product) => {
+                const swiperSlide = document.createElement("div");
+                swiperSlide.classList.add("swiper-slide");
+                swiperSlide.appendChild(createProductItem(product));
+                listSixProduct.appendChild(swiperSlide);
+              });
+          }
+        }
+
+        menuItems.forEach((item) => {
+          item.addEventListener("click", () => {
+            const productItems =
+              listSixProduct.querySelectorAll(".swiper-slide");
+
+            if (listSixProduct.getAttribute("data-type")) {
+              if (item.getAttribute("data-item") === "best sellers") {
+                products
+                  .filter(
+                    (product) =>
+                      product.category ===
+                      listSixProduct.getAttribute("data-type")
+                  )
+                  .sort((a, b) => b.sold - a.sold)
+                  .slice(0, 6)
+                  .forEach((product) => {
+                    const swiperSlide = document.createElement("div");
+                    swiperSlide.classList.add("swiper-slide");
+                    swiperSlide.appendChild(createProductItem(product));
+                    listSixProduct.appendChild(swiperSlide);
+                  });
+              }
+              if (item.getAttribute("data-item") === "on sale") {
+                products
+                  .filter(
+                    (product) =>
+                      product.sale &&
+                      product.category ===
+                      listSixProduct.getAttribute("data-type")
+                  )
+                  .slice(0, 6)
+                  .forEach((product) => {
+                    const swiperSlide = document.createElement("div");
+                    swiperSlide.classList.add("swiper-slide");
+                    swiperSlide.appendChild(createProductItem(product));
+                    listSixProduct.appendChild(swiperSlide);
+                  });
+              }
+              if (item.getAttribute("data-item") === "new arrivals") {
+                products
+                  .filter(
+                    (product) =>
+                      product.new &&
+                      product.category ===
+                      listSixProduct.getAttribute("data-type")
+                  )
+                  .slice(0, 6)
+                  .forEach((product) => {
+                    const swiperSlide = document.createElement("div");
+                    swiperSlide.classList.add("swiper-slide");
+                    swiperSlide.appendChild(createProductItem(product));
+                    listSixProduct.appendChild(swiperSlide);
+                  });
+              }
+            } else {
+              if (item.getAttribute("data-item") === "best sellers") {
+                products
+                  .filter((product) => product.category === "fashion")
+                  .sort((a, b) => b.sold - a.sold)
+                  .slice(0, 6)
+                  .forEach((product) => {
+                    const swiperSlide = document.createElement("div");
+                    swiperSlide.classList.add("swiper-slide");
+                    swiperSlide.appendChild(createProductItem(product));
+                    listSixProduct.appendChild(swiperSlide);
+                  });
+              }
+              if (item.getAttribute("data-item") === "on sale") {
+                products
+                  .filter(
+                    (product) => product.sale && product.category === "fashion"
+                  )
+                  .slice(0, 6)
+                  .forEach((product) => {
+                    const swiperSlide = document.createElement("div");
+                    swiperSlide.classList.add("swiper-slide");
+                    swiperSlide.appendChild(createProductItem(product));
+                    listSixProduct.appendChild(swiperSlide);
+                  });
+              }
+              if (item.getAttribute("data-item") === "new arrivals") {
+                products
+                  .filter(
+                    (product) => product.new && product.category === "fashion"
+                  )
+                  .slice(0, 6)
+                  .forEach((product) => {
+                    const swiperSlide = document.createElement("div");
+                    swiperSlide.classList.add("swiper-slide");
+                    swiperSlide.appendChild(createProductItem(product));
+                    listSixProduct.appendChild(swiperSlide);
+                  });
+              }
+            }
+
+            // remove old product
+            productItems.forEach((prdItem) => {
+              prdItem.remove();
+            });
+
+            handleActiveImgWhenColorChange(products);
+            addEventToProductItem(products);
+          });
+        });
+      } else {
+        if (listSixProduct.getAttribute("data-type")) {
+          products
+            .filter(
+              (product) =>
+                product.category === listSixProduct.getAttribute("data-type")
+            )
+            .slice(0, 6)
+            .forEach((product) => {
+              const swiperSlide = document.createElement("div");
+              swiperSlide.classList.add("swiper-slide");
+              swiperSlide.appendChild(createProductItem(product));
+              listSixProduct.appendChild(swiperSlide);
+            });
+        } else {
+          products.slice(5, 11).forEach((product) => {
+            const swiperSlide = document.createElement("div");
+            swiperSlide.classList.add("swiper-slide");
+            swiperSlide.appendChild(createProductItem(product));
+            listSixProduct.appendChild(swiperSlide);
+          });
+        }
+      }
+    }
+
+    // Display the first 8 products
+    if (listEightProduct) {
+      const parent = listEightProduct.parentElement;
+      if (parent.querySelector(".menu-tab .active")) {
+        const menuItemActive = parent
+          .querySelector(".menu-tab .active")
+          .getAttribute("data-item");
+        const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
+
+        if (menuItemActive === "best sellers") {
+          products
+            .filter((product) => product.category === "fashion")
+            .sort((a, b) => b.sold - a.sold)
+            .slice(0, 8)
+            .forEach((product) => {
+              const productElement = createProductItem(product);
+              listEightProduct.appendChild(productElement);
+            });
+        }
+        menuItems.forEach((item) => {
+          item.addEventListener("click", () => {
+            // remove old product
+            const productItems =
+              listEightProduct.querySelectorAll(".product-item");
+            productItems.forEach((prdItem) => {
+              prdItem.remove();
+            });
+
+            if (item.getAttribute("data-item") === "best sellers") {
+              products
+                .filter((product) => product.category === "fashion")
+                .sort((a, b) => b.sold - a.sold)
+                .slice(0, 8)
+                .forEach((product) => {
+                  const productElement = createProductItem(product);
+                  listEightProduct.appendChild(productElement);
+                });
+            }
+            if (item.getAttribute("data-item") === "on sale") {
+              products
+                .filter(
+                  (product) => product.sale && product.category === "fashion"
+                )
+                .slice(0, 8)
+                .forEach((product) => {
+                  const productElement = createProductItem(product);
+                  listEightProduct.appendChild(productElement);
+                });
+            }
+            if (item.getAttribute("data-item") === "new arrivals") {
+              products
+                .filter(
+                  (product) => product.new && product.category === "fashion"
+                )
+                .slice(0, 8)
+                .forEach((product) => {
+                  const productElement = createProductItem(product);
+                  listEightProduct.appendChild(productElement);
+                });
+            }
+
+            handleActiveImgWhenColorChange(products);
+            addEventToProductItem(products);
+          });
+        });
+      } else {
+        if (listEightProduct.getAttribute("data-type")) {
+          products
+            .filter(
+              (product) =>
+                product.category === listEightProduct.getAttribute("data-type")
+            )
+            .slice(0, 8)
+            .forEach((product) => {
+              const productElement = createProductItem(product);
+              listEightProduct.appendChild(productElement);
+            });
+        } else {
+          products.slice(11, 19).forEach((product) => {
+            const productElement = createProductItem(product);
+            listEightProduct.appendChild(productElement);
+          });
+        }
+      }
+    }
+
+    // Display 3 products(Home 11)
+    if (listThreeProduct) {
+      listThreeProduct.forEach((list) => {
+        const parent = list.parentElement;
+        const gender = list.getAttribute("data-gender");
+        const menuItemActive = parent
+          .querySelector(".menu-tab .active")
+          .getAttribute("data-item");
+        const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
+
+        products
+          .filter(
+            (product) =>
+              product.gender === gender && product.type === menuItemActive
+          )
+          .slice(0, 3)
+          .forEach((product) => {
+            const productElement = createProductItem(product);
+            list.appendChild(productElement);
+          });
+
+        menuItems.forEach((item) => {
+          item.addEventListener("click", () => {
+            // remove old product
+            const productItems = list.querySelectorAll(".product-item");
+            productItems.forEach((prdItem) => {
+              prdItem.remove();
+            });
+
+            products
+              .filter(
+                (product) =>
+                  product.gender === gender &&
+                  product.type === item.getAttribute("data-item")
+              )
+              .slice(0, 3)
+              .forEach((product) => {
+                // create product
+                const productElement = createProductItem(product);
+                list.appendChild(productElement);
+              });
+
+            handleActiveImgWhenColorChange(products);
+            addEventToProductItem(products);
+          });
+        });
+      });
+    }
+
+    handleActiveImgWhenColorChange(products);
+    addEventToProductItem(products);
+  })
+  .catch((error) => console.error("Error loading products:", error));
 
 
 
@@ -3233,119 +3577,3 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
-
-// Backend Product Integration Functions
-async function fetchProductsFromBackend() {
-    try {
-        console.log("🔄 Fetching products from backend API...");
-        const response = await fetch('/api/products');
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const products = await response.json();
-        console.log(`✅ Loaded ${products.length} products from backend`);
-        return products;
-    } catch (error) {
-        console.error("❌ Error fetching products from backend:", error);
-        
-        // Fallback to static JSON if backend fails
-        console.log("🔄 Falling back to static Product.json...");
-        try {
-            const response = await fetch('./assets/data/Product.json');
-            const fallbackProducts = await response.json();
-            console.log(`✅ Loaded ${fallbackProducts.length} products from fallback`);
-            return fallbackProducts;
-        } catch (fallbackError) {
-            console.error("❌ Fallback also failed:", fallbackError);
-            return [];
-        }
-    }
-}
-
-// Convert backend product format to frontend format
-function convertBackendProductToFrontend(product) {
-    return {
-        id: product.id,
-        category: product.category || "fashion",
-        type: product.type || "product",
-        name: product.name,
-        new: product.new || false,
-        sale: product.sale || false,
-        rate: product.rate || 0,
-        price: product.price || 0,
-        originPrice: product.originPrice || product.price || 0,
-        brand: product.brand || "SHUBHA KUTEER",
-        sold: product.sold || 0,
-        quantity: product.quantity || 0,
-        quantityPurchase: product.quantityPurchase || 1,
-        sizes: product.sizes || [],
-        variation: product.variation || [],
-        thumbImage: product.thumbImage || [],
-        images: product.images || [],
-        description: product.description || "",
-        action: product.action || "add to cart",
-        slug: product.slug || product.name.toLowerCase().replace(/\s+/g, "-")
-    };
-}
-
-// Filter products by data-item (best seller, on sale, new arrivals)
-function filterProductsByDataItem(products, dataItem) {
-    switch (dataItem) {
-        case 'best sellers':
-            return products.filter(product => product.sold > 10).slice(0, 4);
-        case 'on sale':
-            return products.filter(product => product.sale === true).slice(0, 4);
-        case 'new arrivals':
-            return products.filter(product => product.new === true).slice(0, 4);
-        default:
-            return products.slice(0, 4);
-    }
-}
-
-// Render products in tab container
-function renderProductsInTab(products, containerSelector, dataItem) {
-    const container = document.querySelector(containerSelector);
-    if (!container) return;
-    
-    const filteredProducts = filterProductsByDataItem(products, dataItem);
-    
-    container.innerHTML = filteredProducts.map((product, index) => 
-        createProductItem(product, index)
-    ).join('');
-    
-    addEventToProductItem(container);
-}
-
-// Initialize tab filtering for underwear section
-function initializeTabFiltering(products) {
-    const tabContainer = document.querySelector('.tab-features-block.style-underwear');
-    if (!tabContainer) return;
-    
-    const tabItems = tabContainer.querySelectorAll('.tab-item');
-    const productContainer = tabContainer.querySelector('.list-product.four-product');
-    
-    if (!productContainer) return;
-    
-    // Set initial active tab
-    const activeTab = tabContainer.querySelector('.tab-item.active');
-    if (activeTab) {
-        const dataItem = activeTab.getAttribute('data-item');
-        renderProductsInTab(products, '.tab-features-block.style-underwear .list-product.four-product', dataItem);
-    }
-    
-    // Add click event listeners to tab items
-    tabItems.forEach(tabItem => {
-        tabItem.addEventListener('click', () => {
-            // Remove active class from all tabs
-            tabItems.forEach(item => item.classList.remove('active'));
-            // Add active class to clicked tab
-            tabItem.classList.add('active');
-            
-            // Get data-item and render products
-            const dataItem = tabItem.getAttribute('data-item');
-            renderProductsInTab(products, '.tab-features-block.style-underwear .list-product.four-product', dataItem);
-        });
-    });
-}
