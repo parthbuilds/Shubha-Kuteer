@@ -5,7 +5,7 @@ import pool from "../utils/db.js";
 const router = express.Router();
 
 
-// GET /admin/me → return logged in admin details
+// GET /admin → return logged in admin details
 router.get("/:id", async (req, res) => {
     const { id } = req.params;
     try {
