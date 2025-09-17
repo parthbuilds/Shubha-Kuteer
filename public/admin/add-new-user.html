@@ -1129,7 +1129,7 @@
     <script>
 async function loadAdminData(adminId) {
     try {
-        const res = await fetch(`/api/admin/users/me/${adminId}`);
+        const res = await fetch(`/api/admin/users/${adminId}`);
         if (!res.ok) throw new Error("Failed to fetch admin");
         const data = await res.json();
 

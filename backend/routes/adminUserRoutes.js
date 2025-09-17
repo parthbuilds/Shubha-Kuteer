@@ -6,33 +6,22 @@ const router = express.Router();
 
 
 // GET /admin/me → return logged in admin details
-router.get("/me/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
+    const { id } = req.params;
     try {
-        const { id } = req.params;
-
-        if (!id) {
-            return res.status(400).json({ message: "Admin ID is required ❌" });
-        }
-
         const [rows] = await pool.query(
-            "SELECT id, name, role FROM admins WHERE id = ? LIMIT 1",
+            "SELECT id, name, email, role, permissions, phone FROM admins WHERE id = ?",
             [id]
         );
-
-        if (!rows || rows.length === 0) {
+        if (rows.length === 0) {
             return res.status(404).json({ message: "Admin not found ❌" });
         }
-
-        res.status(200).json({
-            success: true,
-            admin: rows[0] // { id, name, role }
-        });
+        res.json(rows[0]);
     } catch (err) {
         console.error("DB error:", err);
         res.status(500).json({ message: "Database error ❌" });
     }
 });
-
 
 // Middleware to parse ID from URL
 router.use("/:id", (req, res, next) => {
