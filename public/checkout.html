@@ -569,7 +569,7 @@
                                     </button>
 
                                     <div class="text-secondary text-center mt-3 pb-4" id="registerBlock">
-                                        Don't have an account?
+                                        Don’t have an account?
                                         <a href="register.html" class="text-black pl-1 hover:underline">Register</a>
                                     </div>
 
@@ -2210,26 +2210,6 @@
         </div>
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
         <script>
-            // Calculate actual cart total instead of fixed amount
-            function calculateCartTotal() {
-                let total = 0;
-                
-                // Get all product prices from the cart
-                const priceElements = document.querySelectorAll('.product-price');
-                priceElements.forEach(priceEl => {
-                    const priceText = priceEl.textContent.replace('₹', '').replace('$', '');
-                    const price = parseFloat(priceText) || 0;
-                    total += price;
-                });
-                
-                // If no products found, use a default amount for testing
-                if (total === 0) {
-                    total = 100; // Default test amount
-                }
-                
-                return total;
-            }
-
             document.getElementById("checkout-form").addEventListener("submit", async function (e) {
                 e.preventDefault();
 
@@ -2238,23 +2218,10 @@
 
                 if (!isLoggedIn) {
                     alert("Please log in to your account before making a payment.");
-                    return;
+                    // You can also redirect to the login page
+                    // window.location.href = 'login.html';
+                    return; // Stop the function from proceeding
                 }
-
-                // Get cart items from localStorage
-                const cartStore = localStorage.getItem("cartStore");
-                const cartItems = cartStore ? JSON.parse(cartStore) : [];
-                
-                if (cartItems.length === 0) {
-                    alert("Your cart is empty. Please add some products first.");
-                    return;
-                }
-
-                // Calculate total amount from cart
-                let totalAmount = 0;
-                cartItems.forEach(item => {
-                    totalAmount += item.price * (item.quantity || 1);
-                });
 
                 const formData = {
                     first_name: document.getElementById("firstName").value,
@@ -2265,8 +2232,7 @@
                     apartment: document.getElementById("apartment").value,
                     postal_code: document.getElementById("postal").value,
                     note: document.getElementById("note").value,
-                    amount: totalAmount, // Use calculated cart total
-                    cart_items: cartItems // Include cart items for order details
+                    amount: 100 // 👈 Rs.100 test payment instead of 50,000
                 };
 
                 try {
@@ -2289,7 +2255,7 @@
                         amount: orderData.razorpay_order.amount,
                         currency: "INR",
                         name: "Shubha Kuteer",
-                        description: `Order for ${cartItems.length} item(s) - Total: ₹${totalAmount}`,
+                        description: "Test Transaction",
                         order_id: orderData.razorpay_order.id,
                         handler: async function (response) {
                             // Send payment capture to backend
@@ -2302,13 +2268,7 @@
                                     payment_status: "completed"
                                 })
                             });
-                            
-                            // Clear cart after successful payment
-                            localStorage.removeItem("cartStore");
-                            
-                            alert("✅ Payment Successful! Your order has been placed.");
-                            // Redirect to order tracking or thank you page
-                            window.location.href = "/order-tracking.html";
+                            alert("✅ Payment Successful!");
                         },
                         prefill: {
                             name: formData.first_name + " " + formData.last_name,
