@@ -440,7 +440,7 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Kristin Watson</a>
+                                                                <a href="/admin/product-list.html" class="body-text" id="adminName">Admin</a>
                                                             </div>
                                                         </div>
                                                     </li>
@@ -722,8 +722,8 @@
                                                     <img src="/admin/images/avatar/user-1.png" alt="">
                                                 </span>
                                                 <span class="flex flex-column">
-                                                    <span class="body-title mb-2">Kristin Watson</span>
-                                                    <span class="text-tiny">Admin</span>
+                                                <span id="admin-name" class="body-title mb-2">Loading...</span>
+                                                <span id="admin-role" class="text-tiny">Admin</span>
                                                 </span>
                                             </span>
                                         </button>
@@ -931,7 +931,7 @@
                         <div class="bottom-page">
                             <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
                             <i class="icon-heart"></i>
-                            <div class="body-text">by <a href="https://aptmedia.in">APT Media</a> All rights reserved.</div>
+                            <div class="body-text">by <a href="https://aptmedia.in">Themesflat</a> All rights reserved.</div>
                         </div>
                         <!-- /bottom-page -->
                     </div>
@@ -946,7 +946,25 @@
     <!-- /#wrapper -->
 
     <!-- Javascript -->
-    <script src="/admin/js/jquery.min.js"></script>
+    <script>
+async function loadAdminData(adminId) {
+    try {
+        const res = await fetch(`/api/admin/users/me/${adminId}`);
+        if (!res.ok) throw new Error("Failed to fetch admin");
+        const data = await res.json();
+
+        // Insert into DOM
+        document.getElementById("admin-name").textContent = data.name;
+        document.getElementById("admin-role").textContent = data.role;
+    } catch (err) {
+        console.error("Error loading admin:", err);
+    }
+}
+
+// Example: pass the logged-in user's ID
+loadAdminData(1);
+</script>
+<script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>
     <script src="/admin/js/zoom.js"></script>

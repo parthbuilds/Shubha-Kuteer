@@ -55,4 +55,22 @@ router.get("/check", (req, res) => {
     }
 });
 
+// GET /admin/me → return logged in admin details
+router.get("/me/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [rows] = await pool.query(
+            "SELECT id, name, role FROM admins WHERE id = ?",
+            [id]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "Admin not found ❌" });
+        }
+        res.json(rows[0]); // return { id, name, role }
+    } catch (err) {
+        console.error("DB error:", err);
+        res.status(500).json({ message: "Database error ❌" });
+    }
+});
+
 export default router;

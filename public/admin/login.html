@@ -123,7 +123,25 @@
         });
     </script>
 
-    <script src="/admin/js/jquery.min.js"></script>
+    <script>
+async function loadAdminData(adminId) {
+    try {
+        const res = await fetch(`/api/admin/users/me/${adminId}`);
+        if (!res.ok) throw new Error("Failed to fetch admin");
+        const data = await res.json();
+
+        // Insert into DOM
+        document.getElementById("admin-name").textContent = data.name;
+        document.getElementById("admin-role").textContent = data.role;
+    } catch (err) {
+        console.error("Error loading admin:", err);
+    }
+}
+
+// Example: pass the logged-in user's ID
+loadAdminData(1);
+</script>
+<script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>
     <script src="/admin/js/main.js"></script>
