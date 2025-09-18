@@ -1127,8 +1127,16 @@
 
 
     <script>
-async function loadAdminData(adminId) {
+async function loadAdminData() {
     try {
+        // Get logged-in admin ID from storage (adjust if you store it in JWT or session)
+        const adminId = localStorage.getItem("adminId");  
+
+        if (!adminId) {
+            console.error("No adminId found in storage ❌");
+            return;
+        }
+
         const res = await fetch(`/api/admin/users/${adminId}`);
         if (!res.ok) throw new Error("Failed to fetch admin");
         const data = await res.json();
@@ -1141,9 +1149,10 @@ async function loadAdminData(adminId) {
     }
 }
 
-// Example: pass the logged-in user's ID
-loadAdminData(1);
+// Run on page load
+loadAdminData();
 </script>
+
 <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>
