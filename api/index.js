@@ -97,7 +97,7 @@ export default async function handler(req, res) {
                 const bcrypt = await import("bcrypt");
                 const jwt = await import("jsonwebtoken");
                 const pool = await import("../backend/utils/db.js");
-                
+
                 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
                 const [rows] = await pool.default.query("SELECT * FROM admins WHERE email = ?", [email]);
@@ -126,8 +126,8 @@ export default async function handler(req, res) {
                 }
                 res.setHeader('Set-Cookie', cookieOptions.join('; '));
 
-                return res.status(200).json({ 
-                    message: "Login successful ✅", 
+                return res.status(200).json({
+                    message: "Login successful ✅",
                     redirect: "/admin/index.html",
                     admin: { id: admin.id, email: admin.email, role: admin.role }
                 });
@@ -152,9 +152,9 @@ export default async function handler(req, res) {
                 }
                 res.setHeader('Set-Cookie', cookieOptions.join('; '));
 
-                return res.status(200).json({ 
-                    message: "Logged out ✅", 
-                    redirect: "/admin/login.html" 
+                return res.status(200).json({
+                    message: "Logged out ✅",
+                    redirect: "/admin/login.html"
                 });
             } catch (error) {
                 console.error("Admin logout error:", error);
@@ -166,7 +166,7 @@ export default async function handler(req, res) {
             try {
                 const jwt = await import("jsonwebtoken");
                 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
-                
+
                 const token = req.headers.cookie?.split(';')
                     .find(c => c.trim().startsWith('adminToken='))
                     ?.split('=')[1];
@@ -176,9 +176,9 @@ export default async function handler(req, res) {
                 }
 
                 const decoded = jwt.default.verify(token, JWT_SECRET);
-                return res.status(200).json({ 
-                    message: "Authorized ✅", 
-                    admin: decoded 
+                return res.status(200).json({
+                    message: "Authorized ✅",
+                    admin: decoded
                 });
             } catch (error) {
                 console.error("Admin auth check error:", error);
@@ -191,13 +191,13 @@ export default async function handler(req, res) {
             try {
                 const jwt = await import("jsonwebtoken");
                 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
-                
+
                 const token = req.headers.cookie?.split(';')
                     .find(c => c.trim().startsWith('adminToken='))
                     ?.split('=')[1];
 
                 if (!token) {
-                    return res.status(401).json({ 
+                    return res.status(401).json({
                         message: "Unauthorized ❌",
                         redirect: "/admin/login.html"
                     });
@@ -205,12 +205,12 @@ export default async function handler(req, res) {
 
                 const decoded = jwt.default.verify(token, JWT_SECRET);
                 // Token is valid, allow access
-                return res.status(200).json({ 
-                    message: "Authorized ✅", 
-                    admin: decoded 
+                return res.status(200).json({
+                    message: "Authorized ✅",
+                    admin: decoded
                 });
             } catch (error) {
-                return res.status(401).json({ 
+                return res.status(401).json({
                     message: "Unauthorized ❌",
                     redirect: "/admin/login.html"
                 });
@@ -221,7 +221,7 @@ export default async function handler(req, res) {
         if (pathname.startsWith('/api/admin/products')) {
             try {
                 const pool = await import("../backend/utils/db.js");
-                
+
                 // GET all products
                 if (pathname === '/api/admin/products' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
@@ -233,7 +233,7 @@ export default async function handler(req, res) {
                     `);
                     return res.status(200).json(rows);
                 }
-                
+
                 // POST new product
                 if (pathname === '/api/admin/products' && req.method === 'POST') {
                     const {
@@ -241,14 +241,14 @@ export default async function handler(req, res) {
                         rate, is_new, on_sale, sizes, variations, category, description,
                         type, brand, main_image, gallery, action
                     } = req.body;
-                    
+
                     if (!name || !price) {
                         return res.status(400).json({ message: "Name and price are required!" });
                     }
-                    
+
                     // Set thumb_image to same as main_image (as requested)
                     const thumb_image = main_image || "";
-                    
+
                     const [result] = await pool.default.query(`
                         INSERT INTO products (name, slug, price, origin_price, quantity, sold, 
                                             quantity_purchase, rate, is_new, on_sale, sizes, 
@@ -259,31 +259,31 @@ export default async function handler(req, res) {
                         name, slug, price, origin_price, quantity || 0, sold || 0,
                         quantity_purchase || 0, rate || 0, is_new || 0, on_sale || 0,
                         JSON.stringify(sizes || []), JSON.stringify(variations || []),
-                        category, description, type, brand, 
-                        main_image, thumb_image, JSON.stringify(gallery || []), 
+                        category, description, type, brand,
+                        main_image, thumb_image, JSON.stringify(gallery || []),
                         action || "add to cart"
                     ]);
-                    
+
                     return res.status(200).json({
                         message: "Product added successfully!",
-                        data: { 
-                            id: result.insertId, 
-                            name, 
-                            price, 
-                            main_image, 
+                        data: {
+                            id: result.insertId,
+                            name,
+                            price,
+                            main_image,
                             thumb_image,
                             action: action || "add to cart"
                         }
                     });
                 }
-                
+
                 // DELETE product
                 if (pathname.startsWith('/api/admin/products/') && req.method === 'DELETE') {
                     const id = pathname.split('/').pop();
                     await pool.default.query("DELETE FROM products WHERE id = ?", [id]);
                     return res.status(200).json({ message: "Product deleted successfully!" });
                 }
-                
+
                 return res.status(404).json({ message: "Product endpoint not found" });
             } catch (error) {
                 console.error("Product operation error:", error);
@@ -295,7 +295,7 @@ export default async function handler(req, res) {
         if (pathname.startsWith('/api/admin/categories')) {
             try {
                 const pool = await import("../backend/utils/db.js");
-                
+
                 // Handle different category endpoints
                 if (pathname === '/api/admin/categories/public' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
@@ -305,7 +305,7 @@ export default async function handler(req, res) {
                     `);
                     return res.status(200).json(rows);
                 }
-                
+
                 if (pathname === '/api/admin/categories' && req.method === 'POST') {
                     const { name, sale, data_item } = req.body;
                     if (!name) {
@@ -321,13 +321,13 @@ export default async function handler(req, res) {
                         data: { id: result.insertId, name, data_item: finalDataItem, sale: sale || 0 }
                     });
                 }
-                
+
                 if (pathname.startsWith('/api/admin/categories/') && req.method === 'DELETE') {
                     const id = pathname.split('/').pop();
                     await pool.default.query("DELETE FROM categories WHERE id = ?", [id]);
                     return res.status(200).json({ message: "Category deleted successfully!" });
                 }
-                
+
                 return res.status(404).json({ message: "Category endpoint not found" });
             } catch (error) {
                 console.error("Category operation error:", error);
@@ -339,7 +339,7 @@ export default async function handler(req, res) {
         if (pathname.startsWith('/api/admin/attributes')) {
             try {
                 const pool = await import("../backend/utils/db.js");
-                
+
                 // GET all attributes
                 if (pathname === '/api/admin/attributes' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
@@ -351,35 +351,35 @@ export default async function handler(req, res) {
                     `);
                     return res.status(200).json(rows);
                 }
-                
+
                 // POST new attribute
                 if (pathname === '/api/admin/attributes' && req.method === 'POST') {
                     const { category_id, attribute_name, attribute_value, attribute_hash } = req.body;
-                    
+
                     if (!category_id || !attribute_name || !attribute_value) {
                         return res.status(400).json({
                             message: "Missing required fields: category_id, attribute_name, attribute_value"
                         });
                     }
-                    
+
                     const [result] = await pool.default.query(`
                         INSERT INTO attributes (category_id, attribute_name, attribute_value, attribute_hash) 
                         VALUES (?, ?, ?, ?)
                     `, [category_id, attribute_name, attribute_value, attribute_hash || null]);
-                    
+
                     return res.status(200).json({
                         message: "Attribute added successfully!",
                         data: { id: result.insertId, category_id, attribute_name, attribute_value }
                     });
                 }
-                
+
                 // DELETE attribute
                 if (pathname.startsWith('/api/admin/attributes/') && req.method === 'DELETE') {
                     const id = pathname.split('/').pop();
                     await pool.default.query("DELETE FROM attributes WHERE id = ?", [id]);
                     return res.status(200).json({ message: "Attribute deleted successfully!" });
                 }
-                
+
                 return res.status(404).json({ message: "Attribute endpoint not found" });
             } catch (error) {
                 console.error("Attribute operation error:", error);
@@ -392,96 +392,133 @@ export default async function handler(req, res) {
             try {
                 const pool = await import("../backend/utils/db.js");
                 const bcrypt = await import("bcrypt");
-                
+                const jwt = await import("jsonwebtoken");
+                const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+
                 // GET all admins
                 if (pathname === '/api/admin/users' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
-                        SELECT id, name, email, phone, role, permissions, created_at
-                        FROM admins
-                        ORDER BY created_at DESC
-                    `);
+                SELECT id, name, email, phone, role, permissions, created_at
+                FROM admins
+                ORDER BY created_at DESC
+            `);
                     return res.status(200).json(rows);
                 }
-                
+
+                // GET current logged-in admin (from cookie/token)
+                if (pathname === '/api/admin/users/me' && req.method === 'GET') {
+                    try {
+                        // Extract token from cookie
+                        const token = req.headers.cookie?.split(';')
+                            .find(c => c.trim().startsWith('adminToken='))
+                            ?.split('=')[1];
+
+                        if (!token) {
+                            return res.status(401).json({ message: "Unauthorized ❌ (no token)" });
+                        }
+
+                        // Verify token
+                        const decoded = jwt.default.verify(token, JWT_SECRET);
+
+                        // Fetch admin from DB
+                        const [rows] = await pool.default.query(
+                            "SELECT id, name, email, role, phone, permissions FROM admins WHERE id = ? LIMIT 1",
+                            [decoded.id]
+                        );
+
+                        if (rows.length === 0) {
+                            return res.status(404).json({ message: "Admin not found ❌" });
+                        }
+
+                        return res.status(200).json({
+                            success: true,
+                            admin: rows[0]
+                        });
+                    } catch (err) {
+                        console.error("Error in /api/admin/users/me:", err);
+                        return res.status(500).json({ message: "Failed to fetch admin ❌", error: err.message });
+                    }
+                }
+
                 // POST new admin
                 if (pathname === '/api/admin/users' && req.method === 'POST') {
                     const { name, email, password, phone, role, permissions } = req.body;
-                    
+
                     if (!name || !email || !password) {
                         return res.status(400).json({
                             message: "Name, email, and password are required!"
                         });
                     }
-                    
+
                     // Check if admin already exists
                     const [existing] = await pool.default.query(
                         "SELECT id FROM admins WHERE email = ?", [email]
                     );
-                    
+
                     if (existing.length > 0) {
                         return res.status(409).json({ message: "Admin with this email already exists!" });
                     }
-                    
+
                     // Hash password
                     const password_hash = await bcrypt.default.hash(password, 10);
-                    
+
                     const [result] = await pool.default.query(`
-                        INSERT INTO admins (name, email, password_hash, phone, role, permissions) 
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    `, [name, email, password_hash, phone || null, role || 'admin', JSON.stringify(permissions || {})]);
-                    
+                INSERT INTO admins (name, email, password_hash, phone, role, permissions) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [name, email, password_hash, phone || null, role || 'admin', JSON.stringify(permissions || {})]);
+
                     return res.status(200).json({
                         message: "Admin created successfully!",
                         data: { id: result.insertId, name, email, role: role || 'admin' }
                     });
                 }
-                
+
                 // PUT update admin
                 if (pathname.startsWith('/api/admin/users/') && req.method === 'PUT') {
                     const id = pathname.split('/').pop();
                     const { name, email, phone } = req.body;
-                    
+
                     if (!name || !email) {
                         return res.status(400).json({
                             message: "Name and email are required!"
                         });
                     }
-                    
+
                     // Check if email already exists for another admin
                     const [existing] = await pool.default.query(
                         "SELECT id FROM admins WHERE email = ? AND id != ?", [email, id]
                     );
-                    
+
                     if (existing.length > 0) {
                         return res.status(409).json({ message: "Email already exists for another admin!" });
                     }
-                    
+
                     const [result] = await pool.default.query(`
-                        UPDATE admins SET name = ?, email = ?, phone = ? WHERE id = ?
-                    `, [name, email, phone || null, id]);
-                    
+                UPDATE admins SET name = ?, email = ?, phone = ? WHERE id = ?
+            `, [name, email, phone || null, id]);
+
                     if (result.affectedRows === 0) {
                         return res.status(404).json({ message: "Admin not found!" });
                     }
-                    
+
                     return res.status(200).json({
                         message: "Admin updated successfully!",
                         data: { id, name, email, phone }
                     });
                 }
-                
+
                 // DELETE admin
                 if (pathname.startsWith('/api/admin/users/') && req.method === 'DELETE') {
                     const id = pathname.split('/').pop();
                     const [result] = await pool.default.query("DELETE FROM admins WHERE id = ?", [id]);
-                    
+
                     if (result.affectedRows === 0) {
                         return res.status(404).json({ message: "Admin not found!" });
                     }
-                    
+
                     return res.status(200).json({ message: "Admin deleted successfully!" });
                 }
-                
+
                 return res.status(404).json({ message: "Admin endpoint not found" });
             } catch (error) {
                 console.error("Admin operation error:", error);
@@ -493,7 +530,7 @@ export default async function handler(req, res) {
         if (pathname.startsWith('/api/orders')) {
             try {
                 const pool = await import("../backend/utils/db.js");
-                
+
                 // Check if Razorpay credentials are available
                 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
                     console.error("Razorpay credentials not found in environment variables");
@@ -502,41 +539,41 @@ export default async function handler(req, res) {
                         error: "Payment gateway configuration error"
                     });
                 }
-                
+
                 const Razorpay = await import("razorpay");
-                
+
                 // Initialize Razorpay
                 const razorpay = new Razorpay.default({
                     key_id: process.env.RAZORPAY_KEY_ID,
                     key_secret: process.env.RAZORPAY_KEY_SECRET,
                 });
-                
+
                 // POST /api/orders/create-order
                 if (pathname === '/api/orders/create-order' && req.method === 'POST') {
-                    const { 
-                        first_name, last_name, email, phone_number, 
-                        city, apartment, postal_code, note, amount 
+                    const {
+                        first_name, last_name, email, phone_number,
+                        city, apartment, postal_code, note, amount
                     } = req.body;
-                    
+
                     if (!first_name || !last_name || !email || !phone_number || !amount) {
                         return res.status(400).json({
                             success: false,
                             error: "Missing required fields"
                         });
                     }
-                    
+
                     try {
                         console.log("Creating Razorpay order with amount:", amount);
-                        
+
                         // Create Razorpay order
                         const razorpayOrder = await razorpay.orders.create({
                             amount: amount * 100, // Convert to paise
                             currency: "INR",
                             receipt: `order_${Date.now()}`,
                         });
-                        
+
                         console.log("Razorpay order created:", razorpayOrder.id);
-                        
+
                         // Save order to database
                         const [result] = await pool.default.query(`
                             INSERT INTO orders (first_name, last_name, email, phone_number, 
@@ -548,9 +585,9 @@ export default async function handler(req, res) {
                             city, apartment, postal_code, note, amount,
                             razorpayOrder.id, 'pending'
                         ]);
-                        
+
                         console.log("Order saved to database with ID:", result.insertId);
-                        
+
                         return res.status(200).json({
                             success: true,
                             key: process.env.RAZORPAY_KEY_ID,
@@ -562,18 +599,18 @@ export default async function handler(req, res) {
                         console.error("Error message:", error.message);
                         console.error("Error code:", error.error?.code);
                         console.error("Error description:", error.error?.description);
-                        
+
                         return res.status(500).json({
                             success: false,
                             error: `Payment gateway error: ${error.message || 'Unknown error'}`
                         });
                     }
                 }
-                
+
                 // POST /api/orders/capture-order
                 if (pathname === '/api/orders/capture-order' && req.method === 'POST') {
                     const { razorpay_order_id, razorpay_payment_id, payment_status } = req.body;
-                    
+
                     try {
                         // Update order status in database
                         await pool.default.query(`
@@ -581,7 +618,7 @@ export default async function handler(req, res) {
                             SET razorpay_payment_id = ?, status = ?, updated_at = NOW()
                             WHERE razorpay_order_id = ?
                         `, [razorpay_payment_id, payment_status, razorpay_order_id]);
-                        
+
                         return res.status(200).json({
                             success: true,
                             message: "Payment captured successfully"
@@ -594,7 +631,7 @@ export default async function handler(req, res) {
                         });
                     }
                 }
-                
+
                 // GET /api/orders - Get all orders
                 if (pathname === '/api/orders' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
@@ -607,7 +644,7 @@ export default async function handler(req, res) {
                     `);
                     return res.status(200).json(rows);
                 }
-                
+
                 // GET /api/orders/:id - Get single order
                 if (pathname.startsWith('/api/orders/') && req.method === 'GET') {
                     const id = pathname.split('/').pop();
@@ -619,26 +656,26 @@ export default async function handler(req, res) {
                         FROM orders
                         WHERE id = ?
                     `, [id]);
-                    
+
                     if (rows.length === 0) {
                         return res.status(404).json({ message: "Order not found" });
                     }
-                    
+
                     return res.status(200).json(rows[0]);
                 }
-                
+
                 // DELETE /api/orders/:id - Delete order
                 if (pathname.startsWith('/api/orders/') && req.method === 'DELETE') {
                     const id = pathname.split('/').pop();
                     const [result] = await pool.default.query("DELETE FROM orders WHERE id = ?", [id]);
-                    
+
                     if (result.affectedRows === 0) {
                         return res.status(404).json({ message: "Order not found" });
                     }
-                    
+
                     return res.status(200).json({ message: "Order deleted successfully" });
                 }
-                
+
                 // GET /api/orders/test - Test endpoint
                 if (pathname === '/api/orders/test' && req.method === 'GET') {
                     return res.status(200).json({
@@ -649,7 +686,7 @@ export default async function handler(req, res) {
                         timestamp: new Date().toISOString()
                     });
                 }
-                
+
                 return res.status(404).json({ message: "Order endpoint not found" });
             } catch (error) {
                 console.error("Order operation error:", error);

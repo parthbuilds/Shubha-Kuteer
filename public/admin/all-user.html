@@ -1111,27 +1111,19 @@
     <script>
 async function loadAdminData() {
     try {
-        // Get logged-in admin ID from storage (adjust if you store it in JWT or session)
-        const adminId = localStorage.getItem("adminId");  
-
-        if (!adminId) {
-            console.error("No adminId found in storage ❌");
-            return;
-        }
-
-        const res = await fetch(`/api/admin/users/${adminId}`);
+        const res = await fetch("/api/admin/users/me");
         if (!res.ok) throw new Error("Failed to fetch admin");
         const data = await res.json();
 
         // Insert into DOM
-        document.getElementById("admin-name").textContent = data.name;
-        document.getElementById("admin-role").textContent = data.role;
+        document.getElementById("admin-name").textContent = data.admin.name;
+        document.getElementById("admin-role").textContent = data.admin.role;
     } catch (err) {
         console.error("Error loading admin:", err);
     }
 }
 
-// Run on page load
+// Call without ID
 loadAdminData();
 </script>
 
