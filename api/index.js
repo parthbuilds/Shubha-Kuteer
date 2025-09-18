@@ -226,8 +226,8 @@ export default async function handler(req, res) {
                 if (pathname === '/api/admin/products' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
                         SELECT id, name, slug, price, origin_price, quantity, sold, 
-                               rate, is_new, on_sale, category, description, type, brand, 
-                               main_image, thumb_image, gallery, action, created_at
+                            rate, is_new, on_sale, category, description, type, brand, 
+                            main_image, thumb_image, gallery, action, created_at
                         FROM products
                         ORDER BY created_at DESC
                     `);
@@ -344,7 +344,7 @@ export default async function handler(req, res) {
                 if (pathname === '/api/admin/attributes' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
                         SELECT a.id, a.category_id, a.attribute_name, a.attribute_value, 
-                               a.attribute_hash, a.created_at, c.name as category_name
+                            a.attribute_hash, a.created_at, c.name as category_name
                         FROM attributes a
                         LEFT JOIN categories c ON a.category_id = c.id
                         ORDER BY a.created_at DESC
@@ -577,8 +577,8 @@ export default async function handler(req, res) {
                         // Save order to database
                         const [result] = await pool.default.query(`
                             INSERT INTO orders (first_name, last_name, email, phone_number, 
-                                              city, apartment, postal_code, note, amount, 
-                                              razorpay_order_id, status, created_at)
+                                city, apartment, postal_code, note, amount, 
+                                razorpay_order_id, status, created_at)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                         `, [
                             first_name, last_name, email, phone_number,
@@ -636,9 +636,9 @@ export default async function handler(req, res) {
                 if (pathname === '/api/orders' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
                         SELECT id, first_name, last_name, email, phone_number, 
-                               city, apartment, postal_code, note, amount, 
-                               razorpay_order_id, razorpay_payment_id, status, 
-                               created_at, updated_at
+                            city, apartment, postal_code, note, amount, 
+                            razorpay_order_id, razorpay_payment_id, status, 
+                            created_at, updated_at
                         FROM orders
                         ORDER BY created_at DESC
                     `);
@@ -650,9 +650,9 @@ export default async function handler(req, res) {
                     const id = pathname.split('/').pop();
                     const [rows] = await pool.default.query(`
                         SELECT id, first_name, last_name, email, phone_number, 
-                               city, apartment, postal_code, note, amount, 
-                               razorpay_order_id, razorpay_payment_id, status, 
-                               created_at, updated_at
+                            city, apartment, postal_code, note, amount, 
+                            razorpay_order_id, razorpay_payment_id, status, 
+                            created_at, updated_at
                         FROM orders
                         WHERE id = ?
                     `, [id]);
