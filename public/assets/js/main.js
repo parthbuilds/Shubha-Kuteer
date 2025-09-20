@@ -476,7 +476,7 @@ const handleItemModalCart = () => {
     // Set money to freeship in cart
     modalCart.querySelector('.more-price').innerHTML = moneyForFreeship - totalCart
     modalCart.querySelector('.tow-bar-block .progress-line').style.width = (totalCart / moneyForFreeship * 100) + '%'
-    modalCart.querySelector('.total-cart').innerHTML = '$' + totalCart + '.00'
+    modalCart.querySelector('.total-cart').innerHTML = '₹' + totalCart + '.00'
     if (moneyForFreeship - totalCart <= 0) {
       modalCart.querySelector('.more-price').innerHTML = 0
       modalCart.querySelector('.tow-bar-block .progress-line').style.width = '100%'
@@ -496,7 +496,7 @@ const handleItemModalCart = () => {
       if (cartStore.length === 0) {
         modalCart.querySelector('.more-price').innerHTML = 0
         modalCart.querySelector('.tow-bar-block .progress-line').style.width = '0'
-        modalCart.querySelector('.total-cart').innerHTML = '$0.00'
+        modalCart.querySelector('.total-cart').innerHTML = '₹0.00'
       }
     });
   });
@@ -1210,8 +1210,8 @@ const handleItemModalQuickview = () => {
       }
     }
     modalQuickviewMain.querySelector('.product-infor .rate').innerHTML = arrOfStar
-    modalQuickviewMain.querySelector('.product-infor .product-price').innerHTML = '$' + item.price + '.00'
-    modalQuickviewMain.querySelector('.product-infor .product-origin-price del').innerHTML = '$' + item.originPrice + '.00'
+    modalQuickviewMain.querySelector('.product-infor .product-price').innerHTML = '₹' + item.price + '.00'
+    modalQuickviewMain.querySelector('.product-infor .product-origin-price del').innerHTML = '₹' + item.originPrice + '.00'
     modalQuickviewMain.querySelector('.product-infor .product-sale').innerHTML = '-' + Math.floor(100 - (item.price / item.originPrice) * 100) + '%'
     modalQuickviewMain.querySelector('.product-infor .desc').innerHTML = item.description
 
