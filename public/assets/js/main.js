@@ -3339,7 +3339,7 @@ const handleInforCart = () => {
         totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
       moneyFreeshipProgress.style.width =
         totalCart <= moneyForFreeship
-          ? `${(totalCart / moneyForFreeship) * 100}%`
+          ? `${(totalCart / moneyForFreeship)}%`
           : `100%`;
       console.log('Cart total updated:', totalCart);
     };

@@ -2257,7 +2257,7 @@
                     amount: cartTotalAmount // Use cart total instead of hardcoded 100
                 };
         
-                console.log('Processing payment for amount:', cartTotalAmount / 100, 'INR');
+                console.log('Processing payment for amount:', cartTotalAmount, 'INR');
         
                 try {
                     // Call backend to create Razorpay order
@@ -2279,7 +2279,7 @@
                         amount: orderData.razorpay_order.amount,
                         currency: "INR",
                         name: "Shubha Kuteer",
-                        description: `Payment for order - ₹${cartTotalAmount / 100}`,
+                        description: `Payment for order - ₹${cartTotalAmount}`,
                         order_id: orderData.razorpay_order.id,
                         handler: async function (response) {
                             // Send payment capture to backend
@@ -2303,7 +2303,7 @@
                             email: formData.email,
                             contact: formData.phone_number
                         },
-                        theme: { color: "#3399cc" },
+                        theme: { color: "#FFE0BF" },
                         method: {
                             upi: true,
                             card: true,
