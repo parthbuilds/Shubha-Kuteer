@@ -1088,16 +1088,16 @@
                     // Clear existing items
                     itemsContainer.innerHTML = '';
 
-                    // Add customer information
+                    // Add customer information FIRST (above items)
                     const customerLi = document.createElement('li');
                     customerLi.className = 'product-item gap14';
                     customerLi.innerHTML = `
                         <div class="image no-bg">
-                            <img src="/admin/images/products/default-order.png" alt="Order">
+                            <img src="/admin/images/products/default-order.png" alt="Customer">
                         </div>
                         <div class="flex items-center justify-between gap40 flex-grow">
                             <div class="name">
-                                <div class="text-tiny mb-1">Customer</div>
+                                <div class="text-tiny mb-1">Customer Details</div>
                                 <a href="#!" class="body-title-2">${order.first_name} ${order.last_name}</a>
                             </div>
                             <div class="name">
@@ -1107,6 +1107,10 @@
                             <div class="name">
                                 <div class="text-tiny mb-1">Phone</div>
                                 <div class="body-title-2">${order.phone_number}</div>
+                            </div>
+                            <div class="name">
+                                <div class="text-tiny mb-1">Order Date</div>
+                                <div class="body-title-2">${new Date(order.created_at).toLocaleDateString()}</div>
                             </div>
                         </div>
                     `;
@@ -1143,7 +1147,7 @@
                                         <div class="body-title-2">${product.quantity}</div>
                                     </div>
                                     <div class="name">
-                                        <div class="text-tiny mb-1">Price</div>
+                                        <div class="text-tiny mb-1">Unit Price</div>
                                         <div class="body-title-2">₹${product.price}</div>
                                     </div>
                                     <div class="name">
@@ -1174,24 +1178,31 @@
                     }
                 }
 
-                // Update cart totals section
-                const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
-                const shippingEl = document.querySelector(".cart-totals-item:nth-child(3) .body-title-2");
-                const taxEl = document.querySelector(".cart-totals-item:nth-child(5) .body-title-2");
-                const totalEl = document.querySelector(".cart-totals-item:nth-child(7) .body-title-2");
-
-                // Calculate totals from products
+                // Calculate totals from products (FIXED CALCULATION)
                 let calculatedSubtotal = 0;
                 let totalItems = 0;
                 
                 if (order.products && order.products.length > 0) {
                     order.products.forEach(product => {
-                        calculatedSubtotal += product.price * product.quantity;
+                        const productTotal = product.price * product.quantity;
+                        calculatedSubtotal += productTotal;
                         totalItems += product.quantity;
                     });
                 }
 
-                if (subtotalEl) subtotalEl.textContent = `₹${calculatedSubtotal || order.amount}`;
+                console.log('Calculated subtotal:', calculatedSubtotal);
+                console.log('Order amount from DB:', order.amount);
+
+                // Update cart totals section with CORRECT calculations
+                const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
+                const shippingEl = document.querySelector(".cart-totals-item:nth-child(3) .body-title-2");
+                const taxEl = document.querySelector(".cart-totals-item:nth-child(5) .body-title-2");
+                const totalEl = document.querySelector(".cart-totals-item:nth-child(7) .body-title-2");
+
+                // Use calculated subtotal if available, otherwise use order amount
+                const displaySubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : order.amount;
+                
+                if (subtotalEl) subtotalEl.textContent = `₹${displaySubtotal}`;
                 if (shippingEl) shippingEl.textContent = "₹0.00";
                 if (taxEl) taxEl.textContent = "₹0.00";
                 if (totalEl) totalEl.textContent = `₹${order.amount}`;
@@ -1205,17 +1216,16 @@
                 if (dateEl) dateEl.textContent = new Date(order.created_at).toLocaleDateString();
                 if (totalSummaryEl) totalSummaryEl.textContent = `₹${order.amount}`;
 
-                // ✅ Fix shipping address - use correct data
+                // ✅ Fix shipping address - REMOVE person's name, just address
                 const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
                 if (shippingAddressEl) {
                     shippingAddressEl.innerHTML = `
-                    <strong>${order.first_name} ${order.last_name}</strong><br>
-                    ${order.apartment || ''}<br>
-                    ${order.city || ''}<br>
-                    ${order.postal_code || ''}<br>
-                    <strong>Phone:</strong> ${order.phone_number}<br>
-                    <strong>Email:</strong> ${order.email}
-                `;
+                        ${order.apartment || ''}<br>
+                        ${order.city || ''}<br>
+                        ${order.postal_code || ''}<br>
+                        <strong>Phone:</strong> ${order.phone_number}<br>
+                        <strong>Email:</strong> ${order.email}
+                    `;
                 }
 
                 // Update payment method with more details
@@ -1231,12 +1241,17 @@
                     `;
                 }
 
-                // Update expected delivery date
+                // Update expected delivery date - CHANGE TO 7-10 DAYS
                 const deliveryDateEl = document.querySelector(".wg-box:nth-child(4) .body-title-2");
                 if (deliveryDateEl) {
-                    const deliveryDate = new Date(order.created_at);
-                    deliveryDate.setDate(deliveryDate.getDate() + 3); // 3 days from order date
-                    deliveryDateEl.textContent = deliveryDate.toLocaleDateString();
+                    const orderDate = new Date(order.created_at);
+                    const minDeliveryDate = new Date(orderDate);
+                    const maxDeliveryDate = new Date(orderDate);
+                    
+                    minDeliveryDate.setDate(orderDate.getDate() + 7); // 7 days minimum
+                    maxDeliveryDate.setDate(orderDate.getDate() + 10); // 10 days maximum
+                    
+                    deliveryDateEl.textContent = `${minDeliveryDate.toLocaleDateString()} - ${maxDeliveryDate.toLocaleDateString()}`;
                 }
 
                 console.log('Order details loaded successfully');
