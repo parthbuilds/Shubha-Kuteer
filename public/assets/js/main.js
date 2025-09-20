@@ -2079,8 +2079,6 @@ fetch("./assets/data/Product.json")
       });
     }
 
-
-
     // Display the first 6 products
     if (listSixProduct) {
       const parent = listSixProduct.parentElement.parentElement.parentElement;
@@ -3330,18 +3328,20 @@ const handleInforCart = () => {
       cartStore.forEach((product) => {
         totalCart += product.price * product.quantityPurchase;
       });
+      
+      // Update the global cart total
+      window.cartTotal = totalCart;
+      
       // Change value in cart page
-      document.querySelector(".total-block .total-product").innerHTML =
-        totalCart;
-      document.querySelector(".total-cart-block .total-cart").innerHTML =
-        totalCart;
+      document.querySelector(".total-block .total-product").innerHTML = totalCart;
+      document.querySelector(".total-cart-block .total-cart").innerHTML = totalCart;
       document.querySelector(".heading.banner .more-price").innerHTML =
         totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
       moneyFreeshipProgress.style.width =
         totalCart <= moneyForFreeship
           ? `${(totalCart / moneyForFreeship) * 100}%`
           : `100%`;
-      console.log(totalCart);
+      console.log('Cart total updated:', totalCart);
     };
 
     updateTotalCart();

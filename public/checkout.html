@@ -569,7 +569,7 @@
                                     </button>
 
                                     <div class="text-secondary text-center mt-3 pb-4" id="registerBlock">
-                                        Don’t have an account?
+                                        Don't have an account?
                                         <a href="register.html" class="text-black pl-1 hover:underline">Register</a>
                                     </div>
 
@@ -2210,19 +2210,41 @@
         </div>
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
         <script>
+            // Function to get cart total from main.js
+            function getCartTotal() {
+                // Get cart data from localStorage
+                let cartStore = localStorage.getItem("cartStore");
+                cartStore = cartStore ? JSON.parse(cartStore) : [];
+                
+                let totalCart = 0;
+                cartStore.forEach((product) => {
+                    totalCart += product.price * (product.quantityPurchase || 1);
+                });
+                
+                // Convert to paise (Razorpay expects amount in smallest currency unit)
+                return Math.round(totalCart * 100);
+            }
+        
             document.getElementById("checkout-form").addEventListener("submit", async function (e) {
                 e.preventDefault();
-
+        
                 // Check if the user is logged in
                 const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-
+        
                 if (!isLoggedIn) {
                     alert("Please log in to your account before making a payment.");
-                    // You can also redirect to the login page
-                    // window.location.href = 'login.html';
-                    return; // Stop the function from proceeding
+                    return;
                 }
-
+        
+                // Get cart total
+                const cartTotalAmount = getCartTotal();
+                
+                // Check if cart is empty
+                if (cartTotalAmount === 0) {
+                    alert("Your cart is empty. Please add some items before checkout.");
+                    return;
+                }
+        
                 const formData = {
                     first_name: document.getElementById("firstName").value,
                     last_name: document.getElementById("lastName").value,
@@ -2232,9 +2254,11 @@
                     apartment: document.getElementById("apartment").value,
                     postal_code: document.getElementById("postal").value,
                     note: document.getElementById("note").value,
-                    amount: 100 // 👈 Rs.100 test payment instead of 50,000
+                    amount: cartTotalAmount // Use cart total instead of hardcoded 100
                 };
-
+        
+                console.log('Processing payment for amount:', cartTotalAmount / 100, 'INR');
+        
                 try {
                     // Call backend to create Razorpay order
                     const res = await fetch("/api/orders/create-order", {
@@ -2243,19 +2267,19 @@
                         body: JSON.stringify(formData)
                     });
                     const orderData = await res.json();
-
+        
                     if (!orderData.success) {
                         alert("❌ Failed to create order: " + orderData.error);
                         return;
                     }
-
+        
                     // Razorpay Checkout options
                     const options = {
                         key: orderData.key,
                         amount: orderData.razorpay_order.amount,
                         currency: "INR",
                         name: "Shubha Kuteer",
-                        description: "Test Transaction",
+                        description: `Payment for order - ₹${cartTotalAmount / 100}`,
                         order_id: orderData.razorpay_order.id,
                         handler: async function (response) {
                             // Send payment capture to backend
@@ -2269,6 +2293,10 @@
                                 })
                             });
                             alert("✅ Payment Successful!");
+                            
+                            // Clear cart after successful payment
+                            localStorage.removeItem("cartStore");
+                            window.location.href = "order-confirmation.html"; // Redirect to success page
                         },
                         prefill: {
                             name: formData.first_name + " " + formData.last_name,
@@ -2284,7 +2312,7 @@
                             emi: true
                         }
                     };
-
+        
                     const rzp = new Razorpay(options);
                     rzp.open();
                 } catch (err) {
@@ -2293,7 +2321,6 @@
                 }
             });
         </script>
-
 
         <script src="./assets/js/login.js"></script>
         <script src="./assets/js/phosphor-icons.js"></script>
