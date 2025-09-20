@@ -2210,40 +2210,58 @@
         </div>
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
         <script>
-            // Function to get cart total from main.js
-            function getCartTotal() {
+            // Function to get cart total and products from main.js
+            function getCartData() {
                 // Get cart data from localStorage
                 let cartStore = localStorage.getItem("cartStore");
                 cartStore = cartStore ? JSON.parse(cartStore) : [];
                 
                 let totalCart = 0;
+                let products = [];
+                
                 cartStore.forEach((product) => {
                     totalCart += product.price * (product.quantityPurchase || 1);
+                    
+                    // Extract product details for backend
+                    products.push({
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        quantity: product.quantityPurchase || 1,
+                        size: product.sizes ? product.sizes[0] : null,
+                        color: product.variation && product.variation[0] ? product.variation[0].color : null,
+                        image: product.thumbImage ? product.thumbImage[0] : null,
+                        category: product.category || null,
+                        brand: product.brand || null
+                    });
                 });
                 
-                return Math.round(totalCart);
+                return {
+                    totalAmount: Math.round(totalCart),
+                    products: products
+                };
             }
-        
+
             document.getElementById("checkout-form").addEventListener("submit", async function (e) {
                 e.preventDefault();
-        
+
                 // Check if the user is logged in
                 const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        
+
                 if (!isLoggedIn) {
                     alert("Please log in to your account before making a payment.");
                     return;
                 }
-        
-                // Get cart total
-                const cartTotalAmount = getCartTotal();
+
+                // Get cart data (total + products)
+                const cartData = getCartData();
                 
                 // Check if cart is empty
-                if (cartTotalAmount === 0) {
+                if (cartData.totalAmount === 0 || cartData.products.length === 0) {
                     alert("Your cart is empty. Please add some items before checkout.");
                     return;
                 }
-        
+
                 const formData = {
                     first_name: document.getElementById("firstName").value,
                     last_name: document.getElementById("lastName").value,
@@ -2253,11 +2271,13 @@
                     apartment: document.getElementById("apartment").value,
                     postal_code: document.getElementById("postal").value,
                     note: document.getElementById("note").value,
-                    amount: cartTotalAmount // Use cart total instead of hardcoded 100
+                    amount: cartData.totalAmount,
+                    products: cartData.products // Add products array
                 };
-        
-                console.log('Processing payment for amount:', cartTotalAmount / 100, 'INR');
-        
+
+                console.log('Processing payment for amount:', cartData.totalAmount, 'INR');
+                console.log('Products in order:', cartData.products);
+
                 try {
                     // Call backend to create Razorpay order
                     const res = await fetch("/api/orders/create-order", {
@@ -2266,36 +2286,37 @@
                         body: JSON.stringify(formData)
                     });
                     const orderData = await res.json();
-        
+
                     if (!orderData.success) {
                         alert("❌ Failed to create order: " + orderData.error);
                         return;
                     }
-        
+
                     // Razorpay Checkout options
                     const options = {
                         key: orderData.key,
                         amount: orderData.razorpay_order.amount,
                         currency: "INR",
                         name: "Shubha Kuteer",
-                        description: `Payment for order - ₹${cartTotalAmount / 100}`,
+                        description: `Payment for ${cartData.products.length} item(s) - ₹${cartData.totalAmount}`,
                         order_id: orderData.razorpay_order.id,
                         handler: async function (response) {
-                            // Send payment capture to backend
+                            // Send payment capture to backend with order details
                             await fetch("/api/orders/capture-order", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({
                                     razorpay_order_id: response.razorpay_order_id,
                                     razorpay_payment_id: response.razorpay_payment_id,
-                                    payment_status: "completed"
+                                    payment_status: "completed",
+                                    order_id: orderData.order_id
                                 })
                             });
                             alert("✅ Payment Successful!");
                             
                             // Clear cart after successful payment
                             localStorage.removeItem("cartStore");
-                            window.location.href = "order-confirmation.html"; // Redirect to success page
+                            window.location.href = "order-confirmation.html";
                         },
                         prefill: {
                             name: formData.first_name + " " + formData.last_name,
@@ -2311,7 +2332,7 @@
                             emi: true
                         }
                     };
-        
+
                     const rzp = new Razorpay(options);
                     rzp.open();
                 } catch (err) {

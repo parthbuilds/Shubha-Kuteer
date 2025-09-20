@@ -550,21 +550,19 @@ export default async function handler(req, res) {
 
                 // POST /api/orders/create-order
                 if (pathname === '/api/orders/create-order' && req.method === 'POST') {
-                    const {
-                        first_name, last_name, email, phone_number,
-                        city, apartment, postal_code, note, amount
+                    const { 
+                        first_name, last_name, email, phone_number, 
+                        city, apartment, postal_code, note, amount, products 
                     } = req.body;
 
-                    if (!first_name || !last_name || !email || !phone_number || !amount) {
+                    if (!amount || !first_name || !email) {
                         return res.status(400).json({
                             success: false,
-                            error: "Missing required fields"
+                            error: 'Missing required fields: amount, first_name, email'
                         });
                     }
 
                     try {
-                        console.log("Creating Razorpay order with amount:", amount);
-
                         // Create Razorpay order
                         const razorpayOrder = await razorpay.orders.create({
                             amount: amount * 100, // Convert to paise
@@ -574,19 +572,20 @@ export default async function handler(req, res) {
 
                         console.log("Razorpay order created:", razorpayOrder.id);
 
-                        // Save order to database
+                        // Save order to database with products JSON
                         const [result] = await pool.default.query(`
                             INSERT INTO orders (first_name, last_name, email, phone_number, 
                                 city, apartment, postal_code, note, amount, 
-                                razorpay_order_id, status, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                                razorpay_order_id, status, products, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                         `, [
                             first_name, last_name, email, phone_number,
                             city, apartment, postal_code, note, amount,
-                            razorpayOrder.id, 'pending'
+                            razorpayOrder.id, 'pending', JSON.stringify(products)
                         ]);
 
                         console.log("Order saved to database with ID:", result.insertId);
+                        console.log("Products saved:", products);
 
                         return res.status(200).json({
                             success: true,
@@ -596,10 +595,6 @@ export default async function handler(req, res) {
                         });
                     } catch (error) {
                         console.error("Razorpay error details:", error);
-                        console.error("Error message:", error.message);
-                        console.error("Error code:", error.error?.code);
-                        console.error("Error description:", error.error?.description);
-
                         return res.status(500).json({
                             success: false,
                             error: `Payment gateway error: ${error.message || 'Unknown error'}`
@@ -609,7 +604,7 @@ export default async function handler(req, res) {
 
                 // POST /api/orders/capture-order
                 if (pathname === '/api/orders/capture-order' && req.method === 'POST') {
-                    const { razorpay_order_id, razorpay_payment_id, payment_status } = req.body;
+                    const { razorpay_order_id, razorpay_payment_id, payment_status, order_id } = req.body;
 
                     try {
                         // Update order status in database
@@ -619,49 +614,90 @@ export default async function handler(req, res) {
                             WHERE razorpay_order_id = ?
                         `, [razorpay_payment_id, payment_status, razorpay_order_id]);
 
+                        console.log(`Order ${order_id} payment captured successfully`);
+
                         return res.status(200).json({
                             success: true,
-                            message: "Payment captured successfully"
+                            message: 'Payment captured successfully',
+                            order_id: order_id
                         });
                     } catch (error) {
                         console.error("Payment capture error:", error);
                         return res.status(500).json({
                             success: false,
-                            error: "Payment capture failed"
+                            error: 'Failed to capture payment'
                         });
                     }
                 }
 
-                // GET /api/orders - Get all orders
+                // GET /api/orders - Get all orders with product details
                 if (pathname === '/api/orders' && req.method === 'GET') {
-                    const [rows] = await pool.default.query(`
-                        SELECT id, first_name, last_name, email, phone_number, 
-                            city, apartment, postal_code, note, amount, 
-                            razorpay_order_id, razorpay_payment_id, status, 
-                            created_at, updated_at
-                        FROM orders
-                        ORDER BY created_at DESC
-                    `);
-                    return res.status(200).json(rows);
+                    try {
+                        const [orders] = await pool.default.query(`
+                            SELECT 
+                                id, first_name, last_name, email, phone_number,
+                                city, apartment, postal_code, note, amount,
+                                razorpay_order_id, razorpay_payment_id, status,
+                                products, created_at, updated_at
+                            FROM orders 
+                            ORDER BY created_at DESC
+                        `);
+
+                        // Parse products JSON for each order
+                        const ordersWithProducts = orders.map(order => ({
+                            ...order,
+                            products: order.products ? JSON.parse(order.products) : []
+                        }));
+
+                        return res.status(200).json({
+                            success: true,
+                            orders: ordersWithProducts
+                        });
+                    } catch (error) {
+                        console.error("Get orders error:", error);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to fetch orders'
+                        });
+                    }
                 }
 
-                // GET /api/orders/:id - Get single order
+                // GET /api/orders/:id - Get specific order details
                 if (pathname.startsWith('/api/orders/') && req.method === 'GET') {
-                    const id = pathname.split('/').pop();
-                    const [rows] = await pool.default.query(`
-                        SELECT id, first_name, last_name, email, phone_number, 
-                            city, apartment, postal_code, note, amount, 
-                            razorpay_order_id, razorpay_payment_id, status, 
-                            created_at, updated_at
-                        FROM orders
-                        WHERE id = ?
-                    `, [id]);
+                    const orderId = pathname.split('/')[3];
+                    
+                    try {
+                        const [orders] = await pool.default.query(`
+                            SELECT 
+                                id, first_name, last_name, email, phone_number,
+                                city, apartment, postal_code, note, amount,
+                                razorpay_order_id, razorpay_payment_id, status,
+                                products, created_at, updated_at
+                            FROM orders 
+                            WHERE id = ?
+                        `, [orderId]);
 
-                    if (rows.length === 0) {
-                        return res.status(404).json({ message: "Order not found" });
+                        if (orders.length === 0) {
+                            return res.status(404).json({
+                                success: false,
+                                error: 'Order not found'
+                            });
+                        }
+
+                        const order = orders[0];
+                        order.products = order.products ? JSON.parse(order.products) : [];
+
+                        return res.status(200).json({
+                            success: true,
+                            order: order
+                        });
+                    } catch (error) {
+                        console.error("Get order error:", error);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to fetch order'
+                        });
                     }
-
-                    return res.status(200).json(rows[0]);
                 }
 
                 // DELETE /api/orders/:id - Delete order
