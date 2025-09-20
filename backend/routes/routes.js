@@ -14,7 +14,7 @@ router.post("/register", async (req, res) => {
     }
     try {
         const [existingMember] = await pool.query(
-            "SELECT * FROM registered_members WHERE email = ?",
+            "SELECT * FROM users WHERE email = ?",
             [email]
         );
         if (existingMember.length > 0) {
@@ -22,7 +22,7 @@ router.post("/register", async (req, res) => {
         }
         const password_hash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
         await pool.query(
-            "INSERT INTO registered_members (name, email, password_hash) VALUES (?, ?, ?)",
+            "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
             [name, email, password_hash]
         );
         res.status(201).json({ message: "Registration successful! 🎉" });
@@ -40,7 +40,7 @@ router.post("/login", async (req, res) => {
     }
     try {
         const [rows] = await pool.query(
-            "SELECT * FROM registered_members WHERE email = ?",
+            "SELECT * FROM users WHERE email = ?",
             [email]
         );
         if (rows.length === 0) {
