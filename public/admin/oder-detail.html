@@ -1045,11 +1045,10 @@
 
     <!-- Javascript -->
     <script>
-        document.addEventListener("DOMContentLoaded", async () => {
-            const orderList = document.querySelector(".table-all-category .flex-column");
-            orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">Loading orders...</div></li>`;
-
+        async function loadOrderDetails(orderId) {
             try {
+                console.log('Loading order details for ID:', orderId);
+                
                 // Check admin authentication first
                 const authRes = await fetch("/api/admin/auth/check");
                 if (!authRes.ok) {
@@ -1057,97 +1056,207 @@
                     return;
                 }
 
-                const res = await fetch("/api/orders");
-                if (!res.ok) throw new Error("Server error " + res.status);
+                // ✅ Fetch order details from backend
+                const res = await fetch(`/api/orders/${orderId}`);
+                console.log('API Response status:', res.status);
+                
+                if (!res.ok) throw new Error(`Order ${orderId} not found (status ${res.status})`);
+                
                 const response = await res.json();
+                console.log('API Response data:', response);
 
                 // Handle new API response format
-                const orders = response.success ? response.orders : response;
+                const order = response.success ? response.order : response;
+                console.log('Parsed order data:', order);
+
+                // Update page title and heading
+                document.title = `Order #${order.id} - Shubha Kuteer Admin`;
+                const orderHeading = document.querySelector("h3");
+                if (orderHeading) {
+                    orderHeading.innerHTML = `Order <span class="highlight">#${order.id}</span>`;
+                }
+
+                // Update breadcrumb
+                const breadcrumbEl = document.querySelector(".breadcrumbs li:last-child .text-tiny");
+                if (breadcrumbEl) {
+                    breadcrumbEl.textContent = `Order #${order.id}`;
+                }
+
+                // Update order items section - show actual order data
+                const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
+                if (itemsContainer) {
+                    // Clear existing items
+                    itemsContainer.innerHTML = '';
+
+                    // Add customer information
+                    const customerLi = document.createElement('li');
+                    customerLi.className = 'product-item gap14';
+                    customerLi.innerHTML = `
+                        <div class="image no-bg">
+                            <img src="/admin/images/products/default-order.png" alt="Order">
+                        </div>
+                        <div class="flex items-center justify-between gap40 flex-grow">
+                            <div class="name">
+                                <div class="text-tiny mb-1">Customer</div>
+                                <a href="#!" class="body-title-2">${order.first_name} ${order.last_name}</a>
+                            </div>
+                            <div class="name">
+                                <div class="text-tiny mb-1">Email</div>
+                                <div class="body-title-2">${order.email}</div>
+                            </div>
+                            <div class="name">
+                                <div class="text-tiny mb-1">Phone</div>
+                                <div class="body-title-2">${order.phone_number}</div>
+                            </div>
+                        </div>
+                    `;
+                    itemsContainer.appendChild(customerLi);
+
+                    // Add product items
+                    if (order.products && order.products.length > 0) {
+                        console.log('Processing products:', order.products);
+                        
+                        order.products.forEach((product, index) => {
+                            const productLi = document.createElement('li');
+                            productLi.className = 'product-item gap14';
+                            productLi.innerHTML = `
+                                <div class="image no-bg">
+                                    <img src="${product.image || '/admin/images/products/default-order.png'}" alt="${product.name}">
+                                </div>
+                                <div class="flex items-center justify-between gap40 flex-grow">
+                                    <div class="name">
+                                        <div class="text-tiny mb-1">Product ${index + 1}</div>
+                                        <a href="#!" class="body-title-2">${product.name}</a>
+                                        <div class="text-tiny mt-1" style="color: #666;">
+                                            ${product.category ? `Category: ${product.category}` : ''}
+                                            ${product.brand ? ` | Brand: ${product.brand}` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="name">
+                                        <div class="text-tiny mb-1">Size/Color</div>
+                                        <div class="body-title-2">
+                                            ${product.size || 'N/A'} / ${product.color || 'N/A'}
+                                        </div>
+                                    </div>
+                                    <div class="name">
+                                        <div class="text-tiny mb-1">Quantity</div>
+                                        <div class="body-title-2">${product.quantity}</div>
+                                    </div>
+                                    <div class="name">
+                                        <div class="text-tiny mb-1">Price</div>
+                                        <div class="body-title-2">₹${product.price}</div>
+                                    </div>
+                                    <div class="name">
+                                        <div class="text-tiny mb-1">Total</div>
+                                        <div class="body-title-2">₹${product.price * product.quantity}</div>
+                                    </div>
+                                </div>
+                            `;
+                            itemsContainer.appendChild(productLi);
+                        });
+                    } else {
+                        console.log('No products found for this order');
+                        // No products found
+                        const noProductsLi = document.createElement('li');
+                        noProductsLi.className = 'product-item gap14';
+                        noProductsLi.innerHTML = `
+                            <div class="image no-bg">
+                                <img src="/admin/images/products/default-order.png" alt="No Products">
+                            </div>
+                            <div class="flex items-center justify-between gap40 flex-grow">
+                                <div class="name">
+                                    <div class="text-tiny mb-1">Products</div>
+                                    <div class="body-title-2" style="color: #999;">No products found</div>
+                                </div>
+                            </div>
+                        `;
+                        itemsContainer.appendChild(noProductsLi);
+                    }
+                }
+
+                // Update cart totals section
+                const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
+                const shippingEl = document.querySelector(".cart-totals-item:nth-child(3) .body-title-2");
+                const taxEl = document.querySelector(".cart-totals-item:nth-child(5) .body-title-2");
+                const totalEl = document.querySelector(".cart-totals-item:nth-child(7) .body-title-2");
+
+                // Calculate totals from products
+                let calculatedSubtotal = 0;
+                let totalItems = 0;
                 
-                orderList.innerHTML = ""; // clear loading
-
-                if (!orders || orders.length === 0) {
-                    orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">No orders found</div></li>`;
-                    return;
-                }
-
-                orders.forEach(order => {
-                    const li = document.createElement("li");
-                    li.className = "product-item gap14";
-                    li.dataset.id = order.id;
-
-                    // Calculate total items count from products
-                    const totalItems = order.products ? order.products.reduce((sum, product) => sum + product.quantity, 0) : 0;
-                    
-                    // Get product names for display
-                    const productNames = order.products && order.products.length > 0 
-                        ? order.products.map(p => p.name).join(', ') 
-                        : 'No products';
-
-                    li.innerHTML = `
-                <div class="image no-bg">
-                    <img src="/admin/images/products/default-order.png" alt="Order">
-                </div>
-                <div class="flex items-center justify-between gap20 flex-grow">
-                    <div class="name">
-                        <a href="#!" class="body-title-2">${order.first_name} ${order.last_name}</a>
-                        <div class="text-tiny mt-1" style="color: #666; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productNames}">
-                            ${productNames}
-                        </div>
-                    </div>
-                    <div class="body-text">#${order.razorpay_order_id || order.id}</div>
-                    <div class="body-text">₹${order.amount}</div>
-                    <div class="body-text">${totalItems}</div>
-                    <div class="body-text">Razorpay</div>
-                    <div>
-                        <div class="block-available ${order.status === 'completed' ? 'success' : 'pending'}">
-                            ${order.status}
-                        </div>
-                    </div>
-                    <div>
-                        <div class="block-tracking">${order.status}</div>
-                    </div>
-                    <div class="list-icon-function">
-                        <div class="item eye" data-id="${order.id}"><i class="icon-eye"></i></div>
-                        <div class="item edit"><i class="icon-edit-3"></i></div>
-                        <div class="item trash" data-id="${order.id}"><i class="icon-trash-2"></i></div>
-                    </div>
-                </div>
-            `;
-
-                    // 👁️ View order (redirect to order detail page)
-                    li.querySelector(".eye").addEventListener("click", () => {
-                        window.location.href = `/admin/oder-detail.html?id=${order.id}`;
+                if (order.products && order.products.length > 0) {
+                    order.products.forEach(product => {
+                        calculatedSubtotal += product.price * product.quantity;
+                        totalItems += product.quantity;
                     });
-
-                    // 🗑️ Delete handler
-                    li.querySelector(".trash").addEventListener("click", () => deleteOrder(order.id));
-
-                    orderList.appendChild(li);
-                });
-
-            } catch (err) {
-                console.error("⚠️ Error fetching orders:", err);
-                orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">Error loading orders</div></li>`;
-            }
-        });
-
-        // delete function (optional)
-        async function deleteOrder(id) {
-            if (!confirm("Are you sure you want to delete this order?")) return;
-            try {
-                const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("✅ " + data.message);
-                    document.querySelector(`li[data-id="${id}"]`).remove();
-                } else {
-                    alert("❌ Error: " + data.message);
                 }
+
+                if (subtotalEl) subtotalEl.textContent = `₹${calculatedSubtotal || order.amount}`;
+                if (shippingEl) shippingEl.textContent = "₹0.00";
+                if (taxEl) taxEl.textContent = "₹0.00";
+                if (totalEl) totalEl.textContent = `₹${order.amount}`;
+
+                // Update summary section (right sidebar)
+                const orderIdEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
+                const dateEl = document.querySelector(".summary-item:nth-child(3) .body-title-2");
+                const totalSummaryEl = document.querySelector(".summary-item:nth-child(4) .body-title-2");
+
+                if (orderIdEl) orderIdEl.textContent = `#${order.id}`;
+                if (dateEl) dateEl.textContent = new Date(order.created_at).toLocaleDateString();
+                if (totalSummaryEl) totalSummaryEl.textContent = `₹${order.amount}`;
+
+                // ✅ Fix shipping address - use correct data
+                const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
+                if (shippingAddressEl) {
+                    shippingAddressEl.innerHTML = `
+                    <strong>${order.first_name} ${order.last_name}</strong><br>
+                    ${order.apartment || ''}<br>
+                    ${order.city || ''}<br>
+                    ${order.postal_code || ''}<br>
+                    <strong>Phone:</strong> ${order.phone_number}<br>
+                    <strong>Email:</strong> ${order.email}
+                `;
+                }
+
+                // Update payment method with more details
+                const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
+                if (paymentMethodEl) {
+                    paymentMethodEl.innerHTML = `
+                        <strong>Payment Method:</strong> Razorpay<br>
+                        <strong>Status:</strong> ${order.status}<br>
+                        <strong>Payment ID:</strong> ${order.razorpay_payment_id || 'Pending'}<br>
+                        <strong>Order ID:</strong> ${order.razorpay_order_id || 'N/A'}<br>
+                        <strong>Total Items:</strong> ${totalItems}<br>
+                        <strong>Note:</strong> ${order.note || 'No additional notes'}
+                    `;
+                }
+
+                // Update expected delivery date
+                const deliveryDateEl = document.querySelector(".wg-box:nth-child(4) .body-title-2");
+                if (deliveryDateEl) {
+                    const deliveryDate = new Date(order.created_at);
+                    deliveryDate.setDate(deliveryDate.getDate() + 3); // 3 days from order date
+                    deliveryDateEl.textContent = deliveryDate.toLocaleDateString();
+                }
+
+                console.log('Order details loaded successfully');
+
             } catch (err) {
-                console.error("Delete failed:", err);
-                alert("⚠️ Failed to delete order");
+                console.error("⚠️ Error loading order details:", err);
+                alert("Failed to load order details: " + err.message);
             }
+        }
+
+        // ✅ Get orderId from URL (order-detail.html?id=15)
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get("id");
+
+        console.log('Order ID from URL:', orderId);
+
+        if (orderId) {
+            loadOrderDetails(orderId);
+        } else {
+            alert("No order ID found in URL");
         }
     </script>
 
