@@ -1196,9 +1196,9 @@
                 
                 if (order.products && order.products.length > 0) {
                     order.products.forEach(product => {
-                        const productTotal = product.price * product.quantity;
+                        const productTotal = parseFloat(product.price) * parseInt(product.quantity);
                         calculatedSubtotal += productTotal;
-                        totalItems += product.quantity;
+                        totalItems += parseInt(product.quantity);
                         console.log(`Product: ${product.name}, Price: ${product.price}, Qty: ${product.quantity}, Total: ${productTotal}`);
                     });
                 }
@@ -1207,24 +1207,75 @@
                 console.log('Order amount from DB:', order.amount);
                 console.log('Total items:', totalItems);
 
+                // ✅ FIX TOTAL PRICE - Try multiple selectors to find the correct element
+                const totalSelectors = [
+                    ".cart-totals-item:nth-child(7) .body-title-2",
+                    ".cart-totals-item:last-child .body-title-2", 
+                    ".cart-totals-item .body-title-2:last-child",
+                    "[class*='cart-totals'] .body-title-2:last-child",
+                    ".cart-totals .body-title-2:last-child"
+                ];
+
+                let totalEl = null;
+                for (let selector of totalSelectors) {
+                    totalEl = document.querySelector(selector);
+                    if (totalEl) {
+                        console.log('Found total element with selector:', selector);
+                        break;
+                    }
+                }
+
+                // Also try to find by text content
+                if (!totalEl) {
+                    const allTotalElements = document.querySelectorAll('.body-title-2');
+                    allTotalElements.forEach(el => {
+                        if (el.textContent.includes('₹') && el.textContent.includes('.')) {
+                            console.log('Found potential total element by content:', el.textContent);
+                            totalEl = el;
+                        }
+                    });
+                }
+
                 // Update cart totals section with CORRECT calculations
                 const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
                 const shippingEl = document.querySelector(".cart-totals-item:nth-child(3) .body-title-2");
                 const taxEl = document.querySelector(".cart-totals-item:nth-child(5) .body-title-2");
-                const totalEl = document.querySelector(".cart-totals-item:nth-child(7) .body-title-2");
 
                 // Use calculated subtotal if available, otherwise use order amount
                 const displaySubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : order.amount;
                 
-                if (subtotalEl) subtotalEl.textContent = `₹${displaySubtotal}`;
-                if (shippingEl) shippingEl.textContent = "₹0.00";
-                if (taxEl) taxEl.textContent = "₹0.00";
+                if (subtotalEl) {
+                    subtotalEl.textContent = `₹${displaySubtotal}`;
+                    console.log('Updated subtotal to:', `₹${displaySubtotal}`);
+                }
+                if (shippingEl) {
+                    shippingEl.textContent = "₹0.00";
+                    console.log('Updated shipping to: ₹0.00');
+                }
+                if (taxEl) {
+                    taxEl.textContent = "₹0.00";
+                    console.log('Updated tax to: ₹0.00');
+                }
                 
                 // ✅ FIX TOTAL PRICE - Use the calculated total or order amount
                 const finalTotal = calculatedSubtotal > 0 ? calculatedSubtotal : order.amount;
-                if (totalEl) totalEl.textContent = `₹${finalTotal}`;
                 
-                console.log('Final total displayed:', finalTotal);
+                if (totalEl) {
+                    totalEl.textContent = `₹${finalTotal}`;
+                    console.log('Updated total to:', `₹${finalTotal}`);
+                } else {
+                    console.error('Could not find total element to update!');
+                    // Try to find and update all elements that might be the total
+                    const allCartElements = document.querySelectorAll('[class*="cart"] .body-title-2');
+                    allCartElements.forEach(el => {
+                        if (el.textContent.includes('₹90.58')) {
+                            el.textContent = `₹${finalTotal}`;
+                            console.log('Updated total element by content matching');
+                        }
+                    });
+                }
+                
+                console.log('Final total calculated:', finalTotal);
 
                 // Update summary section (right sidebar)
                 const orderIdEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
