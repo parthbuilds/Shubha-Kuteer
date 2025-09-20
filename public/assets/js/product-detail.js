@@ -252,8 +252,8 @@ if (productDetail) {
             productDetail.querySelector('.product-category').innerHTML = productMain.category
             productDetail.querySelector('.product-name').innerHTML = productMain.name
             productDetail.querySelector('.product-description').innerHTML = productMain.description
-            productDetail.querySelector('.product-price').innerHTML = '$' + productMain.price + '.00'
-            productDetail.querySelector('.product-origin-price').innerHTML = '<del>$' + productMain.originPrice + '.00</del>'
+            productDetail.querySelector('.product-price').innerHTML = '₹' + productMain.price + '.00'
+            productDetail.querySelector('.product-origin-price').innerHTML = '<del>₹' + productMain.originPrice + '.00</del>'
             productDetail.querySelector('.product-sale').innerHTML = '-' + Math.floor(100 - ((productMain.price / productMain.originPrice) * 100)) + '%'
 
             productMain.variation.map((item) => {
