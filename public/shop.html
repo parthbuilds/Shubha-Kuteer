@@ -2163,7 +2163,7 @@
                     const response = await fetch("/api/admin/categories/public");
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ₹{response.status}`);
+                        throw new Error(`HTTP error! Status: ${response.status}`);
                     }
 
                     const categories = await response.json();
@@ -2183,9 +2183,9 @@
 
                         item.innerHTML = `
           <div class="type-name text-secondary has-line-before hover:text-black capitalize">
-            ₹{cat.name}
+            ${cat.name}
           </div>
-          <div class="text-secondary2 number">₹{cat.count ?? 0}</div>
+          <div class="text-secondary2 number">${cat.count ?? 0}</div>
         `;
 
                         container.appendChild(item);
