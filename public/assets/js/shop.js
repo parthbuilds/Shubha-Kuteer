@@ -85,15 +85,15 @@ rangeInput.forEach(input => {
             progress.style.right = 100 - (maxValue / rangeInput[1].max) * 100 + "%";
         }
 
-        minPrice.innerHTML = '$' + minValue
-        maxPrice.innerHTML = '$' + maxValue
+        minPrice.innerHTML = '₹' + minValue
+        maxPrice.innerHTML = '₹' + maxValue
 
         if (minValue >= 290) {
-            minPrice.innerHTML = '$' + 290
+            minPrice.innerHTML = '₹' + 290
         }
 
         if (maxValue <= 10) {
-            maxPrice.innerHTML = '$' + 10
+            maxPrice.innerHTML = '₹' + 10
         }
     })
 })
@@ -179,7 +179,7 @@ function fetchProducts() {
                     if (document.querySelector('.filter-price select')) {
                         const selectPrice = document.querySelector('.filter-price select').value;
                         if (selectPrice !== "null") {
-                            const [min, max] = selectPrice.split('-').map(val => parseInt(val.replace('$', '').trim()));
+                            const [min, max] = selectPrice.split('-').map(val => parseInt(val.replace('₹', '').trim()));
                             selectedFilters.minPrice = parseInt(min);
                             selectedFilters.maxPrice = parseInt(max);
                         } else {
