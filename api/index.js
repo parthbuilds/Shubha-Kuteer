@@ -702,14 +702,32 @@ export default async function handler(req, res) {
 
                 // DELETE /api/orders/:id - Delete order
                 if (pathname.startsWith('/api/orders/') && req.method === 'DELETE') {
-                    const id = pathname.split('/').pop();
-                    const [result] = await pool.default.query("DELETE FROM orders WHERE id = ?", [id]);
+                    const orderId = pathname.split('/')[3];
+                    
+                    try {
+                        const [result] = await pool.default.query(
+                            'DELETE FROM orders WHERE id = ?',
+                            [orderId]
+                        );
 
-                    if (result.affectedRows === 0) {
-                        return res.status(404).json({ message: "Order not found" });
+                        if (result.affectedRows === 0) {
+                            return res.status(404).json({
+                                success: false,
+                                message: 'Order not found'
+                            });
+                        }
+
+                        return res.status(200).json({
+                            success: true,
+                            message: 'Order deleted successfully'
+                        });
+                    } catch (error) {
+                        console.error("Delete order error:", error);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to delete order'
+                        });
                     }
-
-                    return res.status(200).json({ message: "Order deleted successfully" });
                 }
 
                 // GET /api/orders/test - Test endpoint

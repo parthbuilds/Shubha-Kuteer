@@ -979,13 +979,16 @@
                     return;
                 }
 
-                const res = await fetch("/api/orders"); // Fixed: removed localhost:3000
+                const res = await fetch("/api/orders");
                 if (!res.ok) throw new Error("Server error " + res.status);
-                const orders = await res.json();
+                const response = await res.json();
 
+                // Handle new API response format
+                const orders = response.success ? response.orders : response;
+                
                 orderList.innerHTML = ""; // clear loading
 
-                if (orders.length === 0) {
+                if (!orders || orders.length === 0) {
                     orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">No orders found</div></li>`;
                     return;
                 }
@@ -995,6 +998,14 @@
                     li.className = "product-item gap14";
                     li.dataset.id = order.id;
 
+                    // Calculate total items count from products
+                    const totalItems = order.products ? order.products.reduce((sum, product) => sum + product.quantity, 0) : 0;
+                    
+                    // Get product names for display
+                    const productNames = order.products && order.products.length > 0 
+                        ? order.products.map(p => p.name).join(', ') 
+                        : 'No products';
+
                     li.innerHTML = `
             <div class="image no-bg">
                 <img src="/admin/images/products/default-order.png" alt="Order">
@@ -1002,10 +1013,13 @@
             <div class="flex items-center justify-between gap20 flex-grow">
                 <div class="name">
                     <a href="#!" class="body-title-2">${order.first_name} ${order.last_name}</a>
+                    <div class="text-tiny mt-1" style="color: #666; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productNames}">
+                        ${productNames}
+                    </div>
                 </div>
                 <div class="body-text">#${order.razorpay_order_id || order.id}</div>
                 <div class="body-text">₹${order.amount}</div>
-                <div class="body-text">1</div>
+                <div class="body-text">${totalItems}</div>
                 <div class="body-text">Razorpay</div>
                 <div>
                     <div class="block-available ${order.status === 'completed' ? 'success' : 'pending'}">
@@ -1044,7 +1058,7 @@
         async function deleteOrder(id) {
             if (!confirm("Are you sure you want to delete this order?")) return;
             try {
-                const res = await fetch(`/api/orders/${id}`, { method: "DELETE" }); // Fixed: removed localhost:3000
+                const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
                 const data = await res.json();
                 if (res.ok) {
                     alert("✅ " + data.message);
