@@ -1082,41 +1082,53 @@
                     breadcrumbEl.textContent = `Order #${order.id}`;
                 }
 
-                // Update order items section - show actual order data
+                // ✅ ADD CUSTOMER DETAILS ABOVE THE "ALL ITEM" SECTION
+                // Find the section before "All item" and add customer details there
+                const allItemSection = document.querySelector(".table-order-detail");
+                if (allItemSection) {
+                    // Create customer details section above the items
+                    const customerSection = document.createElement('div');
+                    customerSection.className = 'wg-box mb-4';
+                    customerSection.innerHTML = `
+                        <div class="wg-box-header">
+                            <div class="body-title-2">Customer Information</div>
+                        </div>
+                        <div class="flex items-center gap-6 p-4">
+                            <div class="image no-bg">
+                                <img src="/admin/images/products/default-order.png" alt="Customer" style="width: 60px; height: 60px;">
+                            </div>
+                            <div class="flex items-center justify-between gap-8 flex-grow">
+                                <div class="name">
+                                    <div class="text-tiny mb-1">Customer Name</div>
+                                    <div class="body-title-2">${order.first_name} ${order.last_name}</div>
+                                </div>
+                                <div class="name">
+                                    <div class="text-tiny mb-1">Email</div>
+                                    <div class="body-title-2">${order.email}</div>
+                                </div>
+                                <div class="name">
+                                    <div class="text-tiny mb-1">Phone</div>
+                                    <div class="body-title-2">${order.phone_number}</div>
+                                </div>
+                                <div class="name">
+                                    <div class="text-tiny mb-1">Order Date</div>
+                                    <div class="body-title-2">${new Date(order.created_at).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Insert customer section before the "All item" section
+                    allItemSection.parentNode.insertBefore(customerSection, allItemSection);
+                }
+
+                // Update order items section - show ONLY product data (no customer info)
                 const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
                 if (itemsContainer) {
                     // Clear existing items
                     itemsContainer.innerHTML = '';
 
-                    // Add customer information FIRST (above items)
-                    const customerLi = document.createElement('li');
-                    customerLi.className = 'product-item gap14';
-                    customerLi.innerHTML = `
-                        <div class="image no-bg">
-                            <img src="/admin/images/products/default-order.png" alt="Customer">
-                        </div>
-                        <div class="flex items-center justify-between gap40 flex-grow">
-                            <div class="name">
-                                <div class="text-tiny mb-1">Customer Details</div>
-                                <a href="#!" class="body-title-2">${order.first_name} ${order.last_name}</a>
-                            </div>
-                            <div class="name">
-                                <div class="text-tiny mb-1">Email</div>
-                                <div class="body-title-2">${order.email}</div>
-                            </div>
-                            <div class="name">
-                                <div class="text-tiny mb-1">Phone</div>
-                                <div class="body-title-2">${order.phone_number}</div>
-                            </div>
-                            <div class="name">
-                                <div class="text-tiny mb-1">Order Date</div>
-                                <div class="body-title-2">${new Date(order.created_at).toLocaleDateString()}</div>
-                            </div>
-                        </div>
-                    `;
-                    itemsContainer.appendChild(customerLi);
-
-                    // Add product items
+                    // Add ONLY product items (customer info is now above)
                     if (order.products && order.products.length > 0) {
                         console.log('Processing products:', order.products);
                         
@@ -1187,11 +1199,13 @@
                         const productTotal = product.price * product.quantity;
                         calculatedSubtotal += productTotal;
                         totalItems += product.quantity;
+                        console.log(`Product: ${product.name}, Price: ${product.price}, Qty: ${product.quantity}, Total: ${productTotal}`);
                     });
                 }
 
                 console.log('Calculated subtotal:', calculatedSubtotal);
                 console.log('Order amount from DB:', order.amount);
+                console.log('Total items:', totalItems);
 
                 // Update cart totals section with CORRECT calculations
                 const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
@@ -1205,7 +1219,12 @@
                 if (subtotalEl) subtotalEl.textContent = `₹${displaySubtotal}`;
                 if (shippingEl) shippingEl.textContent = "₹0.00";
                 if (taxEl) taxEl.textContent = "₹0.00";
-                if (totalEl) totalEl.textContent = `₹${order.amount}`;
+                
+                // ✅ FIX TOTAL PRICE - Use the calculated total or order amount
+                const finalTotal = calculatedSubtotal > 0 ? calculatedSubtotal : order.amount;
+                if (totalEl) totalEl.textContent = `₹${finalTotal}`;
+                
+                console.log('Final total displayed:', finalTotal);
 
                 // Update summary section (right sidebar)
                 const orderIdEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
@@ -1214,7 +1233,7 @@
 
                 if (orderIdEl) orderIdEl.textContent = `#${order.id}`;
                 if (dateEl) dateEl.textContent = new Date(order.created_at).toLocaleDateString();
-                if (totalSummaryEl) totalSummaryEl.textContent = `₹${order.amount}`;
+                if (totalSummaryEl) totalSummaryEl.textContent = `₹${finalTotal}`;
 
                 // ✅ Fix shipping address - REMOVE person's name, just address
                 const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
