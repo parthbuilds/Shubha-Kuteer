@@ -2221,8 +2221,7 @@
                     totalCart += product.price * (product.quantityPurchase || 1);
                 });
                 
-                // Convert to paise (Razorpay expects amount in smallest currency unit)
-                return Math.round(totalCart * 100);
+                return Math.round(totalCart);
             }
         
             document.getElementById("checkout-form").addEventListener("submit", async function (e) {
@@ -2257,7 +2256,7 @@
                     amount: cartTotalAmount // Use cart total instead of hardcoded 100
                 };
         
-                console.log('Processing payment for amount:', cartTotalAmount, 'INR');
+                console.log('Processing payment for amount:', cartTotalAmount / 100, 'INR');
         
                 try {
                     // Call backend to create Razorpay order
@@ -2279,7 +2278,7 @@
                         amount: orderData.razorpay_order.amount,
                         currency: "INR",
                         name: "Shubha Kuteer",
-                        description: `Payment for order - ₹${cartTotalAmount}`,
+                        description: `Payment for order - ₹${cartTotalAmount / 100}`,
                         order_id: orderData.razorpay_order.id,
                         handler: async function (response) {
                             // Send payment capture to backend
