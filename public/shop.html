@@ -917,11 +917,11 @@
                                 <div class="price-block flex items-center justify-between flex-wrap mt-4">
                                     <div class="min flex items-center gap-1">
                                         <div>Min price:</div>
-                                        <div class="min-price">$0</div>
+                                        <div class="min-price">₹0</div>
                                     </div>
                                     <div class="min flex items-center gap-1">
                                         <div>Max price:</div>
-                                        <div class="max-price">$300</div>
+                                        <div class="max-price">₹300</div>
                                     </div>
                                 </div>
                             </div>
@@ -1989,10 +1989,10 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-3 flex-wrap mt-5 pb-6 border-b border-line">
-                                <div class="product-price heading5">$20.00</div>
+                                <div class="product-price heading5">₹20.00</div>
                                 <div class="w-px h-4 bg-line"></div>
                                 <div class="product-origin-price font-normal text-secondary2">
-                                    <del>$32.00</del>
+                                    <del>₹32.00</del>
                                 </div>
                                 <div
                                     class="product-sale caption2 font-semibold bg-green px-3 py-0.5 inline-block rounded-full">
@@ -2163,7 +2163,7 @@
                     const response = await fetch("/api/admin/categories/public");
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
+                        throw new Error(`HTTP error! Status: ₹{response.status}`);
                     }
 
                     const categories = await response.json();
@@ -2183,9 +2183,9 @@
 
                         item.innerHTML = `
           <div class="type-name text-secondary has-line-before hover:text-black capitalize">
-            ${cat.name}
+            ₹{cat.name}
           </div>
-          <div class="text-secondary2 number">${cat.count ?? 0}</div>
+          <div class="text-secondary2 number">₹{cat.count ?? 0}</div>
         `;
 
                         container.appendChild(item);
