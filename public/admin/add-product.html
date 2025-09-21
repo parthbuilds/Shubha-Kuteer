@@ -1078,79 +1078,23 @@
             let attributeVariants = {};
             let attributes = [];
 
-            document.getElementById("addColorBtn")?.addEventListener("click", () => {
-                const colorName = prompt("Enter color name:");
-                if (!colorName) return;
-                const colorCode = prompt("Enter hex code (e.g. #DB4444):", "#000000");
-                if (!colorCode) return;
-                variationList.push({ color: colorName, colorCode, colorImage: null });
-                renderVariations();
-            });
-
-            function renderVariations() {
-                variationsContainer.innerHTML = "";
-
-                // Render colors
-                variationList.forEach(v => {
-                    const div = document.createElement("div");
-                    div.className = "variation-item mb-10";
-                    div.innerHTML = `
-        <div class="body-text">
-          ${v.color} 
-          <span style="background:${v.colorCode};padding:0 10px;margin-left:10px;border-radius:3px;">&nbsp;</span>
-          <button type="button" onclick="removeColorVariation('${v.color}', '${v.colorCode}')">Remove</button>
-        </div>`;
-                    variationsContainer.appendChild(div);
-                });
-
-                // Render attributes
-                Object.keys(attributeVariants).forEach(attrName => {
-                    const wrapperDiv = document.createElement("div");
-                    wrapperDiv.className = "attribute-group mb-10";
-                    wrapperDiv.innerHTML = `<strong>${attrName}:</strong>`;
-
-                    attributeVariants[attrName].forEach(value => {
-                        const id = `attr-${attrName}-${value}`;
-                        const checkbox = document.createElement("input");
-                        checkbox.type = "checkbox";
-                        checkbox.id = id;
-                        checkbox.value = value;
-                        checkbox.dataset.attribute = attrName;
-                        checkbox.className = "variant-checkbox";
-
-                        const label = document.createElement("label");
-                        label.htmlFor = id;
-                        label.textContent = value;
-                        label.style.marginLeft = "5px";
-
-                        const span = document.createElement("span");
-                        span.style.marginRight = "10px";
-                        span.appendChild(checkbox);
-                        span.appendChild(label);
-
-                        wrapperDiv.appendChild(span);
-                    });
-
-                    variationsContainer.appendChild(wrapperDiv);
-                });
-
-                variationsHidden.value = JSON.stringify({ colors: variationList, attributes: attributeVariants });
-            }
-
-            window.removeColorVariation = function (colorName, colorCode) {
-                variationList = variationList.filter(v => !(v.color === colorName && v.colorCode === colorCode));
-                renderVariations();
-            }
-
-            // --- Load Attributes ---
+            // --- Load Attributes from Database ---
             const attributeSelect = document.getElementById("attributeSelect");
             async function loadAttributes() {
                 try {
+                    console.log('Loading attributes from database...');
                     const res = await fetch("/api/admin/attributes");
-                    attributes = await res.json();
+                    if (!res.ok) throw new Error('Failed to fetch attributes');
+                    
+                    const attributesData = await res.json();
+                    console.log('Loaded attributes:', attributesData);
+                    
+                    attributes = attributesData;
 
+                    // Populate attribute select dropdown
                     const uniqueNames = [...new Set(attributes.map(a => a.attribute_name))];
                     attributeSelect.innerHTML = `<option value="">-- Choose Attribute --</option>`;
+                    
                     uniqueNames.forEach(name => {
                         const option = document.createElement("option");
                         option.value = name;
@@ -1158,33 +1102,229 @@
                         attributeSelect.appendChild(option);
                     });
 
-                    attributeSelect.addEventListener("change", () => {
-                        const attrName = attributeSelect.value;
-                        const attrObj = attributes.find(a => a.attribute_name === attrName);
-                        if (attrObj && attrObj.attribute_value) {
-                            const values = attrObj.attribute_value.split(",").map(v => v.trim());
-                            attributeVariants[attrName] = values;
-                            renderVariations();
+                    // Handle attribute selection
+                    attributeSelect.addEventListener("change", (e) => {
+                        const attrName = e.target.value;
+                        if (!attrName) {
+                            variationsContainer.innerHTML = '';
+                            return;
                         }
+                        
+                        console.log('Selected attribute:', attrName);
+                        displayAttributeVariants(attrName);
                     });
+
                 } catch (err) {
                     console.error("Failed to load attributes:", err);
+                    alert('Failed to load attributes. Please refresh the page.');
                 }
+            }
+
+            // --- Display Attribute Variants ---
+            function displayAttributeVariants(attributeName) {
+                variationsContainer.innerHTML = '';
+                
+                const attrObj = attributes.find(a => a.attribute_name === attributeName);
+                if (!attrObj) {
+                    console.error('Attribute not found:', attributeName);
+                    return;
+                }
+
+                console.log('Attribute object:', attrObj);
+
+                // Parse attribute values from JSON
+                let attributeValues = [];
+                if (attrObj.attribute_values) {
+                    try {
+                        const parsedValues = JSON.parse(attrObj.attribute_values);
+                        console.log('Parsed attribute values:', parsedValues);
+                        
+                        if (Array.isArray(parsedValues)) {
+                            attributeValues = parsedValues;
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse attribute values:', e);
+                        return;
+                    }
+                }
+
+                if (attributeValues.length === 0) {
+                    variationsContainer.innerHTML = '<div class="text-tiny text-secondary">No values found for this attribute</div>';
+                    return;
+                }
+
+                // Create attribute selection interface
+                const attributeGroup = document.createElement('div');
+                attributeGroup.className = 'attribute-group mb-10';
+                attributeGroup.innerHTML = `
+                    <div class="body-title mb-5">${attributeName} Options</div>
+                    <div class="selected-attributes mb-5" id="selectedAttributes_${attributeName}"></div>
+                    <div class="available-attributes" id="availableAttributes_${attributeName}"></div>
+                `;
+
+                variationsContainer.appendChild(attributeGroup);
+
+                // Display available attribute values
+                const availableContainer = document.getElementById(`availableAttributes_${attributeName}`);
+                const selectedContainer = document.getElementById(`selectedAttributes_${attributeName}`);
+
+                attributeValues.forEach((valueObj, index) => {
+                    const valueWrapper = document.createElement('div');
+                    valueWrapper.className = 'attribute-value-item mb-3 p-3 border border-line rounded-lg cursor-pointer hover:bg-surface';
+                    
+                    let displayText = '';
+                    let valueData = {};
+
+                    // Handle different attribute value structures
+                    if (valueObj.color && valueObj.colorCode) {
+                        // Color attribute
+                        displayText = `${valueObj.color} (${valueObj.colorCode})`;
+                        valueData = {
+                            type: 'color',
+                            name: valueObj.color,
+                            code: valueObj.colorCode,
+                            display: valueObj.color
+                        };
+                        
+                        valueWrapper.innerHTML = `
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full border border-line" style="background-color: ${valueObj.colorCode}"></div>
+                                <span class="body-text">${valueObj.color}</span>
+                                <span class="text-tiny text-secondary">${valueObj.colorCode}</span>
+                            </div>
+                        `;
+                    } else if (valueObj.size) {
+                        // Size attribute
+                        displayText = valueObj.size;
+                        valueData = {
+                            type: 'size',
+                            name: valueObj.size,
+                            display: valueObj.size
+                        };
+                        
+                        valueWrapper.innerHTML = `
+                            <div class="flex items-center gap-3">
+                                <span class="body-text">${valueObj.size}</span>
+                            </div>
+                        `;
+                    } else if (valueObj.value) {
+                        // Generic value attribute
+                        displayText = valueObj.value;
+                        valueData = {
+                            type: 'value',
+                            name: valueObj.value,
+                            display: valueObj.value
+                        };
+                        
+                        valueWrapper.innerHTML = `
+                            <div class="flex items-center gap-3">
+                                <span class="body-text">${valueObj.value}</span>
+                            </div>
+                        `;
+                    } else {
+                        // Fallback for string values
+                        const stringValue = Object.values(valueObj)[0] || valueObj;
+                        displayText = stringValue;
+                        valueData = {
+                            type: 'string',
+                            name: stringValue,
+                            display: stringValue
+                        };
+                        
+                        valueWrapper.innerHTML = `
+                            <div class="flex items-center gap-3">
+                                <span class="body-text">${stringValue}</span>
+                            </div>
+                        `;
+                    }
+
+                    // Add click handler to select attribute value
+                    valueWrapper.addEventListener('click', () => {
+                        selectAttributeValue(attributeName, valueData, valueWrapper, selectedContainer, availableContainer);
+                    });
+
+                    availableContainer.appendChild(valueWrapper);
+                });
+            }
+
+            // --- Select Attribute Value ---
+            function selectAttributeValue(attributeName, valueData, clickedElement, selectedContainer, availableContainer) {
+                // Remove from available
+                clickedElement.remove();
+                
+                // Add to selected
+                const selectedItem = document.createElement('div');
+                selectedItem.className = 'selected-attribute-item mb-2 p-2 bg-primary text-white rounded-lg flex items-center justify-between';
+                
+                if (valueData.type === 'color') {
+                    selectedItem.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 rounded-full border border-white" style="background-color: ${valueData.code}"></div>
+                            <span class="text-sm">${valueData.name}</span>
+                        </div>
+                        <button type="button" onclick="removeSelectedAttribute('${attributeName}', '${valueData.name}')" class="text-white hover:text-red">✕</button>
+                    `;
+                } else {
+                    selectedItem.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm">${valueData.display}</span>
+                        </div>
+                        <button type="button" onclick="removeSelectedAttribute('${attributeName}', '${valueData.name}')" class="text-white hover:text-red">✕</button>
+                    `;
+                }
+                
+                selectedContainer.appendChild(selectedItem);
+                
+                // Store in attributeVariants
+                if (!attributeVariants[attributeName]) {
+                    attributeVariants[attributeName] = [];
+                }
+                attributeVariants[attributeName].push(valueData);
+                
+                console.log('Updated attributeVariants:', attributeVariants);
+                updateVariationsHidden();
+            }
+
+            // --- Remove Selected Attribute ---
+            window.removeSelectedAttribute = function(attributeName, valueName) {
+                // Remove from attributeVariants
+                if (attributeVariants[attributeName]) {
+                    attributeVariants[attributeName] = attributeVariants[attributeName].filter(v => v.name !== valueName);
+                    if (attributeVariants[attributeName].length === 0) {
+                        delete attributeVariants[attributeName];
+                    }
+                }
+                
+                // Refresh display
+                displayAttributeVariants(attributeName);
+                updateVariationsHidden();
+            }
+
+            // --- Update Variations Hidden Input ---
+            function updateVariationsHidden() {
+                const variationsData = {
+                    colors: variationList,
+                    attributes: attributeVariants
+                };
+                variationsHidden.value = JSON.stringify(variationsData);
+                console.log('Updated variations hidden input:', variationsData);
             }
 
             // --- Load Categories ---
             async function loadCategories() {
                 try {
-                    const res = await fetch("/api/admin/categories/public");
+                    const res = await fetch("/api/admin/categories");
+                    if (!res.ok) throw new Error('Failed to fetch categories');
+                    
                     const categories = await res.json();
-
-                    const select = document.getElementById("product-category");
-                    select.innerHTML = `<option value="">Choose category</option>`;
-                    categories.forEach(cat => {
+                    const categorySelect = document.getElementById("product-category");
+                    
+                    categorySelect.innerHTML = `<option value="">-- Choose Category --</option>`;
+                    categories.forEach(category => {
                         const option = document.createElement("option");
-                        option.value = cat.name;
-                        option.textContent = cat.name;
-                        select.appendChild(option);
+                        option.value = category.id;
+                        option.textContent = category.name;
+                        categorySelect.appendChild(option);
                     });
                 } catch (err) {
                     console.error("Failed to load categories:", err);
@@ -1250,66 +1390,80 @@
             // --- Form Submission ---
             form.addEventListener("submit", async e => {
                 e.preventDefault();
-                const rawForm = new FormData(form);
-                const payload = Object.fromEntries(rawForm.entries());
+                
+                console.log('Form submission started...');
+                
+                const formData = new FormData(form);
+                const payload = Object.fromEntries(formData.entries());
 
-                // Flags
-                payload.is_new = form.is_new?.checked ? 1 : 0;
-                payload.on_sale = form.on_sale?.checked ? 1 : 0;
-
-                // Numbers default
-                ["price", "origin_price", "quantity", "sold", "quantity_purchase", "rate"].forEach(f => {
-                    payload[f] = Number(payload[f]) || 0;
-                });
-
-                // Sizes & Variations
-                payload.sizes = sizesHidden.value;
-                payload.variations = variationsHidden.value;
-
-                // Images
-                payload.main_image = uploadedMainImage || "";
-                payload.gallery = uploadedGallery || [];
-
-                // Auto-slug
-                if (!payload.slug && payload.name) {
-                    payload.slug = payload.name.toLowerCase().replace(/\s+/g, "-");
+                // Validate required fields
+                if (!payload.name || !payload.category || !payload.price) {
+                    alert('Please fill in all required fields (Name, Category, Price)');
+                    return;
                 }
 
-                // Set default action if not provided
-                if (!payload.action) {
-                    payload.action = "add to cart";
+                // Process sizes
+                payload.sizes = selectedSizes.length > 0 ? JSON.stringify(selectedSizes) : '[]';
+
+                // Process variations
+                payload.variations = variationsHidden.value || '{}';
+
+                // Process gallery images
+                const galleryFiles = document.getElementById('galleryInput').files;
+                const galleryUrls = [];
+                for (let file of galleryFiles) {
+                    // Here you would upload to cloudinary or your image service
+                    // For now, we'll use a placeholder
+                    galleryUrls.push(`./assets/images/product/${file.name}`);
                 }
+                payload.gallery = JSON.stringify(galleryUrls);
+
+                // Process main image
+                const mainImageFile = document.getElementById('mainImageInput').files[0];
+                if (mainImageFile) {
+                    payload.main_image = `./assets/images/product/${mainImageFile.name}`;
+                }
+
+                // Set default values
+                payload.quantity = payload.quantity || 0;
+                payload.sold = payload.sold || 0;
+                payload.rate = payload.rate || 0;
+                payload.is_new = document.getElementById('is_new')?.checked ? 1 : 0;
+                payload.on_sale = document.getElementById('on_sale')?.checked ? 1 : 0;
+
+                console.log('Payload to send:', payload);
 
                 try {
                     const res = await fetch("/api/admin/products", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
                         body: JSON.stringify(payload)
                     });
-                    const data = await res.json();
-                    if (res.ok) {
+
+                    const result = await res.json();
+                    
+                    if (res.ok && result.success) {
                         alert("✅ Product added successfully!");
                         form.reset();
                         selectedSizes = [];
                         variationList = [];
                         attributeVariants = {};
-                        uploadedMainImage = "";
-                        uploadedGallery = [];
+                        variationsContainer.innerHTML = '';
                         renderSizes();
-                        renderVariations();
                     } else {
-                        alert("❌ Error: " + (data.message || "Unknown error"));
-                        console.error(data);
+                        alert("❌ Error: " + (result.error || result.message || "Failed to add product"));
                     }
                 } catch (err) {
-                    console.error("⚠️ Fetch error:", err);
-                    alert("⚠️ Failed to add product. See console.");
+                    console.error("Form submission error:", err);
+                    alert("❌ Failed to submit product. Please try again.");
                 }
             });
 
-            // --- Initialize ---
-            loadCategories();
+            // Initialize
             loadAttributes();
+            loadCategories();
         });
     </script>
 

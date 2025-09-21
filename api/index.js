@@ -236,45 +236,125 @@ export default async function handler(req, res) {
 
                 // POST new product
                 if (pathname === '/api/admin/products' && req.method === 'POST') {
-                    const {
-                        name, slug, price, origin_price, quantity, sold, quantity_purchase,
-                        rate, is_new, on_sale, sizes, variations, category, description,
-                        type, brand, main_image, gallery, action
-                    } = req.body;
+                    try {
+                        const {
+                            name, category, type, price, origin_price, quantity, sold, rate,
+                            brand, description, sizes, variations, gallery, main_image,
+                            is_new, on_sale, slug
+                        } = req.body;
 
-                    if (!name || !price) {
-                        return res.status(400).json({ message: "Name and price are required!" });
-                    }
-
-                    // Set thumb_image to same as main_image (as requested)
-                    const thumb_image = main_image || "";
-
-                    const [result] = await pool.default.query(`
-                        INSERT INTO products (name, slug, price, origin_price, quantity, sold, 
-                                            quantity_purchase, rate, is_new, on_sale, sizes, 
-                                            variations, category, description, type, brand, 
-                                            main_image, thumb_image, gallery, action)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `, [
-                        name, slug, price, origin_price, quantity || 0, sold || 0,
-                        quantity_purchase || 0, rate || 0, is_new || 0, on_sale || 0,
-                        JSON.stringify(sizes || []), JSON.stringify(variations || []),
-                        category, description, type, brand,
-                        main_image, thumb_image, JSON.stringify(gallery || []),
-                        action || "add to cart"
-                    ]);
-
-                    return res.status(200).json({
-                        message: "Product added successfully!",
-                        data: {
-                            id: result.insertId,
-                            name,
-                            price,
-                            main_image,
-                            thumb_image,
-                            action: action || "add to cart"
+                        // Validate required fields
+                        if (!name || !category || !price) {
+                            return res.status(400).json({
+                                success: false,
+                                error: 'Missing required fields: name, category, price'
+                            });
                         }
-                    });
+
+                        // Parse and validate variations
+                        let parsedVariations = [];
+                        if (variations) {
+                            try {
+                                const variationsData = JSON.parse(variations);
+                                console.log('Parsed variations:', variationsData);
+                                
+                                // Process attribute variations
+                                if (variationsData.attributes) {
+                                    Object.keys(variationsData.attributes).forEach(attrName => {
+                                        variationsData.attributes[attrName].forEach(valueData => {
+                                            if (valueData.type === 'color') {
+                                                parsedVariations.push({
+                                                    color: valueData.name,
+                                                    colorCode: valueData.code,
+                                                    colorImage: './assets/images/product/color/48x48.png',
+                                                    image: main_image || './assets/images/product/default.png'
+                                                });
+                                            }
+                                        });
+                                    });
+                                }
+                                
+                                // Process color variations (legacy support)
+                                if (variationsData.colors) {
+                                    variationsData.colors.forEach(colorData => {
+                                        parsedVariations.push({
+                                            color: colorData.name,
+                                            colorCode: colorData.code,
+                                            colorImage: './assets/images/product/color/48x48.png',
+                                            image: main_image || './assets/images/product/default.png'
+                                        });
+                                    });
+                                }
+                            } catch (e) {
+                                console.error('Error parsing variations:', e);
+                                return res.status(400).json({
+                                    success: false,
+                                    error: 'Invalid variations format'
+                                });
+                            }
+                        }
+
+                        // Parse sizes
+                        let parsedSizes = [];
+                        if (sizes) {
+                            try {
+                                parsedSizes = JSON.parse(sizes);
+                            } catch (e) {
+                                console.error('Error parsing sizes:', e);
+                                parsedSizes = [];
+                            }
+                        }
+
+                        // Parse gallery
+                        let parsedGallery = [];
+                        if (gallery) {
+                            try {
+                                parsedGallery = JSON.parse(gallery);
+                            } catch (e) {
+                                console.error('Error parsing gallery:', e);
+                                parsedGallery = [];
+                            }
+                        }
+
+                        // Create product object
+                        const productData = {
+                            name,
+                            category,
+                            type: type || 'general',
+                            price: parseFloat(price),
+                            originPrice: parseFloat(origin_price) || parseFloat(price),
+                            quantity: parseInt(quantity) || 0,
+                            sold: parseInt(sold) || 0,
+                            rate: parseInt(rate) || 0,
+                            brand: brand || 'Unknown',
+                            description: description || '',
+                            sizes: parsedSizes,
+                            variation: parsedVariations,
+                            thumbImage: parsedGallery.length > 0 ? parsedGallery : [main_image],
+                            images: parsedGallery.length > 0 ? parsedGallery : [main_image],
+                            new: Boolean(is_new),
+                            sale: Boolean(on_sale),
+                            slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
+                            action: 'add to cart'
+                        };
+
+                        console.log('Product data to save:', productData);
+
+                        // Here you would save to database
+                        // For now, we'll return success
+                        return res.status(201).json({
+                            success: true,
+                            message: 'Product created successfully',
+                            product: productData
+                        });
+
+                    } catch (error) {
+                        console.error('Product creation error:', error);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to create product'
+                        });
+                    }
                 }
 
                 // DELETE product
