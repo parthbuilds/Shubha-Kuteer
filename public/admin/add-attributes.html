@@ -845,53 +845,32 @@
                                     </ul>
                                 </div>
                                 <!-- new-attribute -->
-                                <div class="wg-box w-full max-w-2xl">
-                                    <!-- Admin Info Header -->
-                                    <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
-                                        <div>
-                                            <h1 class="text-3xl font-bold text-gray-800">Add Product Attributes</h1>
-                                            <p class="text-gray-500">Define product variations</p>
-                                        </div>
-                                        <div class="flex items-center space-x-3">
-                                            <div class="text-right">
-                                                <p class="text-gray-800 font-semibold" id="admin-name">Loading...</p>
-                                                <p class="text-gray-500 text-sm" id="admin-role">...</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div class="wg-box">
                                     <form class="form-new-product form-style-1" id="new-attribute-form">
                                         <fieldset class="name">
                                             <div class="body-title">Category <span class="tf-color-1">*</span></div>
                                             <select name="category_id" id="attribute-category" required>
-                                                <option value="">Select a Category</option>
+                                                <option value="">Loading categories...</option>
                                             </select>
                                         </fieldset>
-                            
+                                
                                         <fieldset class="name">
                                             <div class="body-title">Attribute name <span class="tf-color-1">*</span></div>
                                             <input type="text" name="attribute_name" id="attributeName" placeholder="Attribute name" required>
                                         </fieldset>
-                            
+                                
                                         <fieldset>
                                             <div class="body-title">Attribute values <span class="tf-color-1">*</span></div>
-                                            <div id="attributeValuesContainer"
-                                                class="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-md bg-gray-50 min-h-[40px] items-center">
-                                            </div>
-                                            <div class="mt-4 flex items-center gap-2">
-                                                <input type="text" id="valueInput" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="e.g., Red, Blue, Green">
-                                                <button type="button" class="tf-button" onclick="addAttributeValue()">
-                                                    + Add Value
-                                                </button>
-                                            </div>
+                                            <div id="attributeValuesContainer">
+                                                </div>
+                                            <button type="button" class="tf-button w-full mt-15" onclick="addAttributeValue()">+ Add Value</button>
                                         </fieldset>
                                         <div class="bot">
-                                            <button class="tf-button w-full" type="submit" id="submitButton">
-                                                <span id="buttonText">Save</span>
-                                                <span id="loadingSpinner" class="hidden animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full ml-2"></span>
-                                            </button>
+                                            <div></div>
+                                            <button class="tf-button w208" type="submit">Save</button>
                                         </div>
                                     </form>
-                                </div>                            
+                                </div>
 
                                 <!-- /new-category -->
                             </div>
@@ -921,77 +900,45 @@
     <!-- Javascript -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const form = document.getElementById("new-attribute-form");
             const categorySelect = document.getElementById("attribute-category");
-            const attributeNameInput = document.getElementById("attributeName");
-            const valueInput = document.getElementById("valueInput");
-            const valuesContainer = document.getElementById("attributeValuesContainer");
-            const toastContainer = document.getElementById('toast-container');
-            const button = document.getElementById('submitButton');
-            const buttonText = document.getElementById('buttonText');
-            const loadingSpinner = document.getElementById('loadingSpinner');
-
-            // --- Toast Notification Function ---
-            function showToast(message, type) {
-                const toast = document.createElement('div');
-                toast.className = `toast ${type}`;
-                toast.textContent = message;
-                toastContainer.appendChild(toast);
-
-                setTimeout(() => {
-                    toast.classList.add('show');
-                }, 10);
-
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    setTimeout(() => toast.remove(), 300);
-                }, 5000);
-            }
-
-            // --- Admin Data Fetching ---
-            async function loadAdminData() {
-                try {
-                    const res = await fetch("/api/admin/users/me");
-                    if (!res.ok) throw new Error("Failed to fetch admin data");
-                    const data = await res.json();
-                    document.getElementById("admin-name").textContent = data.admin.name;
-                    document.getElementById("admin-role").textContent = data.admin.role;
-                } catch (err) {
-                    console.error("Error loading admin:", err);
-                }
-            }
-            loadAdminData();
-
-            // --- Values Management ---
+            const attributeForm = document.getElementById("new-attribute-form");
+            const attributeValuesContainer = document.getElementById("attributeValuesContainer");
+    
+            // Function to create and add a new pair of input fields
             window.addAttributeValue = function () {
-                const value = valueInput.value.trim();
-                if (value) {
-                    // Check for duplicates
-                    const existingValues = [...valuesContainer.querySelectorAll('.box-value-item')]
-                        .map(item => item.textContent.trim());
-                    if (existingValues.includes(value)) {
-                        showToast("Value already exists.", "error");
-                        return;
-                    }
-
-                    const div = document.createElement("div");
-                    div.className = "box-value-item";
-                    div.innerHTML = `${value} <span onclick="removeAttributeValue(this)">&times;</span>`;
-                    valuesContainer.appendChild(div);
-                    valueInput.value = "";
-                }
+                const valueGroup = document.createElement('div');
+                valueGroup.className = 'd-flex align-items-center mb-2';
+    
+                const valueInput = document.createElement('input');
+                valueInput.type = 'text';
+                valueInput.className = 'form-control mr-2';
+                valueInput.placeholder = 'Value (e.g., green)';
+    
+                const codeInput = document.createElement('input');
+                codeInput.type = 'text';
+                codeInput.className = 'form-control';
+                codeInput.placeholder = 'Code (e.g., #008000)';
+    
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn btn-danger btn-sm ml-2';
+                removeBtn.textContent = 'x';
+                removeBtn.onclick = () => valueGroup.remove();
+    
+                valueGroup.appendChild(valueInput);
+                valueGroup.appendChild(codeInput);
+                valueGroup.appendChild(removeBtn);
+                attributeValuesContainer.appendChild(valueGroup);
             };
-
-            window.removeAttributeValue = function (element) {
-                element.parentElement.remove();
-            };
-
-            // --- Data Loading ---
+    
             async function loadCategories() {
                 try {
                     const res = await fetch("/api/admin/categories/public");
+                    if (!res.ok) throw new Error("Failed to load categories");
+    
                     const categories = await res.json();
-                    categorySelect.innerHTML = `<option value="">Select a Category</option>`;
+                    categorySelect.innerHTML = '<option value="">Select Category</option>';
+    
                     categories.forEach(cat => {
                         const option = document.createElement("option");
                         option.value = cat.id;
@@ -999,60 +946,61 @@
                         categorySelect.appendChild(option);
                     });
                 } catch (err) {
-                    console.error("Failed to load categories:", err);
-                    showToast("Failed to load categories", "error");
+                    console.error("Error loading categories:", err);
+                    categorySelect.innerHTML = '<option value="">Failed to load categories</option>';
                 }
             }
-            loadCategories();
-
-            // --- Form Submission ---
-            form.addEventListener("submit", async (e) => {
-                e.preventDefault();
-                button.disabled = true;
-                buttonText.textContent = "Saving...";
-                loadingSpinner.classList.remove('hidden');
-
-                const values = [...valuesContainer.querySelectorAll(".box-value-item")]
-                    .map(el => el.textContent.replace('×', '').trim());
-
-                if (values.length === 0) {
-                    showToast("At least one attribute value is required.", "error");
-                    button.disabled = false;
-                    buttonText.textContent = "Save";
-                    loadingSpinner.classList.add('hidden');
-                    return;
-                }
-
-                const payload = {
-                    category_id: categorySelect.value,
-                    attribute_name: attributeNameInput.value.trim(),
-                    attribute_values: values.map(v => ({ value: v }))
-                };
-
-                try {
-                    const res = await fetch("/api/admin/attributes", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await res.json();
-
-                    if (res.ok) {
-                        showToast(result.message || "Attribute added successfully!", "success");
-                        form.reset();
-                        valuesContainer.innerHTML = '';
-                    } else {
-                        showToast(result.message || result.error || "Failed to save attribute.", "error");
+    
+            if (attributeForm) {
+                attributeForm.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+    
+                    // Collect data from the dynamically added fields
+                    const valueInputs = attributeValuesContainer.querySelectorAll('input');
+                    const attributeValues = [];
+                    for (let i = 0; i < valueInputs.length; i += 2) {
+                        if (valueInputs[i].value && valueInputs[i + 1].value) {
+                            attributeValues.push({
+                                value: valueInputs[i].value.trim(),
+                                code: valueInputs[i + 1].value.trim()
+                            });
+                        }
                     }
-                } catch (err) {
-                    console.error("Error saving attribute:", err);
-                    showToast("Failed to save attribute.", "error");
-                } finally {
-                    button.disabled = false;
-                    buttonText.textContent = "Save";
-                    loadingSpinner.classList.add('hidden');
-                }
-            });
+    
+                    if (attributeValues.length === 0) {
+                        return alert("Please add at least one attribute value.");
+                    }
+    
+                    const data = {
+                        category_id: attributeForm.category_id.value,
+                        attribute_name: attributeForm.attribute_name.value.trim().toLowerCase(),
+                        attribute_values: attributeValues // Now sends a JSON array
+                    };
+    
+                    try {
+                        const res = await fetch("/api/admin/attributes", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(data)
+                        });
+    
+                        const result = await res.json();
+    
+                        if (res.ok && result.success) {
+                            alert(result.message || "Attribute added successfully");
+                            attributeForm.reset();
+                            attributeValuesContainer.innerHTML = ''; // Clear dynamic fields
+                        } else {
+                            alert(result.message || result.error || "Failed to save attribute");
+                        }
+                    } catch (err) {
+                        console.error("Error saving attribute:", err);
+                        alert("Failed to save attribute");
+                    }
+                });
+            }
+    
+            loadCategories();
         });
     </script>
 
