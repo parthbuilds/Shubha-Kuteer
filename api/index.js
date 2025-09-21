@@ -335,7 +335,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // Attributes routes
+        // --- ATTRIBUTES ROUTES - REWRITTEN ---
         if (pathname.startsWith('/api/admin/attributes')) {
             try {
                 const pool = await import("../backend/utils/db.js");
@@ -343,8 +343,8 @@ export default async function handler(req, res) {
                 // GET all attributes
                 if (pathname === '/api/admin/attributes' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
-                        SELECT a.id, a.category_id, a.attribute_name, a.attribute_value, 
-                            a.attribute_hash, a.created_at, c.name as category_name
+                        SELECT a.id, a.attribute_name, a.attribute_values, a.created_at,
+                               c.name AS category_name
                         FROM attributes a
                         LEFT JOIN categories c ON a.category_id = c.id
                         ORDER BY a.created_at DESC
@@ -354,22 +354,32 @@ export default async function handler(req, res) {
 
                 // POST new attribute
                 if (pathname === '/api/admin/attributes' && req.method === 'POST') {
-                    const { category_id, attribute_name, attribute_value, attribute_hash } = req.body;
-
-                    if (!category_id || !attribute_name || !attribute_value) {
+                    const { category_id, attribute_name, attribute_values } = req.body;
+            
+                    // Validate that all required fields are present
+                    if (!category_id || !attribute_name || !attribute_values) {
                         return res.status(400).json({
-                            message: "Missing required fields: category_id, attribute_name, attribute_value"
+                            error: "Missing required fields: category_id, attribute_name, and attribute_values",
                         });
                     }
-
-                    const [result] = await pool.default.query(`
-                        INSERT INTO attributes (category_id, attribute_name, attribute_value, attribute_hash) 
-                        VALUES (?, ?, ?, ?)
-                    `, [category_id, attribute_name, attribute_value, attribute_hash || null]);
-
-                    return res.status(200).json({
-                        message: "Attribute added successfully!",
-                        data: { id: result.insertId, category_id, attribute_name, attribute_value }
+            
+                    // Validate that attribute_values is a non-empty array
+                    if (!Array.isArray(attribute_values) || attribute_values.length === 0) {
+                        return res.status(400).json({
+                            error: "attribute_values must be a non-empty array of objects.",
+                        });
+                    }
+            
+                    const [result] = await pool.default.query(
+                        `INSERT INTO attributes (category_id, attribute_name, attribute_values) 
+                        VALUES (?, ?, ?)`,
+                        [category_id, attribute_name, JSON.stringify(attribute_values)]
+                    );
+            
+                    return res.status(201).json({
+                        success: true,
+                        id: result.insertId,
+                        message: "Attribute added successfully",
                     });
                 }
 
@@ -386,6 +396,8 @@ export default async function handler(req, res) {
                 return res.status(500).json({ message: "Attribute operation failed", error: error.message });
             }
         }
+        // --- END OF ATTRIBUTES ROUTES REWRITTEN ---
+
 
         // Admin Users routes (for managing admins)
         if (pathname.startsWith('/api/admin/users')) {
@@ -705,15 +717,14 @@ export default async function handler(req, res) {
                     const orderId = pathname.split('/')[3];
                     
                     try {
-                        const [result] = await pool.default.query(
-                            'DELETE FROM orders WHERE id = ?',
-                            [orderId]
-                        );
+                        const [result] = await pool.default.query(`
+                            DELETE FROM orders WHERE id = ?
+                        `, [orderId]);
 
                         if (result.affectedRows === 0) {
                             return res.status(404).json({
                                 success: false,
-                                message: 'Order not found'
+                                error: 'Order not found'
                             });
                         }
 
@@ -747,7 +758,7 @@ export default async function handler(req, res) {
                 return res.status(500).json({ message: "Order operation failed", error: error.message });
             }
         }
-
+        
         // Default response
         return res.status(200).json({
             message: "API function is running",

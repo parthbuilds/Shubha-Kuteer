@@ -3,20 +3,30 @@ import pool from "../utils/db.js";
 
 const router = express.Router();
 
-router.post("/", async (req, res) => {
-    const { category_id, attribute_name, attribute_value, attribute_hash } = req.body;
 
-    if (!category_id || !attribute_name || !attribute_value) {
+router.post("/", async (req, res) => {
+    const { category_id, attribute_name, attribute_values } = req.body;
+
+    // Validate that all required fields are present
+    if (!category_id || !attribute_name || !attribute_values) {
         return res.status(400).json({
-            error: "Missing required fields: category_id, attribute_name, attribute_value",
+            error: "Missing required fields: category_id, attribute_name, and attribute_values",
+        });
+    }
+
+    // Validate that attribute_values is a non-empty array
+    if (!Array.isArray(attribute_values) || attribute_values.length === 0) {
+        return res.status(400).json({
+            error: "attribute_values must be a non-empty array of objects.",
         });
     }
 
     try {
         const [result] = await pool.query(
-            `INSERT INTO attributes (category_id, attribute_name, attribute_value, attribute_hash) 
-            VALUES (?, ?, ?, ?)`,
-            [category_id, attribute_name, attribute_value, attribute_hash || null]
+            // Use the new SQL query that supports the JSON data type
+            `INSERT INTO attributes (category_id, attribute_name, attribute_values) 
+            VALUES (?, ?, ?)`,
+            [category_id, attribute_name, JSON.stringify(attribute_values)]
         );
 
         res.status(201).json({
@@ -30,11 +40,10 @@ router.post("/", async (req, res) => {
     }
 });
 
-// GET endpoint unchanged
 router.get("/", async (req, res) => {
     try {
         const [rows] = await pool.query(`
-            SELECT a.id, a.attribute_name, a.attribute_value, a.created_at,
+            SELECT a.id, a.attribute_name, a.attribute_values, a.created_at,
                    c.name AS category_name
             FROM attributes a
             LEFT JOIN categories c ON a.category_id = c.id
@@ -47,7 +56,6 @@ router.get("/", async (req, res) => {
     }
 });
 
-// DELETE → Remove attribute by ID
 router.delete("/:id", async (req, res) => {
     const { id } = req.params;
     try {

@@ -853,30 +853,24 @@
                                                 <option value="">Loading categories...</option>
                                             </select>
                                         </fieldset>
-
+                                
                                         <fieldset class="name">
-                                            <div class="body-title">Attribute name <span class="tf-color-1">*</span>
-                                            </div>
-                                            <input type="text" name="attribute_name" placeholder="Attribute name"
-                                                required>
+                                            <div class="body-title">Attribute name <span class="tf-color-1">*</span></div>
+                                            <input type="text" name="attribute_name" id="attributeName" placeholder="Attribute name" required>
                                         </fieldset>
-
-                                        <fieldset class="name">
-                                            <div class="body-title">Attribute value <span class="tf-color-1">*</span>
-                                            </div>
-                                            <input type="text" name="attribute_value"
-                                                placeholder="Attribute value (comma separated for colors)" required>
-                                            <small id="color-hash-message"
-                                                style="display:none; color:green; margin-top:5px;"></small>
+                                
+                                        <fieldset>
+                                            <div class="body-title">Attribute values <span class="tf-color-1">*</span></div>
+                                            <div id="attributeValuesContainer">
+                                                </div>
+                                            <button type="button" class="tf-button w-full mt-15" onclick="addAttributeValue()">+ Add Value</button>
                                         </fieldset>
-
                                         <div class="bot">
                                             <div></div>
                                             <button class="tf-button w208" type="submit">Save</button>
                                         </div>
                                     </form>
                                 </div>
-
 
                                 <!-- /new-category -->
                             </div>
@@ -908,16 +902,43 @@
         document.addEventListener("DOMContentLoaded", () => {
             const categorySelect = document.getElementById("attribute-category");
             const attributeForm = document.getElementById("new-attribute-form");
-            const hashInput = document.getElementById("attribute-hash");
-
+            const attributeValuesContainer = document.getElementById("attributeValuesContainer");
+    
+            // Function to create and add a new pair of input fields
+            window.addAttributeValue = function () {
+                const valueGroup = document.createElement('div');
+                valueGroup.className = 'd-flex align-items-center mb-2';
+    
+                const valueInput = document.createElement('input');
+                valueInput.type = 'text';
+                valueInput.className = 'form-control mr-2';
+                valueInput.placeholder = 'Value (e.g., green)';
+    
+                const codeInput = document.createElement('input');
+                codeInput.type = 'text';
+                codeInput.className = 'form-control';
+                codeInput.placeholder = 'Code (e.g., #008000)';
+    
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn btn-danger btn-sm ml-2';
+                removeBtn.textContent = 'x';
+                removeBtn.onclick = () => valueGroup.remove();
+    
+                valueGroup.appendChild(valueInput);
+                valueGroup.appendChild(codeInput);
+                valueGroup.appendChild(removeBtn);
+                attributeValuesContainer.appendChild(valueGroup);
+            };
+    
             async function loadCategories() {
                 try {
                     const res = await fetch("/api/admin/categories/public");
                     if (!res.ok) throw new Error("Failed to load categories");
-
+    
                     const categories = await res.json();
                     categorySelect.innerHTML = '<option value="">Select Category</option>';
-
+    
                     categories.forEach(cat => {
                         const option = document.createElement("option");
                         option.value = cat.id;
@@ -929,50 +950,46 @@
                     categorySelect.innerHTML = '<option value="">Failed to load categories</option>';
                 }
             }
-
-            async function hashValue(value) {
-                const encoder = new TextEncoder();
-                const data = encoder.encode(value);
-                const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-            }
-
+    
             if (attributeForm) {
                 attributeForm.addEventListener("submit", async (e) => {
                     e.preventDefault();
-
-                    const attributeName = attributeForm.attribute_name.value.trim().toLowerCase();
-                    const attributeValue = attributeForm.attribute_value.value.trim();
-
-                    let attributeHash = null;
-                    if (attributeName === "color") {
-                        // Generate hash and wait for it
-                        attributeHash = await hashValue(attributeValue);
+    
+                    // Collect data from the dynamically added fields
+                    const valueInputs = attributeValuesContainer.querySelectorAll('input');
+                    const attributeValues = [];
+                    for (let i = 0; i < valueInputs.length; i += 2) {
+                        if (valueInputs[i].value && valueInputs[i + 1].value) {
+                            attributeValues.push({
+                                value: valueInputs[i].value.trim(),
+                                code: valueInputs[i + 1].value.trim()
+                            });
+                        }
                     }
-
-                    // Set hidden input value
-                    hashInput.value = attributeHash;
-
+    
+                    if (attributeValues.length === 0) {
+                        return alert("Please add at least one attribute value.");
+                    }
+    
                     const data = {
                         category_id: attributeForm.category_id.value,
-                        attribute_name: attributeName,
-                        attribute_value: attributeValue,
-                        attribute_hash: attributeHash
+                        attribute_name: attributeForm.attribute_name.value.trim().toLowerCase(),
+                        attribute_values: attributeValues // Now sends a JSON array
                     };
-
+    
                     try {
                         const res = await fetch("/api/admin/attributes", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify(data)
                         });
-
+    
                         const result = await res.json();
-
+    
                         if (res.ok && result.success) {
                             alert(result.message || "Attribute added successfully");
                             attributeForm.reset();
+                            attributeValuesContainer.innerHTML = ''; // Clear dynamic fields
                         } else {
                             alert(result.message || result.error || "Failed to save attribute");
                         }
@@ -982,30 +999,10 @@
                     }
                 });
             }
-
+    
             loadCategories();
         });
     </script>
-
-
-    <script>
-async function loadAdminData() {
-    try {
-        const res = await fetch("/api/admin/users/me");
-        if (!res.ok) throw new Error("Failed to fetch admin");
-        const data = await res.json();
-
-        // Insert into DOM
-        document.getElementById("admin-name").textContent = data.admin.name;
-        document.getElementById("admin-role").textContent = data.admin.role;
-    } catch (err) {
-        console.error("Error loading admin:", err);
-    }
-}
-
-// Call without ID
-loadAdminData();
-</script>
 
 <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
