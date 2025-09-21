@@ -973,8 +973,16 @@
 
                         const created = attr.created_at ? new Date(attr.created_at).toLocaleDateString() : "-";
                         
-                        // Parse attribute_value JSON and display in a readable format
-                        const attributeValues = JSON.parse(attr.attribute_value);
+                        // Safely parse attribute_value JSON and display in a readable format
+                        let attributeValues = [];
+                        if (attr.attribute_value) {
+                            try {
+                                attributeValues = JSON.parse(attr.attribute_value);
+                            } catch (e) {
+                                console.error(`Failed to parse JSON for attribute ID ${attr.id}:`, e);
+                                // Fallback to an empty array
+                            }
+                        }
                         const valuesText = attributeValues.map(v => v.value).join(', ');
 
                         li.innerHTML = `
@@ -1047,7 +1055,6 @@
         // Call without ID
         loadAdminData();
     </script>
-
 
 <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
