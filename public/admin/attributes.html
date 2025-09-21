@@ -940,16 +940,13 @@
 
     <!-- Javascript -->
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             const attributeList = document.getElementById("attributeList");
-
-            if (!attributeList) return;
-
-            // Load all attributes
+            
             async function loadAttributes() {
                 attributeList.innerHTML = `
-            <li class="attribute-item gap14"><div class="body-text">Loading attributes...</div></li>
-        `;
+                    <li class="attribute-item gap14"><div class="body-text">Loading attributes...</div></li>
+                `;
 
                 try {
                     const res = await fetch("/api/admin/attributes");
@@ -960,8 +957,8 @@
 
                     if (!attributes.length) {
                         attributeList.innerHTML = `
-                    <li class="attribute-item gap14"><div class="body-text">No attributes found</div></li>
-                `;
+                            <li class="attribute-item gap14"><div class="body-text">No attributes found</div></li>
+                        `;
                         return;
                     }
 
@@ -972,62 +969,96 @@
 
                         const created = attr.created_at ? new Date(attr.created_at).toLocaleDateString() : "-";
                         
-                        // Safely parse attribute_value JSON and display in a readable format
-                        let attributeValues = [];
-                        if (attr.attribute_value) {
+                        // Parse and display attribute values in a readable format
+                        let valuesText = "No values";
+                        let valuesArray = [];
+                        
+                        if (attr.attribute_values) {
                             try {
-                                attributeValues = JSON.parse(attr.attribute_value);
+                                valuesArray = JSON.parse(attr.attribute_values);
+                                
+                                // Handle different attribute value structures
+                                if (Array.isArray(valuesArray)) {
+                                    valuesText = valuesArray.map(v => {
+                                        // Handle color attributes with color name and code
+                                        if (v.color && v.colorCode) {
+                                            return `${v.color} (${v.colorCode})`;
+                                        }
+                                        // Handle size attributes
+                                        else if (v.size) {
+                                            return v.size;
+                                        }
+                                        // Handle generic value attributes
+                                        else if (v.value) {
+                                            return v.value;
+                                        }
+                                        // Handle plain string values
+                                        else if (typeof v === 'string') {
+                                            return v;
+                                        }
+                                        // Fallback to first property value
+                                        else if (typeof v === 'object') {
+                                            const firstValue = Object.values(v)[0];
+                                            return firstValue || '';
+                                        }
+                                        return '';
+                                    }).filter(Boolean).join(', ');
+                                }
                             } catch (e) {
                                 console.error(`Failed to parse JSON for attribute ID ${attr.id}:`, e);
-                                // Fallback to an empty array
+                                valuesText = "Invalid JSON data";
                             }
                         }
 
-                        // Map over the array and find the value, using a more robust approach
-                        const valuesText = attributeValues.map(v => {
-                            if (v && v.value) {
-                                return v.value;
-                            } else if (v && v.color) {
-                                // Fallback in case the key is 'color' instead of 'value'
-                                return v.color;
-                            } else if (typeof v === 'string') {
-                                // Fallback in case the value is a plain string
-                                return v;
-                            }
-                            // As a final fallback, get the first value of the object if it exists
-                            const firstValue = Object.values(v)[0];
-                            if (firstValue) {
-                                return firstValue;
-                            }
-                            return '';
-                        }).filter(Boolean).join(', '); // Filter out any empty strings
-
                         li.innerHTML = `
-                    <div class="flex items-center justify-between gap20 flex-grow">
-                        <div class="name">
-                            <span class="body-title-2">${attr.category_name}</span>
-                        </div>
-                        <div class="body-text">${attr.attribute_name}: ${valuesText}</div>
-                        <div class="body-text">${created}</div>
-                        <div class="list-icon-function">
-                            <div class="item eye" title="View"><i class="icon-eye"></i></div>
-                            <div class="item edit" title="Edit"><i class="icon-edit-3"></i></div>
-                            <div class="item trash" title="Delete" onclick="deleteAttribute(${attr.id})">
-                                <i class="icon-trash-2"></i>
+                            <div class="flex items-center justify-between gap20 flex-grow">
+                                <div class="name">
+                                    <span class="body-title-2">${attr.category_name || 'Uncategorized'}</span>
+                                </div>
+                                <div class="body-text">
+                                    <strong>${attr.attribute_name}:</strong> ${valuesText}
+                                </div>
+                                <div class="body-text">${created}</div>
+                                <div class="list-icon-function">
+                                    <div class="item eye" title="View" onclick="viewAttribute(${attr.id})">
+                                        <i class="icon-eye"></i>
+                                    </div>
+                                    <div class="item edit" title="Edit" onclick="editAttribute(${attr.id})">
+                                        <i class="icon-edit-3"></i>
+                                    </div>
+                                    <div class="item trash" title="Delete" onclick="deleteAttribute(${attr.id})">
+                                        <i class="icon-trash-2"></i>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                `;
+                        `;
                         attributeList.appendChild(li);
                     });
 
                 } catch (err) {
                     console.error("⚠️ Error fetching attributes:", err);
                     attributeList.innerHTML = `
-                <li class="attribute-item gap14"><div class="body-text">Error loading attributes</div></li>
-            `;
+                        <li class="attribute-item gap14"><div class="body-text">Error loading attributes</div></li>
+                    `;
                 }
             }
+
+            // View attribute details
+            window.viewAttribute = function(id) {
+                // Find the attribute in the list and show detailed view
+                const attrElement = document.querySelector(`li[data-id="${id}"]`);
+                if (attrElement) {
+                    const attributeName = attrElement.querySelector('.body-title-2').textContent;
+                    const attributeValues = attrElement.querySelector('.body-text').textContent;
+                    
+                    alert(`Attribute Details:\n\nCategory: ${attributeName}\nValues: ${attributeValues}`);
+                }
+            };
+
+            // Edit attribute (placeholder)
+            window.editAttribute = function(id) {
+                alert(`Edit functionality for attribute ID ${id} - To be implemented`);
+            };
 
             // Delete attribute
             window.deleteAttribute = async function(id) {
@@ -1038,7 +1069,7 @@
                     const data = await res.json();
 
                     if (res.ok && data.success) {
-                        document.querySelector(`#attributeList li[data-id="${id}"]`)?.remove();
+                        document.querySelector(`li[data-id="${id}"]`)?.remove();
                         alert("✅ " + (data.message || "Deleted"));
                     } else {
                         alert("❌ " + (data.error || data.message || "Delete failed"));
@@ -1047,7 +1078,7 @@
                     console.error("Delete failed:", err);
                     alert("⚠️ Failed to delete attribute");
                 }
-            }
+            };
 
             // Initial load
             loadAttributes();
