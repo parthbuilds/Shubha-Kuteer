@@ -1952,7 +1952,7 @@ const listThreeProduct = document.querySelectorAll(
   ".list-product.three-product"
 );
 
-// Place this mapping function near the top of your file, or before any fetch that uses product data
+// Add this mapping function near the top of your file or before the fetch
 function mapApiProductToFrontend(product) {
   return {
     id: String(product.id),
@@ -1967,27 +1967,11 @@ function mapApiProductToFrontend(product) {
     brand: product.brand,
     sold: product.sold,
     quantity: product.quantity,
-    quantityPurchase: product.quantityPurchase || 1, // default to 1
-    sizes: Array.isArray(product.sizes)
-      ? product.sizes
-      : product.sizes
-      ? JSON.parse(product.sizes)
-      : [],
-    variation: Array.isArray(product.variation)
-      ? product.variation
-      : product.variations
-      ? JSON.parse(product.variations)
-      : [],
-    thumbImage: Array.isArray(product.thumbImage)
-      ? product.thumbImage
-      : product.thumb_image
-      ? [product.thumb_image]
-      : [],
-    images: Array.isArray(product.images)
-      ? product.images
-      : product.gallery
-      ? JSON.parse(product.gallery)
-      : [],
+    quantityPurchase: 1, // default
+    sizes: product.sizes ? JSON.parse(product.sizes) : [],
+    variation: product.variations ? JSON.parse(product.variations) : [],
+    thumbImage: product.thumb_image ? [product.thumb_image] : [],
+    images: product.gallery ? JSON.parse(product.gallery) : [],
     description: product.description,
     action: product.action,
     slug: product.slug,

@@ -52,65 +52,22 @@ let classes = productDetail.className.split(' ');
 let typePage = classes[1];
 
 
-function mapApiProductToFrontend(product) {
-  return {
-    id: String(product.id),
-    category: product.category,
-    type: product.type,
-    name: product.name,
-    new: !!product.is_new,
-    sale: !!product.on_sale,
-    rate: Number(product.rate),
-    price: Number(product.price),
-    originPrice: Number(product.origin_price),
-    brand: product.brand,
-    sold: product.sold,
-    quantity: product.quantity,
-    quantityPurchase: product.quantityPurchase || 1, // default to 1
-    sizes: Array.isArray(product.sizes)
-      ? product.sizes
-      : product.sizes
-      ? JSON.parse(product.sizes)
-      : [],
-    variation: Array.isArray(product.variation)
-      ? product.variation
-      : product.variations
-      ? JSON.parse(product.variations)
-      : [],
-    thumbImage: Array.isArray(product.thumbImage)
-      ? product.thumbImage
-      : product.thumb_image
-      ? [product.thumb_image]
-      : [],
-    images: Array.isArray(product.images)
-      ? product.images
-      : product.gallery
-      ? JSON.parse(product.gallery)
-      : [],
-    description: product.description,
-    action: product.action,
-    slug: product.slug,
-  };
-}
-
-
 if (productDetail) {
-    fetch('/api/admin/products')
+    fetch('./assets/data/Product.json')
         .then(response => response.json())
         .then(data => {
-            const mappedProducts = data.map(mapApiProductToFrontend);
-            let productMain = mappedProducts.find(product => product.id === productId);
+            let productMain = data.find(product => product.id === productId);
 
             // find location of current product in array
-            currentIndex = mappedProducts.findIndex(product => product.id === productId);
+            currentIndex = data.findIndex(product => product.id === productId);
 
             // Next, Prev products when click button
             const prevBtn = document.querySelector('.breadcrumb-product .prev-btn')
             const nextBtn = document.querySelector('.breadcrumb-product .next-btn')
 
             nextBtn.addEventListener('click', () => {
-                currentIndex = (currentIndex + 1) % mappedProducts.length;
-                const nextProduct = mappedProducts[currentIndex];
+                currentIndex = (currentIndex + 1) % data.length;
+                const nextProduct = data[currentIndex];
                 window.location.href = `product-${typePage}.html?id=${nextProduct.id}`
             })
 
@@ -118,8 +75,8 @@ if (productDetail) {
                 prevBtn.remove()
             } else {
                 prevBtn.addEventListener('click', () => {
-                    currentIndex = (currentIndex - 1) % mappedProducts.length;
-                    const nextProduct = mappedProducts[currentIndex];
+                    currentIndex = (currentIndex - 1) % data.length;
+                    const nextProduct = data[currentIndex];
                     window.location.href = `product-${typePage}.html?id=${nextProduct.id}`
                 })
             }
