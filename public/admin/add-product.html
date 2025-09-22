@@ -1313,7 +1313,7 @@
             // --- Load Categories ---
             async function loadCategories() {
                 try {
-                    const res = await fetch("/api/admin/categories");
+                    const res = await fetch("/api/admin/categories/public");
                     if (!res.ok) throw new Error('Failed to fetch categories');
                     
                     const categories = await res.json();
