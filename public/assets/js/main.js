@@ -52,8 +52,6 @@
 
 
 // Select language, currency top nav
-// Global cache for mapped products from API
-let PRODUCTS = [];
 const chooseType = document.querySelectorAll(".top-nav .choose-type");
 const optionItems = document.querySelectorAll(".top-nav .choose-type .list-option li");
 
@@ -206,7 +204,7 @@ loginIcon?.addEventListener("click", () => {
 });
 
 // initialize the variable(cart, wishlist, compare) in local storage
-cartStore = localStorage.getItem("cartStore");
+let cartStore = localStorage.getItem("cartStore");
 if (cartStore === null) {
   localStorage.setItem("cartStore", JSON.stringify([]));
 }
@@ -1952,7 +1950,7 @@ const listThreeProduct = document.querySelectorAll(
   ".list-product.three-product"
 );
 
-// Add this mapping function near the top of your file or before the fetch
+// Place this mapping function near the top of your file, or before any fetch that uses product data
 function mapApiProductToFrontend(product) {
   return {
     id: String(product.id),
@@ -1967,11 +1965,27 @@ function mapApiProductToFrontend(product) {
     brand: product.brand,
     sold: product.sold,
     quantity: product.quantity,
-    quantityPurchase: 1, // default
-    sizes: product.sizes ? JSON.parse(product.sizes) : [],
-    variation: product.variations ? JSON.parse(product.variations) : [],
-    thumbImage: product.thumb_image ? [product.thumb_image] : [],
-    images: product.gallery ? JSON.parse(product.gallery) : [],
+    quantityPurchase: product.quantityPurchase || 1, // default to 1
+    sizes: Array.isArray(product.sizes)
+      ? product.sizes
+      : product.sizes
+      ? JSON.parse(product.sizes)
+      : [],
+    variation: Array.isArray(product.variation)
+      ? product.variation
+      : product.variations
+      ? JSON.parse(product.variations)
+      : [],
+    thumbImage: Array.isArray(product.thumbImage)
+      ? product.thumbImage
+      : product.thumb_image
+      ? [product.thumb_image]
+      : [],
+    images: Array.isArray(product.images)
+      ? product.images
+      : product.gallery
+      ? JSON.parse(product.gallery)
+      : [],
     description: product.description,
     action: product.action,
     slug: product.slug,
@@ -1983,7 +1997,6 @@ fetch("/api/admin/products")
   .then((response) => response.json())
   .then((products) => {
     const mappedProducts = products.map(mapApiProductToFrontend);
-    PRODUCTS = mappedProducts;
 
     if (listFourProduct) {
       listFourProduct.forEach((list) => {
@@ -2336,8 +2349,7 @@ if (listEightProduct) {
   }
 }
 
-// Display 3 products(Home 11)// Display 3 products(Home 11)
-const products = PRODUCTS;
+// Display 3 products(Home 11)
 if (listThreeProduct) {
   listThreeProduct.forEach((list) => {
     const parent = list.parentElement;
@@ -2450,50 +2462,61 @@ const createProductItemMarketplace = (product) => {
 
 // fetch product in marketplace
 if (document.querySelector('.tab-features-block.style-marketplace')) {
-  const listProduct = document.querySelector('.tab-features-block.style-marketplace .list-product');
-  const products = PRODUCTS;
+  fetch("./assets/data/Product.json")
+    .then((response) => response.json())
+    .then((products) => {
+      // Display the first 4 products
+      const listProduct = document.querySelector('.tab-features-block.style-marketplace .list-product')
 
-  if (listProduct && products && products.length) {
-    const parent = listProduct.parentElement;
-
-    if (parent.querySelector(".menu-tab .active")) {
-      const menuItemActive = parent.querySelector(".menu-tab .active").getAttribute("data-item");
-      const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
-
-      products
-        .filter((product) => product.category === menuItemActive)
-        .slice(0, 5)
-        .forEach((product) => {
-          const productElement = createProductItemMarketplace(product);
-          listProduct.appendChild(productElement);
-        });
-
-      menuItems.forEach((item) => {
-        item.addEventListener("click", () => {
-          // remove old product
-          const productItems = listProduct.querySelectorAll(".product-item");
-          productItems.forEach((prdItem) => prdItem.remove());
+      if (listProduct) {
+        const parent = listProduct.parentElement;
+        if (parent.querySelector(".menu-tab .active")) {
+          const menuItemActive = parent
+            .querySelector(".menu-tab .active")
+            .getAttribute("data-item");
+          const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
 
           products
-            .filter((product) => product.category === item.getAttribute("data-item"))
+            .filter((product) => product.category === menuItemActive)
             .slice(0, 5)
             .forEach((product) => {
               const productElement = createProductItemMarketplace(product);
               listProduct.appendChild(productElement);
             });
 
-          addEventToProductItem(products);
-        });
-      });
-    } else {
-      products.slice(0, 5).forEach((product) => {
-        const productElement = createProductItemMarketplace(product);
-        listProduct.appendChild(productElement);
-      });
-    }
+          menuItems.forEach((item) => {
+            item.addEventListener("click", () => {
+              // remove old product
+              const productItems = listProduct.querySelectorAll(".product-item");
+              productItems.forEach((prdItem) => {
+                prdItem.remove();
+              });
 
-    addEventToProductItem(products);
-  }
+              products
+                .filter(
+                  (product) => product.category === item.getAttribute("data-item")
+                )
+                .slice(0, 5)
+                .forEach((product) => {
+                  // create product
+                  const productElement = createProductItemMarketplace(product);
+                  listProduct.appendChild(productElement);
+                });
+
+              addEventToProductItem(products);
+            });
+          });
+        } else {
+          products.slice(0, 5).forEach((product) => {
+            const productElement = createProductItemMarketplace(product);
+            listProduct.appendChild(productElement);
+          });
+        }
+      }
+
+      addEventToProductItem(products);
+    })
+    .catch((error) => console.error("Error loading products:", error));
 }
 
 
@@ -3502,17 +3525,3 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
-
-// In your checkout rendering logic (handleInforCart, handleItemModalCart, etc.):
-// Make sure to use this for totals and rendering:
-
-let cartStore = JSON.parse(localStorage.getItem("cartStore") || "[]");
-let totalCart = 0;
-cartStore.forEach(product => {
-  totalCart += product.price * (product.quantityPurchase || 1);
-  // ... render each product row ...
-});
-const totalCartBlock = document.querySelector(".total-cart-block .total-cart");
-if (totalCartBlock) {
-  totalCartBlock.innerHTML = `₹${totalCart}.00`;
-}
