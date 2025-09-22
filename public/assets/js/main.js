@@ -204,7 +204,7 @@ loginIcon?.addEventListener("click", () => {
 });
 
 // initialize the variable(cart, wishlist, compare) in local storage
-let cartStore = localStorage.getItem("cartStore");
+cartStore = localStorage.getItem("cartStore");
 if (cartStore === null) {
   localStorage.setItem("cartStore", JSON.stringify([]));
 }
@@ -3525,3 +3525,17 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+// In your checkout rendering logic (handleInforCart, handleItemModalCart, etc.):
+// Make sure to use this for totals and rendering:
+
+let cartStore = JSON.parse(localStorage.getItem("cartStore") || "[]");
+let totalCart = 0;
+cartStore.forEach(product => {
+  totalCart += product.price * (product.quantityPurchase || 1);
+  // ... render each product row ...
+});
+const totalCartBlock = document.querySelector(".total-cart-block .total-cart");
+if (totalCartBlock) {
+  totalCartBlock.innerHTML = `₹${totalCart}.00`;
+}

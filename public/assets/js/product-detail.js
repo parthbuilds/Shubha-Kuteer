@@ -338,6 +338,23 @@ if (productDetail) {
             listTag.innerHTML = `
             <a href="shop.html" class="text-secondary">${productMain.type}</a>
             `
+
+            // --- Add to Cart Button Logic ---
+            const addCartBtn = document.querySelector('.add-cart-btn');
+            if (addCartBtn) {
+                addCartBtn.addEventListener('click', () => {
+                    let cartStore = JSON.parse(localStorage.getItem('cartStore') || '[]');
+                    const existingIndex = cartStore.findIndex(item => item.id === productMain.id);
+                    if (existingIndex > -1) {
+                        cartStore[existingIndex].quantityPurchase += 1;
+                    } else {
+                        const productToAdd = { ...productMain, quantityPurchase: 1 };
+                        cartStore.push(productToAdd);
+                    }
+                    localStorage.setItem('cartStore', JSON.stringify(cartStore));
+                    // Optionally, update cart UI or show a success message here
+                });
+            }
         })
         .catch(error => console.error('Error fetching products:', error));
 }
