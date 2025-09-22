@@ -1950,13 +1950,38 @@ const listThreeProduct = document.querySelectorAll(
   ".list-product.three-product"
 );
 
-// Fetch products from JSON file (assuming products.json)
-fetch("./assets/data/Product.json")
+// Add this mapping function near the top of your file or before the fetch
+function mapApiProductToFrontend(product) {
+  return {
+    id: String(product.id),
+    category: product.category,
+    type: product.type,
+    name: product.name,
+    new: !!product.is_new,
+    sale: !!product.on_sale,
+    rate: Number(product.rate),
+    price: Number(product.price),
+    originPrice: Number(product.origin_price),
+    brand: product.brand,
+    sold: product.sold,
+    quantity: product.quantity,
+    quantityPurchase: 1, // default
+    sizes: product.sizes ? JSON.parse(product.sizes) : [],
+    variation: product.variations ? JSON.parse(product.variations) : [],
+    thumbImage: product.thumb_image ? [product.thumb_image] : [],
+    images: product.gallery ? JSON.parse(product.gallery) : [],
+    description: product.description,
+    action: product.action,
+    slug: product.slug,
+  };
+}
+
+// Replace the old fetch block for 4 cards view with this:
+fetch("/api/admin/products")
   .then((response) => response.json())
   .then((products) => {
-    // =============================
-    // 🔹 Display the first 4 products
-    // =============================
+    const mappedProducts = products.map(mapApiProductToFrontend);
+
     if (listFourProduct) {
       listFourProduct.forEach((list) => {
         const parent = list.parentElement;
@@ -1966,9 +1991,9 @@ fetch("./assets/data/Product.json")
             .getAttribute("data-item");
           const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
 
-          // ✅ Handle initial active tab
+          // Initial active tab
           if (menuItemActive === "best sellers") {
-            products
+            mappedProducts
               .sort((a, b) => b.sold - a.sold)
               .slice(0, 4)
               .forEach((product) => {
@@ -1976,7 +2001,7 @@ fetch("./assets/data/Product.json")
                 list.appendChild(productElement);
               });
           } else if (menuItemActive === "on sale") {
-            products
+            mappedProducts
               .filter((product) => product.sale === true)
               .slice(0, 4)
               .forEach((product) => {
@@ -1984,7 +2009,7 @@ fetch("./assets/data/Product.json")
                 list.appendChild(productElement);
               });
           } else if (menuItemActive === "new arrivals") {
-            products
+            mappedProducts
               .filter((product) => product.new === true)
               .slice(0, 4)
               .forEach((product) => {
@@ -1992,7 +2017,7 @@ fetch("./assets/data/Product.json")
                 list.appendChild(productElement);
               });
           } else {
-            products
+            mappedProducts
               .filter((product) => product.type === menuItemActive)
               .slice(0, 4)
               .forEach((product) => {
@@ -2001,31 +2026,29 @@ fetch("./assets/data/Product.json")
               });
           }
 
-          // ✅ Tab click handler
+          // Tab click event logic
           menuItems.forEach((item) => {
             item.addEventListener("click", () => {
               list.querySelectorAll(".product-item").forEach((prd) => prd.remove());
-
-              const tab = item.getAttribute("data-item");
-
-              if (tab === "best sellers") {
-                products
+              const menuItemActive = item.getAttribute("data-item");
+              if (menuItemActive === "best sellers") {
+                mappedProducts
                   .sort((a, b) => b.sold - a.sold)
                   .slice(0, 4)
                   .forEach((product) => {
                     const productElement = createProductItem(product);
                     list.appendChild(productElement);
                   });
-              } else if (tab === "on sale") {
-                products
+              } else if (menuItemActive === "on sale") {
+                mappedProducts
                   .filter((product) => product.sale === true)
                   .slice(0, 4)
                   .forEach((product) => {
                     const productElement = createProductItem(product);
                     list.appendChild(productElement);
                   });
-              } else if (tab === "new arrivals") {
-                products
+              } else if (menuItemActive === "new arrivals") {
+                mappedProducts
                   .filter((product) => product.new === true)
                   .slice(0, 4)
                   .forEach((product) => {
@@ -2033,44 +2056,71 @@ fetch("./assets/data/Product.json")
                     list.appendChild(productElement);
                   });
               } else {
-                products
-                  .filter((product) => product.type === tab)
+                mappedProducts
+                  .filter((product) => product.type === menuItemActive)
                   .slice(0, 4)
                   .forEach((product) => {
                     const productElement = createProductItem(product);
                     list.appendChild(productElement);
                   });
               }
-
-              handleActiveImgWhenColorChange(products);
-              addEventToProductItem(products);
             });
-          });
-        } else {
-          // No active tab -> fallback
-          products.slice(0, 4).forEach((product) => {
-            const productElement = createProductItem(product);
-            list.appendChild(productElement);
           });
         }
       });
     }
+  });
 
-    // Display the first 6 products
-    if (listSixProduct) {
-      const parent = listSixProduct.parentElement.parentElement.parentElement;
-      if (parent.querySelector(".menu-tab .active")) {
-        const menuItemActive = parent
-          .querySelector(".menu-tab .active")
-          .getAttribute("data-item");
-        const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
+// Display the first 6 products
+if (listSixProduct) {
+  const parent = listSixProduct.parentElement.parentElement.parentElement;
+  if (parent.querySelector(".menu-tab .active")) {
+    const menuItemActive = parent
+      .querySelector(".menu-tab .active")
+      .getAttribute("data-item");
+    const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
 
-        if (menuItemActive === "best sellers") {
-          if (listSixProduct.getAttribute("data-type")) {
+    if (menuItemActive === "best sellers") {
+      if (listSixProduct.getAttribute("data-type")) {
+        products
+          .filter(
+            (product) =>
+              product.category === listSixProduct.getAttribute("data-type")
+          )
+          .sort((a, b) => b.sold - a.sold)
+          .slice(0, 6)
+          .forEach((product) => {
+            const swiperSlide = document.createElement("div");
+            swiperSlide.classList.add("swiper-slide");
+            swiperSlide.appendChild(createProductItem(product));
+            listSixProduct.appendChild(swiperSlide);
+          });
+      } else {
+        products
+          .filter((product) => product.category === "fashion")
+          .sort((a, b) => b.sold - a.sold)
+          .slice(0, 6)
+          .forEach((product) => {
+            const swiperSlide = document.createElement("div");
+            swiperSlide.classList.add("swiper-slide");
+            swiperSlide.appendChild(createProductItem(product));
+            listSixProduct.appendChild(swiperSlide);
+          });
+      }
+    }
+
+    menuItems.forEach((item) => {
+      item.addEventListener("click", () => {
+        const productItems =
+          listSixProduct.querySelectorAll(".swiper-slide");
+
+        if (listSixProduct.getAttribute("data-type")) {
+          if (item.getAttribute("data-item") === "best sellers") {
             products
               .filter(
                 (product) =>
-                  product.category === listSixProduct.getAttribute("data-type")
+                  product.category ===
+                  listSixProduct.getAttribute("data-type")
               )
               .sort((a, b) => b.sold - a.sold)
               .slice(0, 6)
@@ -2080,7 +2130,41 @@ fetch("./assets/data/Product.json")
                 swiperSlide.appendChild(createProductItem(product));
                 listSixProduct.appendChild(swiperSlide);
               });
-          } else {
+          }
+          if (item.getAttribute("data-item") === "on sale") {
+            products
+              .filter(
+                (product) =>
+                  product.sale &&
+                  product.category ===
+                  listSixProduct.getAttribute("data-type")
+              )
+              .slice(0, 6)
+              .forEach((product) => {
+                const swiperSlide = document.createElement("div");
+                swiperSlide.classList.add("swiper-slide");
+                swiperSlide.appendChild(createProductItem(product));
+                listSixProduct.appendChild(swiperSlide);
+              });
+          }
+          if (item.getAttribute("data-item") === "new arrivals") {
+            products
+              .filter(
+                (product) =>
+                  product.new &&
+                  product.category ===
+                  listSixProduct.getAttribute("data-type")
+              )
+              .slice(0, 6)
+              .forEach((product) => {
+                const swiperSlide = document.createElement("div");
+                swiperSlide.classList.add("swiper-slide");
+                swiperSlide.appendChild(createProductItem(product));
+                listSixProduct.appendChild(swiperSlide);
+              });
+          }
+        } else {
+          if (item.getAttribute("data-item") === "best sellers") {
             products
               .filter((product) => product.category === "fashion")
               .sort((a, b) => b.sold - a.sold)
@@ -2092,147 +2176,97 @@ fetch("./assets/data/Product.json")
                 listSixProduct.appendChild(swiperSlide);
               });
           }
+          if (item.getAttribute("data-item") === "on sale") {
+            products
+              .filter(
+                (product) => product.sale && product.category === "fashion"
+              )
+              .slice(0, 6)
+              .forEach((product) => {
+                const swiperSlide = document.createElement("div");
+                swiperSlide.classList.add("swiper-slide");
+                swiperSlide.appendChild(createProductItem(product));
+                listSixProduct.appendChild(swiperSlide);
+              });
+          }
+          if (item.getAttribute("data-item") === "new arrivals") {
+            products
+              .filter(
+                (product) => product.new && product.category === "fashion"
+              )
+              .slice(0, 6)
+              .forEach((product) => {
+                const swiperSlide = document.createElement("div");
+                swiperSlide.classList.add("swiper-slide");
+                swiperSlide.appendChild(createProductItem(product));
+                listSixProduct.appendChild(swiperSlide);
+              });
+          }
         }
 
-        menuItems.forEach((item) => {
-          item.addEventListener("click", () => {
-            const productItems =
-              listSixProduct.querySelectorAll(".swiper-slide");
-
-            if (listSixProduct.getAttribute("data-type")) {
-              if (item.getAttribute("data-item") === "best sellers") {
-                products
-                  .filter(
-                    (product) =>
-                      product.category ===
-                      listSixProduct.getAttribute("data-type")
-                  )
-                  .sort((a, b) => b.sold - a.sold)
-                  .slice(0, 6)
-                  .forEach((product) => {
-                    const swiperSlide = document.createElement("div");
-                    swiperSlide.classList.add("swiper-slide");
-                    swiperSlide.appendChild(createProductItem(product));
-                    listSixProduct.appendChild(swiperSlide);
-                  });
-              }
-              if (item.getAttribute("data-item") === "on sale") {
-                products
-                  .filter(
-                    (product) =>
-                      product.sale &&
-                      product.category ===
-                      listSixProduct.getAttribute("data-type")
-                  )
-                  .slice(0, 6)
-                  .forEach((product) => {
-                    const swiperSlide = document.createElement("div");
-                    swiperSlide.classList.add("swiper-slide");
-                    swiperSlide.appendChild(createProductItem(product));
-                    listSixProduct.appendChild(swiperSlide);
-                  });
-              }
-              if (item.getAttribute("data-item") === "new arrivals") {
-                products
-                  .filter(
-                    (product) =>
-                      product.new &&
-                      product.category ===
-                      listSixProduct.getAttribute("data-type")
-                  )
-                  .slice(0, 6)
-                  .forEach((product) => {
-                    const swiperSlide = document.createElement("div");
-                    swiperSlide.classList.add("swiper-slide");
-                    swiperSlide.appendChild(createProductItem(product));
-                    listSixProduct.appendChild(swiperSlide);
-                  });
-              }
-            } else {
-              if (item.getAttribute("data-item") === "best sellers") {
-                products
-                  .filter((product) => product.category === "fashion")
-                  .sort((a, b) => b.sold - a.sold)
-                  .slice(0, 6)
-                  .forEach((product) => {
-                    const swiperSlide = document.createElement("div");
-                    swiperSlide.classList.add("swiper-slide");
-                    swiperSlide.appendChild(createProductItem(product));
-                    listSixProduct.appendChild(swiperSlide);
-                  });
-              }
-              if (item.getAttribute("data-item") === "on sale") {
-                products
-                  .filter(
-                    (product) => product.sale && product.category === "fashion"
-                  )
-                  .slice(0, 6)
-                  .forEach((product) => {
-                    const swiperSlide = document.createElement("div");
-                    swiperSlide.classList.add("swiper-slide");
-                    swiperSlide.appendChild(createProductItem(product));
-                    listSixProduct.appendChild(swiperSlide);
-                  });
-              }
-              if (item.getAttribute("data-item") === "new arrivals") {
-                products
-                  .filter(
-                    (product) => product.new && product.category === "fashion"
-                  )
-                  .slice(0, 6)
-                  .forEach((product) => {
-                    const swiperSlide = document.createElement("div");
-                    swiperSlide.classList.add("swiper-slide");
-                    swiperSlide.appendChild(createProductItem(product));
-                    listSixProduct.appendChild(swiperSlide);
-                  });
-              }
-            }
-
-            // remove old product
-            productItems.forEach((prdItem) => {
-              prdItem.remove();
-            });
-
-            handleActiveImgWhenColorChange(products);
-            addEventToProductItem(products);
-          });
+        // remove old product
+        productItems.forEach((prdItem) => {
+          prdItem.remove();
         });
-      } else {
-        if (listSixProduct.getAttribute("data-type")) {
-          products
-            .filter(
-              (product) =>
-                product.category === listSixProduct.getAttribute("data-type")
-            )
-            .slice(0, 6)
-            .forEach((product) => {
-              const swiperSlide = document.createElement("div");
-              swiperSlide.classList.add("swiper-slide");
-              swiperSlide.appendChild(createProductItem(product));
-              listSixProduct.appendChild(swiperSlide);
-            });
-        } else {
-          products.slice(5, 11).forEach((product) => {
-            const swiperSlide = document.createElement("div");
-            swiperSlide.classList.add("swiper-slide");
-            swiperSlide.appendChild(createProductItem(product));
-            listSixProduct.appendChild(swiperSlide);
-          });
-        }
-      }
+
+        handleActiveImgWhenColorChange(products);
+        addEventToProductItem(products);
+      });
+    });
+  } else {
+    if (listSixProduct.getAttribute("data-type")) {
+      products
+        .filter(
+          (product) =>
+            product.category === listSixProduct.getAttribute("data-type")
+        )
+        .slice(0, 6)
+        .forEach((product) => {
+          const swiperSlide = document.createElement("div");
+          swiperSlide.classList.add("swiper-slide");
+          swiperSlide.appendChild(createProductItem(product));
+          listSixProduct.appendChild(swiperSlide);
+        });
+    } else {
+      products.slice(5, 11).forEach((product) => {
+        const swiperSlide = document.createElement("div");
+        swiperSlide.classList.add("swiper-slide");
+        swiperSlide.appendChild(createProductItem(product));
+        listSixProduct.appendChild(swiperSlide);
+      });
     }
+  }
+}
 
-    // Display the first 8 products
-    if (listEightProduct) {
-      const parent = listEightProduct.parentElement;
-      if (parent.querySelector(".menu-tab .active")) {
-        const menuItemActive = parent
-          .querySelector(".menu-tab .active")
-          .getAttribute("data-item");
-        const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
+// Display the first 8 products
+if (listEightProduct) {
+  const parent = listEightProduct.parentElement;
+  if (parent.querySelector(".menu-tab .active")) {
+    const menuItemActive = parent
+      .querySelector(".menu-tab .active")
+      .getAttribute("data-item");
+    const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
 
-        if (menuItemActive === "best sellers") {
+    if (menuItemActive === "best sellers") {
+      products
+        .filter((product) => product.category === "fashion")
+        .sort((a, b) => b.sold - a.sold)
+        .slice(0, 8)
+        .forEach((product) => {
+          const productElement = createProductItem(product);
+          listEightProduct.appendChild(productElement);
+        });
+    }
+    menuItems.forEach((item) => {
+      item.addEventListener("click", () => {
+        // remove old product
+        const productItems =
+          listEightProduct.querySelectorAll(".product-item");
+        productItems.forEach((prdItem) => {
+          prdItem.remove();
+        });
+
+        if (item.getAttribute("data-item") === "best sellers") {
           products
             .filter((product) => product.category === "fashion")
             .sort((a, b) => b.sold - a.sold)
@@ -2242,126 +2276,105 @@ fetch("./assets/data/Product.json")
               listEightProduct.appendChild(productElement);
             });
         }
-        menuItems.forEach((item) => {
-          item.addEventListener("click", () => {
-            // remove old product
-            const productItems =
-              listEightProduct.querySelectorAll(".product-item");
-            productItems.forEach((prdItem) => {
-              prdItem.remove();
-            });
-
-            if (item.getAttribute("data-item") === "best sellers") {
-              products
-                .filter((product) => product.category === "fashion")
-                .sort((a, b) => b.sold - a.sold)
-                .slice(0, 8)
-                .forEach((product) => {
-                  const productElement = createProductItem(product);
-                  listEightProduct.appendChild(productElement);
-                });
-            }
-            if (item.getAttribute("data-item") === "on sale") {
-              products
-                .filter(
-                  (product) => product.sale && product.category === "fashion"
-                )
-                .slice(0, 8)
-                .forEach((product) => {
-                  const productElement = createProductItem(product);
-                  listEightProduct.appendChild(productElement);
-                });
-            }
-            if (item.getAttribute("data-item") === "new arrivals") {
-              products
-                .filter(
-                  (product) => product.new && product.category === "fashion"
-                )
-                .slice(0, 8)
-                .forEach((product) => {
-                  const productElement = createProductItem(product);
-                  listEightProduct.appendChild(productElement);
-                });
-            }
-
-            handleActiveImgWhenColorChange(products);
-            addEventToProductItem(products);
-          });
-        });
-      } else {
-        if (listEightProduct.getAttribute("data-type")) {
+        if (item.getAttribute("data-item") === "on sale") {
           products
             .filter(
-              (product) =>
-                product.category === listEightProduct.getAttribute("data-type")
+              (product) => product.sale && product.category === "fashion"
             )
             .slice(0, 8)
             .forEach((product) => {
               const productElement = createProductItem(product);
               listEightProduct.appendChild(productElement);
             });
-        } else {
-          products.slice(11, 19).forEach((product) => {
-            const productElement = createProductItem(product);
-            listEightProduct.appendChild(productElement);
-          });
         }
-      }
-    }
+        if (item.getAttribute("data-item") === "new arrivals") {
+          products
+            .filter(
+              (product) => product.new && product.category === "fashion"
+            )
+            .slice(0, 8)
+            .forEach((product) => {
+              const productElement = createProductItem(product);
+              listEightProduct.appendChild(productElement);
+            });
+        }
 
-    // Display 3 products(Home 11)
-    if (listThreeProduct) {
-      listThreeProduct.forEach((list) => {
-        const parent = list.parentElement;
-        const gender = list.getAttribute("data-gender");
-        const menuItemActive = parent
-          .querySelector(".menu-tab .active")
-          .getAttribute("data-item");
-        const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
+        handleActiveImgWhenColorChange(products);
+        addEventToProductItem(products);
+      });
+    });
+  } else {
+    if (listEightProduct.getAttribute("data-type")) {
+      products
+        .filter(
+          (product) =>
+            product.category === listEightProduct.getAttribute("data-type")
+        )
+        .slice(0, 8)
+        .forEach((product) => {
+          const productElement = createProductItem(product);
+          listEightProduct.appendChild(productElement);
+        });
+    } else {
+      products.slice(11, 19).forEach((product) => {
+        const productElement = createProductItem(product);
+        listEightProduct.appendChild(productElement);
+      });
+    }
+  }
+}
+
+// Display 3 products(Home 11)
+if (listThreeProduct) {
+  listThreeProduct.forEach((list) => {
+    const parent = list.parentElement;
+    const gender = list.getAttribute("data-gender");
+    const menuItemActive = parent
+      .querySelector(".menu-tab .active")
+      .getAttribute("data-item");
+    const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
+
+    products
+      .filter(
+        (product) =>
+          product.gender === gender && product.type === menuItemActive
+      )
+      .slice(0, 3)
+      .forEach((product) => {
+        const productElement = createProductItem(product);
+        list.appendChild(productElement);
+      });
+
+    menuItems.forEach((item) => {
+      item.addEventListener("click", () => {
+        // remove old product
+        const productItems = list.querySelectorAll(".product-item");
+        productItems.forEach((prdItem) => {
+          prdItem.remove();
+        });
 
         products
           .filter(
             (product) =>
-              product.gender === gender && product.type === menuItemActive
+              product.gender === gender &&
+              product.type === item.getAttribute("data-item")
           )
           .slice(0, 3)
           .forEach((product) => {
+            // create product
             const productElement = createProductItem(product);
             list.appendChild(productElement);
           });
 
-        menuItems.forEach((item) => {
-          item.addEventListener("click", () => {
-            // remove old product
-            const productItems = list.querySelectorAll(".product-item");
-            productItems.forEach((prdItem) => {
-              prdItem.remove();
-            });
-
-            products
-              .filter(
-                (product) =>
-                  product.gender === gender &&
-                  product.type === item.getAttribute("data-item")
-              )
-              .slice(0, 3)
-              .forEach((product) => {
-                // create product
-                const productElement = createProductItem(product);
-                list.appendChild(productElement);
-              });
-
-            handleActiveImgWhenColorChange(products);
-            addEventToProductItem(products);
-          });
-        });
+        handleActiveImgWhenColorChange(products);
+        addEventToProductItem(products);
       });
-    }
+    });
+  });
+}
 
-    handleActiveImgWhenColorChange(products);
-    addEventToProductItem(products);
-  })
-  .catch((error) => console.error("Error loading products:", error));
+handleActiveImgWhenColorChange(products);
+addEventToProductItem(products);
 
 
 
@@ -3434,73 +3447,6 @@ if (paymentCheckbox) {
     });
   });
 }
-
-// // faqs
-// const menuTab = document.querySelector(".menu-tab");
-// const listQuestion = document.querySelector(".list-question");
-// const tabQuestions = document.querySelectorAll(".tab-question");
-// const questionItems = document.querySelectorAll(".question-item");
-
-// if (tabItems) {
-//   tabItems.forEach((tabItem) => {
-//     tabQuestions.forEach((tabQuestion) => {
-//       let activeMenuTab = menuTab.querySelector(".active");
-
-//       if (
-//         activeMenuTab.getAttribute("data-item") ===
-//         tabQuestion.getAttribute("data-item")
-//       ) {
-//         tabQuestion.classList.add("active");
-//       }
-
-//       tabItem.addEventListener("click", () => {
-//         if (
-//           tabItem.getAttribute("data-item") ===
-//           tabQuestion.getAttribute("data-item")
-//         ) {
-//           listQuestion.querySelector(".active").classList.remove("active");
-//           tabQuestion.classList.add("active");
-//         }
-//       });
-//     });
-//   });
-// }
-
-// if (questionItems) {
-//   questionItems.forEach((item, index) => {
-//     item.addEventListener("click", () => {
-//       item.classList.toggle("open");
-
-//       removeOpen(index);
-//     });
-//   });
-// }
-
-// function removeOpen(index1) {
-//   questionItems.forEach((item2, index2) => {
-//     if (index1 != index2) {
-//       item2.classList.remove("open");
-//     }
-//   });
-// }
-
-
-// // Function to remove the "open" class from all question items except the one at the specified index.
-// function removeOpen(index1) {
-//     // Get all elements with the class 'question-item'.
-//     const questionItems = document.querySelectorAll(".question-item");
-    
-//     // Check if the 'questionItems' NodeList exists and contains elements.
-//     if (questionItems && questionItems.length > 0) {
-//         // Iterate through each 'questionItem'.
-//         questionItems.forEach((item2, index2) => {
-//             // If the current element's index is not the one to keep open, remove the 'open' class.
-//             if (index1 !== index2) {
-//                 item2.classList.remove("open");
-//             }
-//         });
-//     }
-// }
 
 // Ensure the DOM is fully loaded before running the script.
 document.addEventListener("DOMContentLoaded", () => {
