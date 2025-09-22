@@ -99,12 +99,54 @@ rangeInput.forEach(input => {
 })
 
 
-// Function to fetch products from JSON file
+// Add this mapping function near the top of your file
+function mapApiProductToFrontend(product) {
+  return {
+    id: String(product.id),
+    category: product.category,
+    type: product.type,
+    name: product.name,
+    new: !!product.is_new,
+    sale: !!product.on_sale,
+    rate: Number(product.rate),
+    price: Number(product.price),
+    originPrice: Number(product.origin_price),
+    brand: product.brand,
+    sold: product.sold,
+    quantity: product.quantity,
+    quantityPurchase: product.quantityPurchase || 1, // default to 1
+    sizes: Array.isArray(product.sizes)
+      ? product.sizes
+      : product.sizes
+      ? JSON.parse(product.sizes)
+      : [],
+    variation: Array.isArray(product.variation)
+      ? product.variation
+      : product.variations
+      ? JSON.parse(product.variations)
+      : [],
+    thumbImage: Array.isArray(product.thumbImage)
+      ? product.thumbImage
+      : product.thumb_image
+      ? [product.thumb_image]
+      : [],
+    images: Array.isArray(product.images)
+      ? product.images
+      : product.gallery
+      ? JSON.parse(product.gallery)
+      : [],
+    description: product.description,
+    action: product.action,
+    slug: product.slug,
+  };
+}
+
+// Replace your fetchProducts function with this:
 function fetchProducts() {
-    fetch('./assets/data/Product.json')
+    fetch('/api/admin/products')
         .then(response => response.json())
         .then(data => {
-            productsData = data;
+            productsData = data.map(mapApiProductToFrontend);
             renderProducts(currentPage, productsData);
             renderPagination(productsData);
 
