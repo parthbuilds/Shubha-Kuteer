@@ -1991,6 +1991,9 @@ fetch("/api/admin/products")
             .getAttribute("data-item");
           const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
 
+          // Clear old products before rendering
+          list.innerHTML = "";
+
           // Initial active tab
           if (menuItemActive === "best sellers") {
             mappedProducts
@@ -2026,9 +2029,13 @@ fetch("/api/admin/products")
               });
           }
 
+          // Attach event handlers after initial render
+          addEventToProductItem(mappedProducts);
+
           // Tab click event logic
           menuItems.forEach((item) => {
             item.addEventListener("click", () => {
+              // remove old product
               list.querySelectorAll(".product-item").forEach((prd) => prd.remove());
               const menuItemActive = item.getAttribute("data-item");
               if (menuItemActive === "best sellers") {
@@ -2064,6 +2071,8 @@ fetch("/api/admin/products")
                     list.appendChild(productElement);
                   });
               }
+              // Attach event handlers after tab click render
+              addEventToProductItem(mappedProducts);
             });
           });
         }
