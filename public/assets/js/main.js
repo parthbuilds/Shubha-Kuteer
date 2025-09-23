@@ -1008,7 +1008,7 @@ if (lookbookUnderwear) {
 // list-feature-product Underwear
 var swiperUnderwear = new Swiper(".mySwiper", {
   spaceBetween: 0,
-  slidesPerView: 4,
+  slidesPerView: 1,
   // freeMode: true,
   watchSlidesProgress: true,
 });
@@ -2700,16 +2700,21 @@ var swiperListInstagram = new Swiper(".swiper-list-instagram", {
     delay: 4000,
     disableOnInteraction: false,
   },
-  slidesPerView: 2,
-  spaceBetween: 12,
+  observer: true,
+  observeParents: true,
+  resizeObserver: true,
+  watchOverflow: true,
+  preloadImages: true,
+  slidesPerView: 4,
+  spaceBetween: 16,
   breakpoints: {
+    480: {
+      slidesPerView: 2,
+      spaceBetween: 12,
+    },
     640: {
       slidesPerView: 3,
       spaceBetween: 12,
-    },
-    768: {
-      slidesPerView: 3,
-      spaceBetween: 16,
     },
     1024: {
       slidesPerView: 4,
@@ -2723,16 +2728,24 @@ var swiperListInstagram = new Swiper(".swiper-list-instagram", {
 });
 
 // list-instagram 3
-var swiperListInstagram = new Swiper(".swiper-instagram-three", {
+var swiperListInstagramThree = new Swiper(".swiper-instagram-three", {
   loop: true,
   autoplay: {
     delay: 4000,
     disableOnInteraction: false,
   },
   clickable: true,
-  slidesPerView: 2,
+  observer: true,
+  observeParents: true,
+  resizeObserver: true,
+  watchOverflow: true,
+  preloadImages: true,
+  slidesPerView: 4,
   spaceBetween: 0,
   breakpoints: {
+    480: {
+      slidesPerView: 2,
+    },
     640: {
       slidesPerView: 4,
     },
