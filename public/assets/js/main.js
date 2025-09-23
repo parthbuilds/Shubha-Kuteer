@@ -50,6 +50,7 @@
 /**** Display wishlist, cart, compare item from localStorage ****/
 /**** faqs ****/
 
+const products = PRODUCTS;
 
 // Select language, currency top nav
 const chooseType = document.querySelectorAll(".top-nav .choose-type");
@@ -2700,21 +2701,16 @@ var swiperListInstagram = new Swiper(".swiper-list-instagram", {
     delay: 4000,
     disableOnInteraction: false,
   },
-  observer: true,
-  observeParents: true,
-  resizeObserver: true,
-  watchOverflow: true,
-  preloadImages: true,
-  slidesPerView: 4,
-  spaceBetween: 0,
+  slidesPerView: 2,
+  spaceBetween: 12,
   breakpoints: {
-    480: {
-      slidesPerView: 2,
-      spaceBetween: 12,
-    },
     640: {
       slidesPerView: 3,
       spaceBetween: 12,
+    },
+    768: {
+      slidesPerView: 3,
+      spaceBetween: 16,
     },
     1024: {
       slidesPerView: 4,
@@ -2728,65 +2724,31 @@ var swiperListInstagram = new Swiper(".swiper-list-instagram", {
 });
 
 // list-instagram 3
-var swiperListInstagramThree = new Swiper(".swiper-instagram-three", {
+var swiperListInstagram = new Swiper(".swiper-instagram-three", {
   loop: true,
   autoplay: {
     delay: 4000,
     disableOnInteraction: false,
   },
   clickable: true,
-  observer: true,
-  observeParents: true,
-  observeSlideChildren: true,
-  resizeObserver: true,
-  watchOverflow: true,
-  preloadImages: true,
-  slidesPerView: 4,
-  spaceBetween: 16,
+  slidesPerView: 2,
+  spaceBetween: 0,
   breakpoints: {
-    480: {
-      slidesPerView: 2,
-      spaceBetween: 8,
-    },
     640: {
       slidesPerView: 4,
-      spaceBetween: 12,
     },
     768: {
       slidesPerView: 4,
-      spaceBetween: 16,
     },
     1024: {
       slidesPerView: 4,
-      spaceBetween: 16,
     },
     1280: {
       slidesPerView: 4,
-      spaceBetween: 16,
     },
   },
-  on: {
-    init() {
-      setTimeout(() => this.update(), 0);
-    },
-    imagesReady() {
-      this.update();
-    },
-    resize() {
-      this.update();
-    }
-  }
 });
-window.addEventListener('load', () => swiperListInstagramThree.update());
 
-// Ensure swiper slides are not forced to 100% width in this block
-(function(){
-  const style = document.createElement('style');
-  style.textContent = `
-    .swiper-instagram-three .swiper-slide { width: auto !important; }
-  `;
-  document.head.appendChild(style);
-})();
 
 // list-brand
 var swiperListBrand = new Swiper(".swiper-list-brand", {
