@@ -51,6 +51,67 @@
 /**** faqs ****/
 
 
+//function to modulate data
+function transformBackendProduct(backendProduct) {
+  // Attempt to parse gallery string into an array, default to empty array if parsing fails
+  let galleryImages = [];
+  try {
+      galleryImages = JSON.parse(backendProduct.gallery);
+  } catch (e) {
+      console.warn("Could not parse gallery string for product:", backendProduct.id, e);
+      galleryImages = [];
+  }
+
+  // Combine main_image and thumb_image into thumbImage array, ensuring no duplicates
+  const thumbImages = [];
+  if (backendProduct.thumb_image) {
+      thumbImages.push(backendProduct.thumb_image);
+  }
+  if (backendProduct.main_image && !thumbImages.includes(backendProduct.main_image)) {
+      thumbImages.push(backendProduct.main_image);
+  }
+  // If no specific thumb_image or main_image, use first from gallery if available
+  if (thumbImages.length === 0 && galleryImages.length > 0) {
+      thumbImages.push(galleryImages[0]);
+  }
+  // Ensure at least one image if possible, using a placeholder if absolutely nothing is found
+  if (thumbImages.length === 0) {
+      thumbImages.push('./assets/images/placeholder.png'); // Fallback placeholder
+  }
+
+  // Default values for sizes and variation, as they are not directly in the backend data
+  // You might need to extend your backend API or add logic here to fetch/infer these
+  const defaultSizes = ["S", "M", "L", "XL"];
+  const defaultVariation = [
+      { color: "red", colorCode: "#DB4444", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" },
+      { color: "yellow", colorCode: "#ECB018", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" }
+  ];
+
+  return {
+      id: String(backendProduct.id), // Ensure ID is a string for consistency
+      category: backendProduct.category,
+      type: backendProduct.type,
+      name: backendProduct.name,
+      new: Boolean(backendProduct.is_new),
+      sale: Boolean(backendProduct.on_sale),
+      rate: parseFloat(backendProduct.rate),
+      price: parseFloat(backendProduct.price),
+      originPrice: parseFloat(backendProduct.origin_price),
+      brand: backendProduct.brand,
+      sold: backendProduct.sold,
+      quantity: backendProduct.quantity,
+      quantityPurchase: 1, // Default, not in backend data
+      sizes: defaultSizes, // Default sizes, or fetch/infer from backend if available
+      variation: defaultVariation, // Default variations, or fetch/infer from backend if available
+      thumbImage: thumbImages, // Combined main and thumb image
+      images: galleryImages.length > 0 ? galleryImages : thumbImages, // Use gallery if available, otherwise thumbImages
+      description: backendProduct.description,
+      action: backendProduct.action,
+      slug: backendProduct.slug
+  };
+}
+
+
 // Select language, currency top nav
 const chooseType = document.querySelectorAll(".top-nav .choose-type");
 const optionItems = document.querySelectorAll(".top-nav .choose-type .list-option li");
@@ -158,9 +219,10 @@ if (listSearchResults) {
 
   const listProductResult = document.querySelector(".list-product-result");
   if (queryValue) {
-    fetch("./assets/data/Product.json")
+    fetch("api/admin/products")
       .then((response) => response.json())
-      .then((products) => {
+      .then((backendProducts) => {
+        const products = backendProducts.map(transformBackendProduct);
         const filterPrd = products.filter(
           (product) =>
             product.type.includes(queryValue) ||
@@ -966,44 +1028,44 @@ if (document.querySelector(".swiper-list-three-product")) {
 }
 
 // Lookbook Underwear
-const lookbookUnderwear = document.querySelector('.lookbook-underwear')
+// const lookbookUnderwear = document.querySelector('.lookbook-underwear')
 
-if (lookbookUnderwear) {
-  fetch("./assets/data/Product.json")
-    .then((response) => response.json())
-    .then((products) => {
-      const itemDot = lookbookUnderwear.querySelector('.list-img .item .dots')
-      const itemDots = lookbookUnderwear.querySelectorAll('.list-img .item .dots')
-      const listPrd = lookbookUnderwear.querySelector('.list-product')
-      const prdId = itemDot.getAttribute('data-item');
+// if (lookbookUnderwear) {
+//   fetch("./assets/data/Product.json")
+//     .then((response) => response.json())
+//     .then((products) => {
+//       const itemDot = lookbookUnderwear.querySelector('.list-img .item .dots')
+//       const itemDots = lookbookUnderwear.querySelectorAll('.list-img .item .dots')
+//       const listPrd = lookbookUnderwear.querySelector('.list-product')
+//       const prdId = itemDot.getAttribute('data-item');
 
-      // Display products
-      products
-        .filter((product) => product.id === prdId)
-        .forEach((product) => {
-          const productElement = createProductItem(product);
-          listPrd.appendChild(productElement);
-        });
+//       // Display products
+//       products
+//         .filter((product) => product.id === prdId)
+//         .forEach((product) => {
+//           const productElement = createProductItem(product);
+//           listPrd.appendChild(productElement);
+//         });
 
-      itemDots.forEach(item => {
-        item.addEventListener('click', () => {
-          const prdId = item.getAttribute('data-item');
+//       itemDots.forEach(item => {
+//         item.addEventListener('click', () => {
+//           const prdId = item.getAttribute('data-item');
 
-          // Display products
-          listPrd.innerHTML = ''
+//           // Display products
+//           listPrd.innerHTML = ''
 
-          products
-            .filter((product) => product.id === prdId)
-            .forEach((product) => {
-              const productElement = createProductItem(product);
-              listPrd.appendChild(productElement);
-              addEventToProductItem()
-            });
-        })
-      })
-    })
-    .catch((error) => console.error("Error loading products:", error));
-}
+//           products
+//             .filter((product) => product.id === prdId)
+//             .forEach((product) => {
+//               const productElement = createProductItem(product);
+//               listPrd.appendChild(productElement);
+//               addEventToProductItem()
+//             });
+//         })
+//       })
+//     })
+//     .catch((error) => console.error("Error loading products:", error));
+// }
 
 // list-feature-product Underwear
 var swiperUnderwear = new Swiper(".mySwiper", {
@@ -1867,9 +1929,10 @@ const handleActiveColorChange = () => {
 const filterProductImg = document.querySelector('.filter-product-img')
 
 if (filterProductImg) {
-  fetch('./assets/data/Product.json')
+  fetch('api/admin/products')
     .then(response => response.json())
-    .then(data => {
+    .then(backendProducts => {
+      const products = backendProducts.map(transformBackendProduct);
       const prdId = filterProductImg.querySelector('.product-infor').getAttribute('data-item')
       let productMain = data.find(product => product.id === prdId);
       const colorItems = filterProductImg.querySelectorAll('.color-item');
@@ -1951,9 +2014,10 @@ const listThreeProduct = document.querySelectorAll(
 );
 
 // Fetch products from JSON file (assuming products.json)
-fetch("./assets/data/Product.json")
+fetch("api/admin/products")
   .then((response) => response.json())
-  .then((products) => {
+  .then((backendProducts) => {
+    const products = backendProducts.map(transformBackendProduct);
     // =============================
     // 🔹 Display the first 4 products
     // =============================
@@ -2424,9 +2488,10 @@ const createProductItemMarketplace = (product) => {
 
 // fetch product in marketplace
 if (document.querySelector('.tab-features-block.style-marketplace')) {
-  fetch("./assets/data/Product.json")
+  fetch("api/admin/products")
     .then((response) => response.json())
-    .then((products) => {
+    .then((backendProducts) => {
+      const products = backendProducts.map(transformBackendProduct);
       // Display the first 4 products
       const listProduct = document.querySelector('.tab-features-block.style-marketplace .list-product')
 
