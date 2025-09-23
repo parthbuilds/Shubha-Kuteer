@@ -82,10 +82,46 @@ function transformBackendProduct(backendProduct) {
   // Default values for sizes and variation, as they are not directly in the backend data
   // You might need to extend your backend API or add logic here to fetch/infer these
   const defaultSizes = ["S", "M", "L", "XL"];
-  const defaultVariation = [
-      { color: "red", colorCode: "#DB4444", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" },
-      { color: "yellow", colorCode: "#ECB018", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" }
-  ];
+
+  // --- START OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
+  let variations = [];
+
+  // Assuming backendProduct has an 'attributes' property which is an array
+  // and one of its elements is a 'color' attribute with values and hex codes.
+  if (backendProduct.attributes && Array.isArray(backendProduct.attributes)) {
+      const colorAttribute = backendProduct.attributes.find(
+          attr => attr.attribute_name && attr.attribute_name.toLowerCase() === 'color'
+      );
+
+      if (colorAttribute && colorAttribute.attribute_values) {
+          try {
+              const attributeValues = typeof colorAttribute.attribute_values === 'string'
+                  ? JSON.parse(colorAttribute.attribute_values)
+                  : colorAttribute.attribute_values;
+
+              if (Array.isArray(attributeValues)) {
+                  variations = attributeValues.map(valueObj => ({
+                      color: valueObj.value,      // e.g., "Red"
+                      colorCode: valueObj.code,   // <--- CHANGED FROM 'hex_code' TO 'code'
+                      colorImage: "./assets/images/product/color/48x48.png", // This might still be a generic placeholder or dynamic based on color name
+                      image: backendProduct.main_image || "./assets/images/product/bag-1.png" // Use main product image or default
+                  }));
+              }
+          } catch (e) {
+              console.warn("Could not parse color attribute_values for product:", backendProduct.id, e);
+          }
+      }
+  }
+
+  // Fallback to default variations if none are generated from backend attributes
+  if (variations.length === 0) {
+      variations = [
+          { color: "red", colorCode: "#DB4444", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" },
+          { color: "yellow", colorCode: "#ECB018", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" }
+      ];
+  }
+  // --- END OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
+
 
   return {
       id: String(backendProduct.id), // Ensure ID is a string for consistency
@@ -102,7 +138,7 @@ function transformBackendProduct(backendProduct) {
       quantity: backendProduct.quantity,
       quantityPurchase: 1, // Default, not in backend data
       sizes: defaultSizes, // Default sizes, or fetch/infer from backend if available
-      variation: defaultVariation, // Default variations, or fetch/infer from backend if available
+      variation: variations, // Use the dynamically generated variations
       thumbImage: thumbImages, // Combined main and thumb image
       images: galleryImages.length > 0 ? galleryImages : thumbImages, // Use gallery if available, otherwise thumbImages
       description: backendProduct.description,
