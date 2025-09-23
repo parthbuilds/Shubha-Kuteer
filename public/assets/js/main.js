@@ -1950,54 +1950,13 @@ const listThreeProduct = document.querySelectorAll(
   ".list-product.three-product"
 );
 
-// Place this mapping function near the top of your file, or before any fetch that uses product data
-function mapApiProductToFrontend(product) {
-  return {
-    id: String(product.id),
-    category: product.category,
-    type: product.type,
-    name: product.name,
-    new: !!product.is_new,
-    sale: !!product.on_sale,
-    rate: Number(product.rate),
-    price: Number(product.price),
-    originPrice: Number(product.origin_price),
-    brand: product.brand,
-    sold: product.sold,
-    quantity: product.quantity,
-    quantityPurchase: product.quantityPurchase || 1, // default to 1
-    sizes: Array.isArray(product.sizes)
-      ? product.sizes
-      : product.sizes
-      ? JSON.parse(product.sizes)
-      : [],
-    variation: Array.isArray(product.variation)
-      ? product.variation
-      : product.variations
-      ? JSON.parse(product.variations)
-      : [],
-    thumbImage: Array.isArray(product.thumbImage)
-      ? product.thumbImage
-      : product.thumb_image
-      ? [product.thumb_image]
-      : [],
-    images: Array.isArray(product.images)
-      ? product.images
-      : product.gallery
-      ? JSON.parse(product.gallery)
-      : [],
-    description: product.description,
-    action: product.action,
-    slug: product.slug,
-  };
-}
-
-// Replace the old fetch block for 4 cards view with this:
-fetch("/api/admin/products")
+// Fetch products from JSON file (assuming products.json)
+fetch("./assets/data/Product.json")
   .then((response) => response.json())
   .then((products) => {
-    const mappedProducts = products.map(mapApiProductToFrontend);
-
+    // =============================
+    // 🔹 Display the first 4 products
+    // =============================
     if (listFourProduct) {
       listFourProduct.forEach((list) => {
         const parent = list.parentElement;
@@ -2007,12 +1966,9 @@ fetch("/api/admin/products")
             .getAttribute("data-item");
           const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
 
-          // Clear old products before rendering
-          list.innerHTML = "";
-
-          // Initial active tab
+          // ✅ Handle initial active tab
           if (menuItemActive === "best sellers") {
-            mappedProducts
+            products
               .sort((a, b) => b.sold - a.sold)
               .slice(0, 4)
               .forEach((product) => {
@@ -2020,7 +1976,7 @@ fetch("/api/admin/products")
                 list.appendChild(productElement);
               });
           } else if (menuItemActive === "on sale") {
-            mappedProducts
+            products
               .filter((product) => product.sale === true)
               .slice(0, 4)
               .forEach((product) => {
@@ -2028,7 +1984,7 @@ fetch("/api/admin/products")
                 list.appendChild(productElement);
               });
           } else if (menuItemActive === "new arrivals") {
-            mappedProducts
+            products
               .filter((product) => product.new === true)
               .slice(0, 4)
               .forEach((product) => {
@@ -2036,7 +1992,7 @@ fetch("/api/admin/products")
                 list.appendChild(productElement);
               });
           } else {
-            mappedProducts
+            products
               .filter((product) => product.type === menuItemActive)
               .slice(0, 4)
               .forEach((product) => {
@@ -2045,33 +2001,31 @@ fetch("/api/admin/products")
               });
           }
 
-          // Attach event handlers after initial render
-          addEventToProductItem(mappedProducts);
-
-          // Tab click event logic
+          // ✅ Tab click handler
           menuItems.forEach((item) => {
             item.addEventListener("click", () => {
-              // remove old product
               list.querySelectorAll(".product-item").forEach((prd) => prd.remove());
-              const menuItemActive = item.getAttribute("data-item");
-              if (menuItemActive === "best sellers") {
-                mappedProducts
+
+              const tab = item.getAttribute("data-item");
+
+              if (tab === "best sellers") {
+                products
                   .sort((a, b) => b.sold - a.sold)
                   .slice(0, 4)
                   .forEach((product) => {
                     const productElement = createProductItem(product);
                     list.appendChild(productElement);
                   });
-              } else if (menuItemActive === "on sale") {
-                mappedProducts
+              } else if (tab === "on sale") {
+                products
                   .filter((product) => product.sale === true)
                   .slice(0, 4)
                   .forEach((product) => {
                     const productElement = createProductItem(product);
                     list.appendChild(productElement);
                   });
-              } else if (menuItemActive === "new arrivals") {
-                mappedProducts
+              } else if (tab === "new arrivals") {
+                products
                   .filter((product) => product.new === true)
                   .slice(0, 4)
                   .forEach((product) => {
@@ -2079,22 +2033,28 @@ fetch("/api/admin/products")
                     list.appendChild(productElement);
                   });
               } else {
-                mappedProducts
-                  .filter((product) => product.type === menuItemActive)
+                products
+                  .filter((product) => product.type === tab)
                   .slice(0, 4)
                   .forEach((product) => {
                     const productElement = createProductItem(product);
                     list.appendChild(productElement);
                   });
               }
-              // Attach event handlers after tab click render
-              addEventToProductItem(mappedProducts);
+
+              handleActiveImgWhenColorChange(products);
+              addEventToProductItem(products);
             });
+          });
+        } else {
+          // No active tab -> fallback
+          products.slice(0, 4).forEach((product) => {
+            const productElement = createProductItem(product);
+            list.appendChild(productElement);
           });
         }
       });
     }
-  });
 
     // Display the first 6 products
     if (listSixProduct) {
