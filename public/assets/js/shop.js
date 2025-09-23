@@ -997,7 +997,7 @@ function transformBackendProduct(backendProduct) {
 async function fetchProductsFromBackend() {
     try {
         // Replace with your actual backend API endpoint
-        const response = await fetch('YOUR_BACKEND_API_ENDPOINT/products');
+        const response = await fetch('api/admin/products');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
