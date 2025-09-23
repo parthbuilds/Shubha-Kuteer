@@ -623,7 +623,7 @@ var swiperBannerTop = new Swiper(".swiper-banner-top", {
 // Slider
 var swiperSlider = new Swiper(".swiper-slider", {
   spaceBetween: 0,
-  slidesPerView: 1,
+  slidesPerView: 4,
   pagination: {
     el: ".swiper-pagination",
     clickable: true,
