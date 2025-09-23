@@ -2735,16 +2735,16 @@ var swiperListInstagram = new Swiper(".swiper-instagram-three", {
   spaceBetween: 0,
   breakpoints: {
     640: {
-      slidesPerView: 3,
+      slidesPerView: 4,
     },
     768: {
       slidesPerView: 4,
     },
     1024: {
-      slidesPerView: 5,
+      slidesPerView: 4,
     },
     1280: {
-      slidesPerView: 6,
+      slidesPerView: 4,
     },
   },
 });
