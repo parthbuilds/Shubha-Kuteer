@@ -242,7 +242,7 @@ export default async function handler(req, res) {
                             brand, description, sizes, variations, gallery, main_image,
                             is_new, on_sale, slug
                         } = req.body;
-
+        
                         // Validate required fields
                         if (!name || !category || !price) {
                             return res.status(400).json({
@@ -250,109 +250,120 @@ export default async function handler(req, res) {
                                 error: 'Missing required fields: name, category, price'
                             });
                         }
-
-                        // Parse and validate variations
-                        let parsedVariations = [];
+        
+                        // --- Parsing logic (adjusted for schema types and frontend output) ---
+                        let parsedVariations = {}; // Store as an object for key-value pairs
                         if (variations) {
                             try {
+                                // Assuming `variations` from frontend is already a JSON string of `{attrName: [value1, value2]}`
                                 const variationsData = JSON.parse(variations);
-                                console.log('Parsed variations:', variationsData);
-                                
-                                // Process attribute variations
-                                if (variationsData.attributes) {
-                                    Object.keys(variationsData.attributes).forEach(attrName => {
-                                        variationsData.attributes[attrName].forEach(valueData => {
-                                            if (valueData.type === 'color') {
-                                                parsedVariations.push({
-                                                    color: valueData.name,
-                                                    colorCode: valueData.code,
-                                                    colorImage: './assets/images/product/color/48x48.png',
-                                                    image: main_image || './assets/images/product/default.png'
-                                                });
-                                            }
-                                        });
-                                    });
-                                }
-                                
-                                // Process color variations (legacy support)
-                                if (variationsData.colors) {
-                                    variationsData.colors.forEach(colorData => {
-                                        parsedVariations.push({
-                                            color: colorData.name,
-                                            colorCode: colorData.code,
-                                            colorImage: './assets/images/product/color/48x48.png',
-                                            image: main_image || './assets/images/product/default.png'
-                                        });
-                                    });
+                                // Ensure it's an object and contains actual selected variants
+                                if (typeof variationsData === 'object' && Object.keys(variationsData).length > 0) {
+                                    parsedVariations = variationsData;
                                 }
                             } catch (e) {
                                 console.error('Error parsing variations:', e);
-                                return res.status(400).json({
-                                    success: false,
-                                    error: 'Invalid variations format'
-                                });
+                                // Even if parsing fails, we'll proceed with an empty object for variations
                             }
                         }
-
-                        // Parse sizes
+        
                         let parsedSizes = [];
                         if (sizes) {
                             try {
                                 parsedSizes = JSON.parse(sizes);
+                                if (!Array.isArray(parsedSizes)) {
+                                    parsedSizes = []; // Ensure it's an array
+                                }
                             } catch (e) {
                                 console.error('Error parsing sizes:', e);
                                 parsedSizes = [];
                             }
                         }
-
-                        // Parse gallery
+        
                         let parsedGallery = [];
                         if (gallery) {
                             try {
                                 parsedGallery = JSON.parse(gallery);
+                                if (!Array.isArray(parsedGallery)) {
+                                    parsedGallery = []; // Ensure it's an array
+                                }
                             } catch (e) {
                                 console.error('Error parsing gallery:', e);
                                 parsedGallery = [];
                             }
                         }
-
-                        // Create product object
-                        const productData = {
+                        // --- End of parsing logic ---
+        
+                        // Generate slug if not provided
+                        const productSlug = slug && slug.trim() !== '' ? slug : name.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
+        
+                        // Determine thumb_image (first image from gallery, then main_image, else null)
+                        const finalThumbImage = parsedGallery.length > 0 ? parsedGallery[0] : (main_image || null);
+        
+                        // Prepare the SQL query and values
+                        const sql = `
+                            INSERT INTO products 
+                            (name, slug, price, origin_price, quantity, sold, rate, 
+                            is_new, on_sale, category, description, type, brand, 
+                            main_image, thumb_image, gallery, sizes, variations, action)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        `;
+                        const values = [
                             name,
+                            productSlug,
+                            parseFloat(price) || 0.00, // Ensure it's a float, default to 0.00
+                            parseFloat(origin_price) || null, // Allow NULL if not provided
+                            parseInt(quantity) || 0,
+                            parseInt(sold) || 0,
+                            parseFloat(rate) || 0.0, // Use parseFloat for decimal rate
+                            Boolean(is_new) ? 1 : 0, // Convert boolean to 1 or 0 for MySQL TINYINT(1)
+                            Boolean(on_sale) ? 1 : 0, // Convert boolean to 1 or 0
                             category,
-                            type: type || 'general',
-                            price: parseFloat(price),
-                            originPrice: parseFloat(origin_price) || parseFloat(price),
-                            quantity: parseInt(quantity) || 0,
-                            sold: parseInt(sold) || 0,
-                            rate: parseInt(rate) || 0,
-                            brand: brand || 'Unknown',
-                            description: description || '',
-                            sizes: parsedSizes,
-                            variation: parsedVariations,
-                            thumbImage: parsedGallery.length > 0 ? parsedGallery : [main_image],
-                            images: parsedGallery.length > 0 ? parsedGallery : [main_image],
-                            new: Boolean(is_new),
-                            sale: Boolean(on_sale),
-                            slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
-                            action: 'add to cart'
-                        };
-
-                        console.log('Product data to save:', productData);
-
-                        // Here you would save to database
-                        // For now, we'll return success
+                            description || null, // Allow NULL for text field
+                            type || null,        // Allow NULL
+                            brand || null,       // Allow NULL
+                            main_image || null,
+                            finalThumbImage,
+                            JSON.stringify(parsedGallery), // Store gallery as JSON string
+                            JSON.stringify(parsedSizes),   // Store sizes as JSON string
+                            JSON.stringify(parsedVariations), // Store variations as JSON string
+                            action || 'add to cart' // Use provided action or default
+                        ];
+        
+                        // Log the data before insertion for debugging
+                        console.log('Product data to insert:', {
+                            name, slug: productSlug, price: values[2], origin_price: values[3],
+                            quantity: values[4], sold: values[5], rate: values[6],
+                            is_new: values[7], on_sale: values[8], category: values[9],
+                            description: values[10], type: values[11], brand: values[12],
+                            main_image: values[13], thumb_image: values[14], gallery: values[15],
+                            sizes: values[16], variations: values[17], action: values[18]
+                        });
+        
+                        // Execute the insert query
+                        const [result] = await pool.default.query(sql, values);
+        
                         return res.status(201).json({
                             success: true,
-                            message: 'Product created successfully',
-                            product: productData
+                            message: 'Product added successfully!',
+                            productId: result.insertId,
+                            insertedProduct: { // Return some of the data for confirmation
+                                id: result.insertId,
+                                name: name,
+                                slug: productSlug,
+                                category: category,
+                                main_image: main_image,
+                                price: parseFloat(price)
+                            }
                         });
-
+        
                     } catch (error) {
                         console.error('Product creation error:', error);
                         return res.status(500).json({
                             success: false,
-                            error: 'Failed to create product'
+                            error: 'Failed to create product',
+                            details: error.message,
+                            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined // Include stack in dev
                         });
                     }
                 }
