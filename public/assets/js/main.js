@@ -623,7 +623,7 @@ var swiperBannerTop = new Swiper(".swiper-banner-top", {
 // Slider
 var swiperSlider = new Swiper(".swiper-slider", {
   spaceBetween: 0,
-  slidesPerView: 4,
+  slidesPerView: 1,
   pagination: {
     el: ".swiper-pagination",
     clickable: true,
@@ -1008,7 +1008,7 @@ if (lookbookUnderwear) {
 // list-feature-product Underwear
 var swiperUnderwear = new Swiper(".mySwiper", {
   spaceBetween: 0,
-  slidesPerView: 1,
+  slidesPerView: 4,
   // freeMode: true,
   watchSlidesProgress: true,
 });
