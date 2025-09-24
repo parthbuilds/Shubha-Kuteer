@@ -240,7 +240,7 @@ export default async function handler(req, res) {
                         const {
                             name, category, type, price, origin_price, quantity, sold, rate,
                             brand, description, sizes, variations, gallery, main_image,
-                            is_new, on_sale, slug
+                            is_new, on_sale, slug ,action
                         } = req.body;
         
                         // Validate required fields
