@@ -462,12 +462,28 @@ function updateColors(variations) {
             variations.colors.forEach(item => {
                 const colorItem = document.createElement('div');
                 colorItem.classList.add('color-item', 'w-12', 'h-12', 'rounded-xl', 'duration-300', 'relative', 'cursor-pointer');
-                colorItem.innerHTML = `
-                    <img src='${item.colorImage}' alt='color' class='rounded-xl w-full h-full object-cover' />
+
+                // Set background color using hex or colorImage as a fallback
+                if (item.hex) {
+                    colorItem.style.backgroundColor = item.hex;
+                    // Add a border for light colors like white for visibility
+                    if (['#FFFFFF', '#FFF', 'white'].includes(item.hex.toLowerCase())) {
+                        colorItem.style.border = '1px solid #e0e0e0';
+                    }
+                } else if (item.colorImage) {
+                    // Fallback to image if hex is not provided, using it as background
+                    colorItem.style.backgroundImage = `url('${item.colorImage}')`;
+                    colorItem.style.backgroundSize = 'cover';
+                    colorItem.style.backgroundPosition = 'center';
+                }
+
+                // Add the color name tag
+                colorItem.innerHTML += `
                     <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm absolute bottom-1 left-1/2 -translate-x-1/2">
                         ${item.color}
                     </div>
                 `;
+
                 colorItem.addEventListener('click', () => {
                     // Remove 'active' class from all color items
                     listColorContainer.querySelectorAll('.color-item').forEach(el => el.classList.remove('active'));
@@ -477,10 +493,14 @@ function updateColors(variations) {
                 });
                 listColorContainer.appendChild(colorItem);
             });
+
             // Set initial selected color if available
             if (variations.colors[0]) {
-                listColorContainer.querySelector('.color-item').classList.add('active');
-                colorText.textContent = variations.colors[0].color;
+                const firstColorItem = listColorContainer.querySelector('.color-item');
+                if (firstColorItem) {
+                    firstColorItem.classList.add('active');
+                    colorText.textContent = variations.colors[0].color;
+                }
             }
         } else {
             colorText.textContent = 'N/A'; // No colors available
@@ -488,7 +508,7 @@ function updateColors(variations) {
     }
 }
 
-// Function to update size display
+// Function to update size display (no changes needed based on your request)
 function updateSizes(sizes) {
     const listSizeContainer = productDetail.querySelector('.choose-size .list-size');
     const sizeText = productDetail.querySelector('.choose-size .size');
@@ -516,8 +536,11 @@ function updateSizes(sizes) {
             });
             // Set initial selected size if available
             if (sizes[0]) {
-                listSizeContainer.querySelector('.size-item').classList.add('active');
-                sizeText.textContent = sizes[0];
+                const firstSizeItem = listSizeContainer.querySelector('.size-item');
+                if (firstSizeItem) {
+                    firstSizeItem.classList.add('active');
+                    sizeText.textContent = sizes[0];
+                }
             }
         } else {
             sizeText.textContent = 'N/A'; // No sizes available
