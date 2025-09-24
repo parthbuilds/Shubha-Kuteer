@@ -234,15 +234,23 @@ export default async function handler(req, res) {
                     return res.status(200).json(rows);
                 }
 
+                // Products routes
+        if (pathname.startsWith('/api/admin/products')) {
+            try {
+                const pool = await import("../backend/utils/db.js");
+
+                // ... (GET products, DELETE product endpoints are fine as they are) ...
+
                 // POST new product
                 if (pathname === '/api/admin/products' && req.method === 'POST') {
                     try {
                         const {
                             name, category, type, price, origin_price, quantity, sold, rate,
                             brand, description, sizes, variations, gallery, main_image,
-                            is_new, on_sale, slug ,action
+                            is_new, on_sale, slug,
+                            action // Corrected: ensure 'action' is destructured
                         } = req.body;
-        
+
                         // Validate required fields
                         if (!name || !category || !price) {
                             return res.status(400).json({
@@ -250,56 +258,53 @@ export default async function handler(req, res) {
                                 error: 'Missing required fields: name, category, price'
                             });
                         }
-        
+
                         // --- Parsing logic (adjusted for schema types and frontend output) ---
-                        let parsedVariations = {}; // Store as an object for key-value pairs
+                        let parsedVariations = {};
                         if (variations) {
                             try {
-                                // Assuming `variations` from frontend is already a JSON string of `{attrName: [value1, value2]}`
                                 const variationsData = JSON.parse(variations);
-                                // Ensure it's an object and contains actual selected variants
                                 if (typeof variationsData === 'object' && Object.keys(variationsData).length > 0) {
+                                    // Frontend sends: {"color":[{"value":"red","code":"#ff0000"}], "size":[{"value":"S"}]}
+                                    // Store this structure directly as JSON
                                     parsedVariations = variationsData;
                                 }
                             } catch (e) {
                                 console.error('Error parsing variations:', e);
-                                // Even if parsing fails, we'll proceed with an empty object for variations
                             }
                         }
-        
+
                         let parsedSizes = [];
                         if (sizes) {
                             try {
                                 parsedSizes = JSON.parse(sizes);
                                 if (!Array.isArray(parsedSizes)) {
-                                    parsedSizes = []; // Ensure it's an array
+                                    parsedSizes = [];
                                 }
                             } catch (e) {
                                 console.error('Error parsing sizes:', e);
-                                parsedSizes = [];
                             }
                         }
-        
+
                         let parsedGallery = [];
                         if (gallery) {
                             try {
                                 parsedGallery = JSON.parse(gallery);
                                 if (!Array.isArray(parsedGallery)) {
-                                    parsedGallery = []; // Ensure it's an array
+                                    parsedGallery = [];
                                 }
                             } catch (e) {
                                 console.error('Error parsing gallery:', e);
-                                parsedGallery = [];
                             }
                         }
                         // --- End of parsing logic ---
-        
+
                         // Generate slug if not provided
                         const productSlug = slug && slug.trim() !== '' ? slug : name.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
-        
+
                         // Determine thumb_image (first image from gallery, then main_image, else null)
                         const finalThumbImage = parsedGallery.length > 0 ? parsedGallery[0] : (main_image || null);
-        
+
                         // Prepare the SQL query and values
                         const sql = `
                             INSERT INTO products 
@@ -311,25 +316,25 @@ export default async function handler(req, res) {
                         const values = [
                             name,
                             productSlug,
-                            parseFloat(price) || 0.00, // Ensure it's a float, default to 0.00
-                            parseFloat(origin_price) || null, // Allow NULL if not provided
+                            parseFloat(price) || 0.00,
+                            parseFloat(origin_price) || null,
                             parseInt(quantity) || 0,
                             parseInt(sold) || 0,
-                            parseFloat(rate) || 0.0, // Use parseFloat for decimal rate
-                            Boolean(is_new) ? 1 : 0, // Convert boolean to 1 or 0 for MySQL TINYINT(1)
-                            Boolean(on_sale) ? 1 : 0, // Convert boolean to 1 or 0
-                            category,
-                            description || null, // Allow NULL for text field
-                            type || null,        // Allow NULL
-                            brand || null,       // Allow NULL
+                            parseFloat(rate) || 0.0,
+                            Boolean(is_new) ? 1 : 0,
+                            Boolean(on_sale) ? 1 : 0,
+                            category, // Keep as string (will be category NAME if frontend updated)
+                            description || null,
+                            type || null,
+                            brand || null,
                             main_image || null,
                             finalThumbImage,
-                            JSON.stringify(parsedGallery), // Store gallery as JSON string
-                            JSON.stringify(parsedSizes),   // Store sizes as JSON string
-                            JSON.stringify(parsedVariations), // Store variations as JSON string
-                            action || 'add to cart' // Use provided action or default
+                            JSON.stringify(parsedGallery),
+                            JSON.stringify(parsedSizes),
+                            JSON.stringify(parsedVariations),
+                            action || 'add to cart'
                         ];
-        
+
                         // Log the data before insertion for debugging
                         console.log('Product data to insert:', {
                             name, slug: productSlug, price: values[2], origin_price: values[3],
@@ -339,15 +344,15 @@ export default async function handler(req, res) {
                             main_image: values[13], thumb_image: values[14], gallery: values[15],
                             sizes: values[16], variations: values[17], action: values[18]
                         });
-        
+
                         // Execute the insert query
                         const [result] = await pool.default.query(sql, values);
-        
+
                         return res.status(201).json({
                             success: true,
                             message: 'Product added successfully!',
                             productId: result.insertId,
-                            insertedProduct: { // Return some of the data for confirmation
+                            insertedProduct: {
                                 id: result.insertId,
                                 name: name,
                                 slug: productSlug,
@@ -356,14 +361,14 @@ export default async function handler(req, res) {
                                 price: parseFloat(price)
                             }
                         });
-        
+
                     } catch (error) {
                         console.error('Product creation error:', error);
                         return res.status(500).json({
                             success: false,
                             error: 'Failed to create product',
                             details: error.message,
-                            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined // Include stack in dev
+                            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
                         });
                     }
                 }
