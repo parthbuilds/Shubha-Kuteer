@@ -450,3 +450,185 @@ typeItems.forEach(item => {
     })
 })
 
+// Function to update color display
+function updateColors(variations) {
+    const listColorContainer = productDetail.querySelector('.choose-color .list-color');
+    const colorText = productDetail.querySelector('.choose-color .color');
+
+    if (listColorContainer && colorText) {
+        listColorContainer.innerHTML = ''; // Clear previous colors
+
+        if (variations && variations.colors && Array.isArray(variations.colors) && variations.colors.length > 0) {
+            variations.colors.forEach(item => {
+                const colorItem = document.createElement('div');
+                colorItem.classList.add('color-item', 'w-12', 'h-12', 'rounded-xl', 'duration-300', 'relative', 'cursor-pointer');
+                colorItem.innerHTML = `
+                    <img src='${item.colorImage}' alt='color' class='rounded-xl w-full h-full object-cover' />
+                    <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm absolute bottom-1 left-1/2 -translate-x-1/2">
+                        ${item.color}
+                    </div>
+                `;
+                colorItem.addEventListener('click', () => {
+                    // Remove 'active' class from all color items
+                    listColorContainer.querySelectorAll('.color-item').forEach(el => el.classList.remove('active'));
+                    // Add 'active' class to the clicked item (for styling, if needed)
+                    colorItem.classList.add('active');
+                    colorText.textContent = item.color; // Update selected color text
+                });
+                listColorContainer.appendChild(colorItem);
+            });
+            // Set initial selected color if available
+            if (variations.colors[0]) {
+                listColorContainer.querySelector('.color-item').classList.add('active');
+                colorText.textContent = variations.colors[0].color;
+            }
+        } else {
+            colorText.textContent = 'N/A'; // No colors available
+        }
+    }
+}
+
+// Function to update size display
+function updateSizes(sizes) {
+    const listSizeContainer = productDetail.querySelector('.choose-size .list-size');
+    const sizeText = productDetail.querySelector('.choose-size .size');
+
+    if (listSizeContainer && sizeText) {
+        listSizeContainer.innerHTML = ''; // Clear previous sizes
+
+        if (Array.isArray(sizes) && sizes.length > 0) {
+            sizes.forEach(item => {
+                const sizeItem = document.createElement('div');
+                sizeItem.classList.add('size-item', 'w-12', 'h-12', 'flex', 'items-center', 'justify-center', 'text-button', 'rounded-full', 'bg-white', 'border', 'border-line', 'cursor-pointer');
+                if (item === 'freesize') {
+                    sizeItem.classList.remove('w-12', 'h-12');
+                    sizeItem.classList.add('px-3', 'py-2');
+                }
+                sizeItem.innerHTML = item;
+                sizeItem.addEventListener('click', () => {
+                    // Remove 'active' class from all size items
+                    listSizeContainer.querySelectorAll('.size-item').forEach(el => el.classList.remove('active'));
+                    // Add 'active' class to the clicked item
+                    sizeItem.classList.add('active');
+                    sizeText.textContent = item; // Update selected size text
+                });
+                listSizeContainer.appendChild(sizeItem);
+            });
+            // Set initial selected size if available
+            if (sizes[0]) {
+                listSizeContainer.querySelector('.size-item').classList.add('active');
+                sizeText.textContent = sizes[0];
+            }
+        } else {
+            sizeText.textContent = 'N/A'; // No sizes available
+        }
+    }
+}
+
+// Function to handle quantity selection
+function setupQuantitySelector(initialQuantity = 1) {
+    const quantityBlock = productDetail.querySelector('.choose-quantity .quantity-block');
+    const quantityDisplay = quantityBlock ? quantityBlock.querySelector('.quantity') : null;
+    const minusBtn = quantityBlock ? quantityBlock.querySelector('.ph-minus') : null;
+    const plusBtn = quantityBlock ? quantityBlock.querySelector('.ph-plus') : null;
+
+    if (quantityDisplay && minusBtn && plusBtn) {
+        let currentQuantity = initialQuantity;
+        quantityDisplay.textContent = currentQuantity;
+
+        minusBtn.addEventListener('click', () => {
+            if (currentQuantity > 1) {
+                currentQuantity--;
+                quantityDisplay.textContent = currentQuantity;
+                // You might want to update a productMain.quantityPurchase here
+            }
+        });
+
+        plusBtn.addEventListener('click', () => {
+            currentQuantity++;
+            quantityDisplay.textContent = currentQuantity;
+            // You might want to update a productMain.quantityPurchase here
+        });
+    }
+}
+
+// Function to display estimated delivery date (10 days from today)
+function updateEstimatedDelivery() {
+    const estimatedDeliveryElement = productDetail.querySelector('.more-infor .flex.items-center.gap-1.mt-3:nth-of-type(3) .text-secondary');
+
+    if (estimatedDeliveryElement) {
+        const today = new Date();
+        const deliveryStartDate = new Date(today);
+        deliveryStartDate.setDate(today.getDate() + 10); // 10 days from today
+
+        // Format dates as "DD Month" (e.g., "14 January")
+        const options = { day: 'numeric', month: 'long' };
+        const formattedDeliveryStartDate = deliveryStartDate.toLocaleDateString('en-US', options);
+
+        // For a range, you might calculate an end date, e.g., 3 days after start
+        const deliveryEndDate = new Date(deliveryStartDate);
+        deliveryEndDate.setDate(deliveryStartDate.getDate() + 3);
+        const formattedDeliveryEndDate = deliveryEndDate.toLocaleDateString('en-US', options);
+
+        estimatedDeliveryElement.textContent = `${formattedDeliveryStartDate} - ${formattedDeliveryEndDate}`;
+    }
+}
+
+// Function to update SKU
+function updateSKU(quantityFromBackend) {
+    const skuElement = productDetail.querySelector('.more-infor .flex.items-center.gap-1.mt-3:nth-of-type(4) .text-secondary');
+    if (skuElement) {
+        skuElement.textContent = quantityFromBackend; // Using quantity from backend as SKU
+    }
+}
+
+// Function to update Categories, ensuring only one is displayed
+function updateCategories(category, gender) {
+    const listCategoryElement = productDetail.querySelector('.list-category');
+    if (listCategoryElement) {
+        listCategoryElement.innerHTML = ''; // Clear previous categories
+
+        if (category) {
+            const categoryLink = document.createElement('a');
+            categoryLink.href = 'shop.html';
+            categoryLink.classList.add('text-secondary');
+            categoryLink.textContent = category;
+            listCategoryElement.appendChild(categoryLink);
+        }
+        // If gender is needed, you can add it similarly, but the current request implies one primary category
+        // if (gender) {
+        //     const genderLink = document.createElement('a');
+        //     genderLink.href = 'shop.html';
+        //     genderLink.classList.add('text-secondary');
+        //     genderLink.textContent = `, ${gender}`;
+        //     listCategoryElement.appendChild(genderLink);
+        // }
+    }
+}
+
+
+if (productDetail) {
+    fetch('/api/admin/products')
+        .then(response => response.json())
+        .then(data => {
+            const mappedProducts = data.map(mapApiProductToFrontend);
+            let productMain = mappedProducts.find(product => product.id === productId);
+
+            // ... (existing code) ...
+
+            // Call new functions here after productMain is available
+            updateColors(productMain.variations); // Assuming 'variations' contains colors
+            updateSizes(productMain.sizes);
+            setupQuantitySelector(productMain.quantityPurchase); // Pass initial quantity (e.g., 1)
+            updateEstimatedDelivery(); // Sets date to 10 days from today
+            updateSKU(productMain.quantity); // Using product quantity as SKU
+            updateCategories(productMain.category, productMain.gender); // Pass category and gender
+
+
+            // existing productMain.variation.map((item) => { ... }) code can be removed/modified if updateColors fully replaces it
+            // existing productMain.sizes.map((item) => { ... }) code can be removed/modified if updateSizes fully replaces it
+            // existing listCategory.innerHTML = ... code can be removed/modified if updateCategories fully replaces it
+
+        })
+        .catch(error => console.error('Error fetching products:', error));
+}
