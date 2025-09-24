@@ -1243,7 +1243,7 @@
                     categorySelect.innerHTML = `<option value="">-- Choose Category --</option>`;
                     categories.forEach(category => {
                         const option = document.createElement("option");
-                        option.value = category.id; // Correctly use category.id
+                        option.value = category.name; 
                         option.textContent = category.name;
                         categorySelect.appendChild(option);
                     });
