@@ -3290,7 +3290,6 @@ if (listProductCompare) {
     });
   }
 }
-
 // Cart
 let listProductCart = document.querySelector(".cart-block .list-product-main");
 
@@ -3303,7 +3302,7 @@ const handleInforCart = () => {
     let moneyForFreeship = 2000;
     let totalCart = 0;
 
-    const moneyFreeshipProgress = cartPage.querySelector(
+    const moneyFreeshipProgress = document.querySelector( // Use document.querySelector as cartPage might not be defined
       ".tow-bar-block .progress-line"
     );
 
@@ -3375,9 +3374,8 @@ const handleInforCart = () => {
         totalPriceProduct.textContent = `₹${product.quantityPurchase * product.price
           }.00`;
         updateTotalCart();
-
-        // Update quantity localStorage
-        localStorage.setItem("cartStore", JSON.stringify(cartStore));
+        localStorage.setItem("cartStore", JSON.stringify(cartStore)); // Update quantity localStorage
+        handleCheckoutCart(); // <--- ADD THIS LINE
       });
 
       quantityBlock.querySelector(".ph-minus").addEventListener("click", () => {
@@ -3387,9 +3385,8 @@ const handleInforCart = () => {
           totalPriceProduct.textContent = `₹${product.quantityPurchase * product.price
             }.00`;
           updateTotalCart();
-
-          // Update quantity localStorage
-          localStorage.setItem("cartStore", JSON.stringify(cartStore));
+          localStorage.setItem("cartStore", JSON.stringify(cartStore)); // Update quantity localStorage
+          handleCheckoutCart(); // <--- ADD THIS LINE
         }
       });
 
@@ -3406,19 +3403,21 @@ const handleInforCart = () => {
       cartStore.forEach((product) => {
         totalCart += product.price * product.quantityPurchase;
       });
-      
+
       // Update the global cart total
       window.cartTotal = totalCart;
-      
+
       // Change value in cart page
       document.querySelector(".total-block .total-product").innerHTML = totalCart;
-      document.querySelector(".total-cart-block .total-cart").innerHTML = totalCart;
+      document.querySelector(".total-cart-block .total-cart").innerHTML = totalCart; // This might be for checkout, keep it for now
       document.querySelector(".heading.banner .more-price").innerHTML =
         totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
-      moneyFreeshipProgress.style.width =
-        totalCart <= moneyForFreeship
-          ? `${(totalCart / moneyForFreeship) * 100}%`
-          : `100%`;
+      if (moneyFreeshipProgress) { // Add a check for moneyFreeshipProgress
+        moneyFreeshipProgress.style.width =
+          totalCart <= moneyForFreeship
+            ? `${(totalCart / moneyForFreeship) * 100}%`
+            : `100%`;
+      }
       console.log('Cart total updated:', totalCart);
     };
 
@@ -3432,7 +3431,8 @@ const handleInforCart = () => {
         // cartStore
         const newArray = cartStore.filter((item) => item.id !== prdId);
         localStorage.setItem("cartStore", JSON.stringify(newArray));
-        handleInforCart();
+        handleInforCart(); // Re-render cart and checkout
+        handleCheckoutCart(); // <--- ADD THIS LINE
       });
     });
   }
@@ -3441,9 +3441,12 @@ const handleInforCart = () => {
 handleInforCart();
 
 // Checkout
+// Moved listProductCheckout definition here for clarity if it's not truly global
+// If it's used elsewhere, define it at a higher scope.
+// let listProductCheckout = document.querySelector(".checkout-block .list-product"); // This should be defined if it's not already
 
 const handleCheckoutCart = () => {
-  if (listProductCheckout) {
+  if (listProductCheckout) { // Ensure listProductCheckout element exists
     let cartStore = localStorage.getItem("cartStore");
     cartStore = cartStore ? JSON.parse(cartStore) : [];
     let totalCart = 0;
@@ -3474,9 +3477,9 @@ const handleCheckoutCart = () => {
             <div>
                 <div class="name text-title">${product.name}</div>
                 <div class="caption1 text-secondary mt-2">
-                    <span class='size capitalize'>${product.sizes[0]}</span>
+                    <span class='size capitalize'>${product.sizes && product.sizes.length > 0 ? product.sizes[0] : 'N/A'}</span>
                     <span>/</span>
-                    <span class='color capitalize'>${product.variation[0].color}</span>
+                    <span class='color capitalize'>${product.variation && product.variation.length > 0 && product.variation[0].color ? product.variation[0].color : 'N/A'}</span>
                 </div>
             </div>
             <div class="text-title">
@@ -3492,8 +3495,15 @@ const handleCheckoutCart = () => {
     });
 
     // update total in checkout summary
-    document.querySelector(".total-cart-block .total-cart")
-      .innerHTML = `₹${totalCart}.00`;
+    const checkoutTotalElement = document.querySelector(".total-cart-block .total-cart");
+    if (checkoutTotalElement) {
+        checkoutTotalElement.innerHTML = `₹${totalCart}.00`;
+    } else {
+        console.warn("Checkout total element not found for updating total.");
+    }
+
+  } else {
+      console.warn("listProductCheckout element not found in the DOM.");
   }
 };
 
@@ -3501,6 +3511,7 @@ const handleCheckoutCart = () => {
 handleCheckoutCart();
 
 // Optional: re-run when cart changes in another tab
+// Keep this, as it handles updates from other tabs
 window.addEventListener("storage", handleCheckoutCart);
 
 // Show, hide login block in checkout
