@@ -3656,197 +3656,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-//function to handle the new collection filter// ===========================================
-// UTILITY FUNCTIONS (Define these ONLY ONCE)
-// ===========================================
+//function to handle the new collection filter 
 
-/**
- * Transforms a product object from the backend API format
- * to the format expected by the frontend display logic.
- */
-function transformBackendProduct(backendProduct) {
-  return {
-      id: backendProduct.id,
-      name: backendProduct.name,
-      slug: backendProduct.slug,
-      price: parseFloat(backendProduct.price),
-      origin_price: backendProduct.origin_price ? parseFloat(backendProduct.origin_price) : null,
-      quantity: parseInt(backendProduct.quantity),
-      sold: parseInt(backendProduct.sold),
-      rate: parseFloat(backendProduct.rate),
-      new: backendProduct.is_new === 1,
-      sale: backendProduct.on_sale === 1,
-      is_new: backendProduct.is_new,
-      on_sale: backendProduct.on_sale,
-      category: backendProduct.category,
-      description: backendProduct.description,
-      type: backendProduct.type,
-      brand: backendProduct.brand,
-      main_image: backendProduct.main_image,
-      thumb_image: backendProduct.thumb_image,
-      gallery: backendProduct.gallery ? JSON.parse(backendProduct.gallery) : [],
-      sizes: backendProduct.sizes ? JSON.parse(backendProduct.sizes) : [],
-      variations: backendProduct.variations ? JSON.parse(backendProduct.variations) : {},
-      action: backendProduct.action || 'add to cart',
-      created_at: backendProduct.created_at,
-  };
-}
-
-/**
-* Creates and returns an HTML element for a single product item.
-* This function *MUST* match the exact HTML structure and classes
-* of your product cards as seen in your index.html.
-*/
-function createProductItem(product) {
-  const productElement = document.createElement("div");
-  productElement.classList.add("product-item");
-  productElement.dataset.productId = product.id;
-
-  productElement.innerHTML = `
-      <div class="product-item-main">
-          <a href="/shop-product.html?slug=${product.slug}" class="product-item-img">
-              <img src="${product.main_image || product.thumb_image || 'https://via.placeholder.com/300x300?text=No+Image'}"
-                   alt="${product.name}"
-                   width="300"
-                   height="300"
-                   class="w-full h-full object-cover">
-          </a>
-          <div class="product-item-content">
-              <div class="product-item-rate flex items-center gap-1">
-                  ${'⭐'.repeat(Math.round(product.rate))} (${product.rate.toFixed(1)})
-              </div>
-              <a href="/shop-product.html?slug=${product.slug}" class="product-item-name text-title hover:text-blue-500 duration-300">
-                  ${product.name}
-              </a>
-              <div class="product-item-price flex items-center gap-2">
-                  <span class="price text-title text-2xl font-semibold">$${product.price.toFixed(2)}</span>
-                  ${product.origin_price ? `<span class="origin-price text-gray-400 line-through">$${product.origin_price.toFixed(2)}</span>` : ''}
-              </div>
-          </div>
-          <div class="product-item-actions">
-              ${product.on_sale ? '<span class="tag sale">Sale</span>' : ''}
-              ${product.is_new ? '<span class="tag new">New</span>' : ''}
-
-              <button class="btn-add-to-cart" data-product-id="${product.id}" data-action="${product.action}">
-                  ${product.action === 'add to cart' ? 'Add to Cart' : product.action}
-              </button>
-
-              <button class="btn-quick-view mt-2 py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 duration-300"
-                      data-product-id="${product.id}">
-                  Quick View
-              </button>
-          </div>
-      </div>
-  `;
-
-  // (Optional) Add color variations rendering here if applicable
-  if (product.variations && product.variations.color && product.variations.color.length > 0) {
-      const colorOptionsDiv = document.createElement('div');
-      colorOptionsDiv.classList.add('product-color-options', 'flex', 'gap-2', 'mt-2');
-      product.variations.color.forEach(colorObj => {
-          const colorSpan = document.createElement('span');
-          colorSpan.style.backgroundColor = colorObj.hex || colorObj.name;
-          colorSpan.dataset.color = colorObj.name;
-          colorSpan.classList.add('w-6', 'h-6', 'rounded-full', 'cursor-pointer', 'border');
-          colorOptionsDiv.appendChild(colorSpan);
-      });
-      productElement.querySelector('.product-item-content').appendChild(colorOptionsDiv);
-  }
-
-  return productElement;
-}
-
-/**
-* Attaches event listeners to product color options to change the main image.
-* This logic is highly dependent on your product data structure and UI.
-* This is a placeholder and may need significant customization.
-*/
-function handleActiveImgWhenColorChange(products) {
-  document.querySelectorAll('.product-item .product-color-options span').forEach(colorOption => {
-      colorOption.addEventListener('click', function() {
-          const productItem = this.closest('.product-item');
-          const productId = productItem.dataset.productId;
-          const selectedColor = this.dataset.color;
-
-          const product = products.find(p => p.id == productId);
-          if (product) {
-              let newImageSrc = product.main_image;
-
-              if (product.gallery && product.gallery.length > 0) {
-                  const colorSpecificImage = product.gallery.find(imgUrl =>
-                      imgUrl.toLowerCase().includes(selectedColor.toLowerCase())
-                  );
-                  if (colorSpecificImage) {
-                      newImageSrc = colorSpecificImage;
-                  } else {
-                      newImageSrc = product.main_image;
-                  }
-              }
-
-              const mainImageElement = productItem.querySelector('.product-item-img img');
-              if (mainImageElement) {
-                  mainImageElement.src = newImageSrc;
-              }
-          }
-
-          this.parentElement.querySelectorAll('span').forEach(s => s.classList.remove('active'));
-          this.classList.add('active');
-      });
-  });
-}
-
-/**
-* Attaches general event listeners to product items, specifically for
-* "Add to Cart" and "Quick View" buttons.
-*/
-function addEventToProductItem(products) {
-  // --- Add to Cart Logic ---
-  document.querySelectorAll('.product-item .btn-add-to-cart').forEach(button => {
-      button.addEventListener('click', function(event) {
-          event.preventDefault();
-          const productId = this.dataset.productId;
-          const action = this.dataset.action;
-
-          const product = products.find(p => p.id == productId);
-
-          if (product) {
-              if (action === 'add to cart') {
-                  console.log(`Adding product "${product.name}" (ID: ${productId}) to cart!`);
-                  // *** YOUR ACTUAL ADD TO CART IMPLEMENTATION HERE ***
-                  alert(`${product.name} added to cart! (Placeholder)`);
-              } else {
-                  console.log(`Performing custom action: "${action}" for product "${product.name}"`);
-              }
-          } else {
-              console.error(`Product with ID ${productId} not found for add to cart.`);
-          }
-      });
-  });
-
-  // --- Quick View Logic ---
-  document.querySelectorAll('.product-item .btn-quick-view').forEach(button => {
-      button.addEventListener('click', function(event) {
-          event.preventDefault();
-          const productId = this.dataset.productId;
-
-          const product = products.find(p => p.id == productId);
-
-          if (product) {
-              console.log(`Opening Quick View for product "${product.name}" (ID: ${productId})`);
-              // *** YOUR ACTUAL QUICK VIEW IMPLEMENTATION HERE ***
-              alert(`Quick View for: ${product.name}\nPrice: $${product.price.toFixed(2)}`);
-              // Example: openQuickViewModal(product);
-          } else {
-              console.error(`Product with ID ${productId} not found for quick view.`);
-          }
-      });
-  });
-}
-
-/**
-* Displays the first four products in a given list element based on the active tab's data-item.
-*/
 function displayFilteredProducts(products, listElement, menuTabElement) {
+  // Clear existing products
   listElement.querySelectorAll(".product-item").forEach((prd) => prd.remove());
 
   const activeTabItem = menuTabElement.querySelector(".tab-item.active");
@@ -3865,6 +3678,7 @@ function displayFilteredProducts(products, listElement, menuTabElement) {
           case "new arrivals":
               filteredAndSortedProducts = products.filter((product) => product.is_new === 1).slice(0, 4);
               break;
+          // Handle specific product types (Travel Kits, Kaftans, Dohar, Table Runners)
           case "travel-kits":
           case "kaftans":
           case "dohar":
@@ -3872,90 +3686,61 @@ function displayFilteredProducts(products, listElement, menuTabElement) {
               filteredAndSortedProducts = products.filter((product) => product.type === dataItem).slice(0, 4);
               break;
           default:
-              console.warn(`Unknown data-item: '${dataItem}'. Displaying first 4 products.`);
-              filteredAndSortedProducts = products.slice(0, 4);
+              // Fallback for any other specific type if needed, or default to all
+              filteredAndSortedProducts = products.filter((product) => product.type === dataItem).slice(0, 4);
               break;
       }
   } else {
-      console.warn("No active tab found. Defaulting to best sellers.");
+      // Default if no active tab is found, e.g., show all or best sellers
       filteredAndSortedProducts = products.sort((a, b) => b.sold - a.sold).slice(0, 4);
   }
 
   filteredAndSortedProducts.forEach((product) => {
-      const productElement = createProductItem(product);
+      const productElement = createProductItem(product); // Assuming createProductItem exists
       listElement.appendChild(productElement);
   });
 
-  // Re-attach listeners after new products are rendered
-  handleActiveImgWhenColorChange(products);
-  addEventToProductItem(products);
+  // Assuming these functions exist globally or are passed in
+  // handleActiveImgWhenColorChange(products);
+  // addEventToProductItem(products);
 }
 
-// ===========================================
-// INITIALIZATION ON PAGE LOAD (ONLY RUNS ONCE)
-// ===========================================
+// You would call this function after fetching products, for example:
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Select the specific product list container.
-  // Ensure the selector matches your HTML, e.g., if it's unique by data-type or ID.
-  const listFourProductContainer = document.querySelector(".list-product.four-product[data-type='underwear']");
-  if (!listFourProductContainer) {
-      console.error("Target element '.list-product.four-product[data-type=\"underwear\"]' not found. Ensure this HTML element exists.");
-      return; // Stop execution if the container isn't found
-  }
+// In your existing fetch block:
+fetch("api/admin/products")
+  .then((response) => response.json())
+  .then((backendProducts) => {
+      const products = backendProducts.map(transformBackendProduct); // Ensure transformBackendProduct correctly maps backend fields
 
-  // Find the menu tab within the same block
-  const menuTabElement = listFourProductContainer.closest(".tab-features-block")?.querySelector(".menu-tab .menu");
-  if (!menuTabElement) {
-      console.error("Menu tab element '.menu-tab .menu' not found within the tab-features-block. Ensure the HTML structure is correct.");
-      return; // Stop execution if the menu tab isn't found
-  }
+      const listFourProductBlocks = document.querySelectorAll(".list-product.four-product");
 
-  fetch("/api/admin/products")
-      .then((response) => {
-          if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-      })
-      .then((backendProducts) => {
-          const products = backendProducts.map(transformBackendProduct);
+      listFourProductBlocks.forEach((listFourProduct) => {
+          const menuTab = listFourProduct.closest(".tab-features-block").querySelector(".menu-tab .menu");
+          if (menuTab) {
+              // Initial display
+              displayFilteredProducts(products, listFourProduct, menuTab);
 
-          // Initial display of products based on the currently active tab
-          displayFilteredProducts(products, listFourProductContainer, menuTabElement);
-
-          // Add event listeners to all tab items for switching filters
-          menuTabElement.querySelectorAll(".tab-item").forEach((item) => {
-              item.addEventListener("click", () => {
-                  // Update active class for visual feedback
-                  menuTabElement.querySelectorAll(".tab-item").forEach(i => i.classList.remove('active'));
-                  item.classList.add('active');
-
-                  // Update indicator position and width (if your CSS/JS handles this)
-                  const indicator = menuTabElement.querySelector(".indicator");
-                  if (indicator) {
-                      indicator.style.left = item.offsetLeft + "px";
-                      indicator.style.width = item.offsetWidth + "px";
-                  }
-
-                  // Re-display products with the new filter
-                  displayFilteredProducts(products, listFourProductContainer, menuTabElement);
+              // Add event listeners for tab clicks
+              menuTab.querySelectorAll(".tab-item").forEach((item) => {
+                  item.addEventListener("click", () => {
+                      // Update active state (assuming you have this logic elsewhere)
+                      menuTab.querySelectorAll(".tab-item").forEach(i => i.classList.remove('active'));
+                      item.classList.add('active');
+                      
+                      // Move indicator (assuming you have this CSS/JS logic)
+                      const indicator = menuTab.querySelector(".indicator");
+                      if (indicator) {
+                          indicator.style.left = item.offsetLeft + "px";
+                          indicator.style.width = item.offsetWidth + "px";
+                      }
+                      
+                      displayFilteredProducts(products, listFourProduct, menuTab);
+                  });
               });
-          });
-
-          // Set initial position of the indicator after the first render
-          const initialActiveTab = menuTabElement.querySelector(".tab-item.active");
-          const indicator = menuTabElement.querySelector(".indicator");
-          if (initialActiveTab && indicator) {
-              indicator.style.left = initialActiveTab.offsetLeft + "px";
-              indicator.style.width = initialActiveTab.offsetWidth + "px";
-          }
-      })
-      .catch((error) => {
-          console.error("Error fetching or processing products:", error);
-          // Optionally, display a user-friendly error message on the page
-          if (listFourProductContainer) {
-              listFourProductContainer.innerHTML = `<p class="text-red-500">Failed to load products. Please try again later.</p>`;
           }
       });
-});
+
+
+  })
+  .catch((error) => console.error("Error fetching products:", error));
