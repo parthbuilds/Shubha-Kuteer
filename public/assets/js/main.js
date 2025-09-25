@@ -3300,7 +3300,7 @@ const handleInforCart = () => {
     cartStore = cartStore ? JSON.parse(cartStore) : [];
 
     // Initial value in cart page
-    let moneyForFreeship = 150;
+    let moneyForFreeship = 2000;
     let totalCart = 0;
 
     const moneyFreeshipProgress = cartPage.querySelector(
@@ -3441,56 +3441,67 @@ const handleInforCart = () => {
 handleInforCart();
 
 // Checkout
-if (listProductCheckout) {
-  let cartStore = localStorage.getItem("cartStore");
-  cartStore = cartStore ? JSON.parse(cartStore) : [];
-  let totalCart = 0;
 
-  cartStore.forEach((product) => {
-    const productElement = document.createElement("div");
-    productElement.classList.add(
-      "item",
-      "flex",
-      "items-center",
-      "justify-between",
-      "w-full",
-      "pb-5",
-      "border-b",
-      "border-line",
-      "gap-6",
-      "mt-5"
-    );
-    productElement.innerHTML = `
-            <div class="bg-img w-[100px] aspect-square flex-shrink-0 rounded-lg overflow-hidden">
-                <img src=${product.thumbImage[0]} alt='img'
-                    class='w-full h-full' />
-            </div>
-            <div class="flex items-center justify-between w-full">
-                <div>
-                    <div class="name text-title">${product.name}</div>
-                    <div class="caption1 text-secondary mt-2">
-                        <span class='size capitalize'>${product.sizes[0]}</span>
-                        <span>/</span>
-                        <span class='color capitalize'>${product.variation[0].color}</span>
-                    </div>
-                </div>
-                <div class="text-title">
-                    <span class='quantity'>${product.quantityPurchase}</span>
-                    <span class='px-1'>x</span>
-                    <span>
-                        ₹${product.price}.00
-                    </span>
+const handleCheckoutCart = () => {
+  if (listProductCheckout) {
+    let cartStore = localStorage.getItem("cartStore");
+    cartStore = cartStore ? JSON.parse(cartStore) : [];
+    let totalCart = 0;
+
+    // clear old checkout list before re-rendering
+    listProductCheckout.innerHTML = "";
+
+    cartStore.forEach((product) => {
+      const productElement = document.createElement("div");
+      productElement.classList.add(
+        "item",
+        "flex",
+        "items-center",
+        "justify-between",
+        "w-full",
+        "pb-5",
+        "border-b",
+        "border-line",
+        "gap-6",
+        "mt-5"
+      );
+      productElement.innerHTML = `
+        <div class="bg-img w-[100px] aspect-square flex-shrink-0 rounded-lg overflow-hidden">
+            <img src=${product.thumbImage[0]} alt='img'
+                class='w-full h-full' />
+        </div>
+        <div class="flex items-center justify-between w-full">
+            <div>
+                <div class="name text-title">${product.name}</div>
+                <div class="caption1 text-secondary mt-2">
+                    <span class='size capitalize'>${product.sizes[0]}</span>
+                    <span>/</span>
+                    <span class='color capitalize'>${product.variation[0].color}</span>
                 </div>
             </div>
-        `;
+            <div class="text-title">
+                <span class='quantity'>${product.quantityPurchase}</span>
+                <span class='px-1'>x</span>
+                <span>₹${product.price}.00</span>
+            </div>
+        </div>
+      `;
 
-    listProductCheckout.appendChild(productElement);
-    totalCart += product.price * product.quantityPurchase;
-    document.querySelector(
-      ".total-cart-block .total-cart"
-    ).innerHTML = `₹${totalCart}.00`;
-  });
-}
+      listProductCheckout.appendChild(productElement);
+      totalCart += product.price * product.quantityPurchase;
+    });
+
+    // update total in checkout summary
+    document.querySelector(".total-cart-block .total-cart")
+      .innerHTML = `₹${totalCart}.00`;
+  }
+};
+
+// Run on page load
+handleCheckoutCart();
+
+// Optional: re-run when cart changes in another tab
+window.addEventListener("storage", handleCheckoutCart);
 
 // Show, hide login block in checkout
 const formLoginHeading = document.querySelector(
