@@ -15,7 +15,101 @@
 /**** list-img review ****/
 /**** Redirect filter type product-sidebar ****/
 
+//function to modulate data
+function transformBackendProduct(backendProduct) {
+    // Attempt to parse gallery string into an array, default to empty array if parsing fails
+    let galleryImages = [];
+    try {
+        galleryImages = JSON.parse(backendProduct.gallery);
+    } catch (e) {
+        console.warn("Could not parse gallery string for product:", backendProduct.id, e);
+        galleryImages = [];
+    }
 
+    // Combine main_image and thumb_image into thumbImage array, ensuring no duplicates
+    const thumbImages = [];
+    if (backendProduct.thumb_image) {
+        thumbImages.push(backendProduct.thumb_image);
+    }
+    if (backendProduct.main_image && !thumbImages.includes(backendProduct.main_image)) {
+        thumbImages.push(backendProduct.main_image);
+    }
+    // If no specific thumb_image or main_image, use first from gallery if available
+    if (thumbImages.length === 0 && galleryImages.length > 0) {
+        thumbImages.push(galleryImages[0]);
+    }
+    // Ensure at least one image if possible, using a placeholder if absolutely nothing is found
+    if (thumbImages.length === 0) {
+        thumbImages.push('./assets/images/placeholder.png'); // Fallback placeholder
+    }
+
+    // Default values for sizes and variation, as they are not directly in the backend data
+    // You might need to extend your backend API or add logic here to fetch/infer these
+    const defaultSizes = ["S", "M", "L", "XL"];
+
+    // --- START OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
+    let variations = [];
+
+    // Assuming backendProduct has an 'attributes' property which is an array
+    // and one of its elements is a 'color' attribute with values and hex codes.
+    if (backendProduct.attributes && Array.isArray(backendProduct.attributes)) {
+        const colorAttribute = backendProduct.attributes.find(
+            attr => attr.attribute_name && attr.attribute_name.toLowerCase() === 'color'
+        );
+
+        if (colorAttribute && colorAttribute.attribute_values) {
+            try {
+                const attributeValues = typeof colorAttribute.attribute_values === 'string'
+                    ? JSON.parse(colorAttribute.attribute_values)
+                    : colorAttribute.attribute_values;
+
+                if (Array.isArray(attributeValues)) {
+                    variations = attributeValues.map(valueObj => ({
+                        color: valueObj.value,      // e.g., "Red"
+                        colorCode: valueObj.code,   // <--- CHANGED FROM 'hex_code' TO 'code'
+                        colorImage: "./assets/images/product/color/48x48.png", // This might still be a generic placeholder or dynamic based on color name
+                        image: backendProduct.main_image || "./assets/images/product/bag-1.png" // Use main product image or default
+                    }));
+                }
+            } catch (e) {
+                console.warn("Could not parse color attribute_values for product:", backendProduct.id, e);
+            }
+        }
+    }
+
+    // Fallback to default variations if none are generated from backend attributes
+    if (variations.length === 0) {
+        variations = [
+            { color: "red", colorCode: "#DB4444", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" },
+            { color: "yellow", colorCode: "#ECB018", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" }
+        ];
+    }
+    // --- END OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
+
+
+    return {
+        id: String(backendProduct.id), // Ensure ID is a string for consistency
+        category: backendProduct.category,
+        type: backendProduct.type,
+        name: backendProduct.name,
+        new: Boolean(backendProduct.is_new),
+        sale: Boolean(backendProduct.on_sale),
+        rate: parseFloat(backendProduct.rate),
+        price: parseFloat(backendProduct.price),
+        originPrice: parseFloat(backendProduct.origin_price),
+        brand: backendProduct.brand,
+        sold: backendProduct.sold,
+        quantity: backendProduct.quantity,
+        quantityPurchase: 1, // Default, not in backend data
+        sizes: defaultSizes, // Default sizes, or fetch/infer from backend if available
+        variation: variations, // Use the dynamically generated variations
+        thumbImage: thumbImages, // Combined main and thumb image
+        images: galleryImages.length > 0 ? galleryImages : thumbImages, // Use gallery if available, otherwise thumbImages
+        description: backendProduct.description,
+        action: backendProduct.action,
+        slug: backendProduct.slug
+    };
+}
 
 // List scroll you'll love this to
 if (document.querySelector('.swiper-product-scroll')) {
@@ -53,44 +147,44 @@ let typePage = classes[1];
 
 
 function mapApiProductToFrontend(product) {
-  return {
-    id: String(product.id),
-    category: product.category,
-    type: product.type,
-    name: product.name,
-    new: !!product.is_new,
-    sale: !!product.on_sale,
-    rate: Number(product.rate),
-    price: Number(product.price),
-    originPrice: Number(product.origin_price),
-    brand: product.brand,
-    sold: product.sold,
-    quantity: product.quantity,
-    quantityPurchase: product.quantityPurchase || 1, // default to 1
-    sizes: Array.isArray(product.sizes)
-      ? product.sizes
-      : product.sizes
-      ? JSON.parse(product.sizes)
-      : [],
-    variation: Array.isArray(product.variation)
-      ? product.variation
-      : product.variations
-      ? JSON.parse(product.variations)
-      : [],
-    thumbImage: Array.isArray(product.thumbImage)
-      ? product.thumbImage
-      : product.thumb_image
-      ? [product.thumb_image]
-      : [],
-    images: Array.isArray(product.images)
-      ? product.images
-      : product.gallery
-      ? JSON.parse(product.gallery)
-      : [],
-    description: product.description,
-    action: product.action,
-    slug: product.slug,
-  };
+    return {
+        id: String(product.id),
+        category: product.category,
+        type: product.type,
+        name: product.name,
+        new: !!product.is_new,
+        sale: !!product.on_sale,
+        rate: Number(product.rate),
+        price: Number(product.price),
+        originPrice: Number(product.origin_price),
+        brand: product.brand,
+        sold: product.sold,
+        quantity: product.quantity,
+        quantityPurchase: product.quantityPurchase || 1, // default to 1
+        sizes: Array.isArray(product.sizes)
+            ? product.sizes
+            : product.sizes
+                ? JSON.parse(product.sizes)
+                : [],
+        variation: Array.isArray(product.variation)
+            ? product.variation
+            : product.variations
+                ? JSON.parse(product.variations)
+                : [],
+        thumbImage: Array.isArray(product.thumbImage)
+            ? product.thumbImage
+            : product.thumb_image
+                ? [product.thumb_image]
+                : [],
+        images: Array.isArray(product.images)
+            ? product.images
+            : product.gallery
+                ? JSON.parse(product.gallery)
+                : [],
+        description: product.description,
+        action: product.action,
+        slug: product.slug,
+    };
 }
 
 
@@ -455,36 +549,64 @@ function updateColors(variations) {
     const listColorContainer = productDetail.querySelector('.choose-color .list-color');
     const colorText = productDetail.querySelector('.choose-color .color');
 
-    if (listColorContainer && colorText) {
-        listColorContainer.innerHTML = ''; // Clear previous colors
+    if (!listColorContainer || !colorText) {
+        console.error("Error: Could not find color display elements. Check your HTML selectors.");
+        return; // Exit if elements are not found
+    }
 
-        if (variations && variations.colors && Array.isArray(variations.colors) && variations.colors.length > 0) {
-            variations.colors.forEach(item => {
-                const colorItem = document.createElement('div');
-                colorItem.classList.add('color-item', 'w-12', 'h-12', 'rounded-xl', 'duration-300', 'relative', 'cursor-pointer');
-                colorItem.innerHTML = `
-                    <img src='${item.colorImage}' alt='color' class='rounded-xl w-full h-full object-cover' />
-                    <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm absolute bottom-1 left-1/2 -translate-x-1/2">
-                        ${item.color}
-                    </div>
-                `;
-                colorItem.addEventListener('click', () => {
-                    // Remove 'active' class from all color items
-                    listColorContainer.querySelectorAll('.color-item').forEach(el => el.classList.remove('active'));
-                    // Add 'active' class to the clicked item (for styling, if needed)
-                    colorItem.classList.add('active');
-                    colorText.textContent = item.color; // Update selected color text
-                });
-                listColorContainer.appendChild(colorItem);
-            });
-            // Set initial selected color if available
-            if (variations.colors[0]) {
-                listColorContainer.querySelector('.color-item').classList.add('active');
-                colorText.textContent = variations.colors[0].color;
+    listColorContainer.innerHTML = ''; // Clear previous colors
+
+    // Ensure variations.colors exists and is an array with items
+    if (variations && variations.colors && Array.isArray(variations.colors) && variations.colors.length > 0) {
+        variations.colors.forEach(item => {
+            const colorItem = document.createElement('div');
+            colorItem.classList.add('color-item', 'w-12', 'h-12', 'rounded-xl', 'duration-300', 'relative', 'cursor-pointer', 'overflow-hidden'); // Added overflow-hidden
+
+            // Set background color using hex or colorImage as a fallback
+            if (item.hex) {
+                colorItem.style.backgroundColor = item.hex;
+                // Add a border for light colors like white for visibility
+                if (['#FFFFFF', '#FFF', 'white'].includes(item.hex.toLowerCase())) {
+                    colorItem.style.border = '1px solid #e0e0e0';
+                }
+            } else if (item.colorImage) {
+                // Fallback to image if hex is not provided, using it as background
+                colorItem.style.backgroundImage = `url('${item.colorImage}')`;
+                colorItem.style.backgroundSize = 'cover';
+                colorItem.style.backgroundPosition = 'center';
+                colorItem.style.backgroundRepeat = 'no-repeat';
+            } else {
+                // If neither hex nor colorImage, use a default fallback (e.g., grey)
+                colorItem.style.backgroundColor = '#cccccc';
             }
-        } else {
-            colorText.textContent = 'N/A'; // No colors available
+
+
+            // Add the color name tag
+            colorItem.innerHTML += `
+                <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm absolute bottom-1 left-1/2 -translate-x-1/2 text-xs">
+                    ${item.color}
+                </div>
+            `;
+
+            colorItem.addEventListener('click', () => {
+                // Remove 'active' class from all color items
+                listColorContainer.querySelectorAll('.color-item').forEach(el => el.classList.remove('active'));
+                // Add 'active' class to the clicked item
+                colorItem.classList.add('active');
+                colorText.textContent = item.color; // Update selected color text
+            });
+            listColorContainer.appendChild(colorItem);
+        });
+
+        // Set initial selected color if available
+        const firstColorItem = listColorContainer.querySelector('.color-item');
+        if (firstColorItem) {
+            firstColorItem.classList.add('active');
+            colorText.textContent = variations.colors[0].color;
         }
+    } else {
+        colorText.textContent = 'N/A'; // No colors available
+        console.warn("No colors found in variations data or variations.colors is not an array.");
     }
 }
 
@@ -493,37 +615,81 @@ function updateSizes(sizes) {
     const listSizeContainer = productDetail.querySelector('.choose-size .list-size');
     const sizeText = productDetail.querySelector('.choose-size .size');
 
-    if (listSizeContainer && sizeText) {
-        listSizeContainer.innerHTML = ''; // Clear previous sizes
+    if (!listSizeContainer || !sizeText) {
+        console.error("Error: Could not find size display elements. Check your HTML selectors.");
+        return; // Exit if elements are not found
+    }
 
-        if (Array.isArray(sizes) && sizes.length > 0) {
-            sizes.forEach(item => {
-                const sizeItem = document.createElement('div');
-                sizeItem.classList.add('size-item', 'w-12', 'h-12', 'flex', 'items-center', 'justify-center', 'text-button', 'rounded-full', 'bg-white', 'border', 'border-line', 'cursor-pointer');
-                if (item === 'freesize') {
-                    sizeItem.classList.remove('w-12', 'h-12');
-                    sizeItem.classList.add('px-3', 'py-2');
-                }
-                sizeItem.innerHTML = item;
-                sizeItem.addEventListener('click', () => {
-                    // Remove 'active' class from all size items
-                    listSizeContainer.querySelectorAll('.size-item').forEach(el => el.classList.remove('active'));
-                    // Add 'active' class to the clicked item
-                    sizeItem.classList.add('active');
-                    sizeText.textContent = item; // Update selected size text
-                });
-                listSizeContainer.appendChild(sizeItem);
-            });
-            // Set initial selected size if available
-            if (sizes[0]) {
-                listSizeContainer.querySelector('.size-item').classList.add('active');
-                sizeText.textContent = sizes[0];
+    listSizeContainer.innerHTML = ''; // Clear previous sizes
+
+    // Ensure sizes exists and is an array with items
+    if (Array.isArray(sizes) && sizes.length > 0) {
+        sizes.forEach(item => {
+            const sizeItem = document.createElement('div');
+            sizeItem.classList.add('size-item', 'w-12', 'h-12', 'flex', 'items-center', 'justify-center', 'text-button', 'rounded-full', 'bg-white', 'border', 'border-line', 'cursor-pointer');
+
+            // Special handling for 'freesize'
+            if (item.toLowerCase() === 'freesize') { // Use toLowerCase for robust comparison
+                sizeItem.classList.remove('w-12', 'h-12');
+                sizeItem.classList.add('px-3', 'py-2'); // Adjust padding for freesize
             }
-        } else {
-            sizeText.textContent = 'N/A'; // No sizes available
+            sizeItem.innerHTML = item; // Display the size text
+
+            sizeItem.addEventListener('click', () => {
+                // Remove 'active' class from all size items
+                listSizeContainer.querySelectorAll('.size-item').forEach(el => el.classList.remove('active'));
+                // Add 'active' class to the clicked item
+                sizeItem.classList.add('active');
+                sizeText.textContent = item; // Update selected size text
+            });
+            listSizeContainer.appendChild(sizeItem);
+        });
+
+        // Set initial selected size if available
+        const firstSizeItem = listSizeContainer.querySelector('.size-item');
+        if (firstSizeItem) {
+            firstSizeItem.classList.add('active');
+            sizeText.textContent = sizes[0];
         }
+    } else {
+        sizeText.textContent = 'N/A'; // No sizes available
+        console.warn("No sizes found in sizes data or sizes is not an array.");
     }
 }
+
+// --- Mocking Backend Data and Initialization ---
+
+// This simulates the product data you would get from your backend API
+// AFTER you have JSON.parse()'d the 'sizes' and 'variations' fields.
+const mockProductData = {
+    id: 1,
+    name: "Awesome T-Shirt",
+    price: 29.99,
+    // These would be JSON.parsed from the database strings
+    parsedVariations: {
+        colors: [
+            { color: "Red", hex: "#E53E3E" },       // Example with hex code
+            { color: "Blue", hex: "#3182CE" },      // Example with hex code
+            { color: "Green", hex: "#38A169" },     // Example with hex code
+            { color: "White", hex: "#FFFFFF" },     // Example with white hex
+            { color: "Black", hex: "#000000" },     // Example with black hex
+            { color: "Pattern", colorImage: "https://via.placeholder.com/48/FF5733/000000?text=P" } // Fallback to image
+        ]
+    },
+    parsedSizes: ["S", "M", "L", "XL", "XXL", "Freesize"] // Example array of sizes
+};
+
+// Call the update functions when the DOM is ready or after fetching data
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if productDetail was successfully selected
+    if (productDetail) {
+        updateColors(mockProductData.parsedVariations);
+        updateSizes(mockProductData.parsedSizes);
+    } else {
+        console.error("Critical Error: 'productDetail' element not found in the DOM. Please check your HTML structure and the selector.");
+    }
+});
+
 
 // Function to handle quantity selection
 function setupQuantitySelector(initialQuantity = 1) {
@@ -581,7 +747,6 @@ function updateSKU(quantityFromBackend) {
         skuElement.textContent = quantityFromBackend; // Using quantity from backend as SKU
     }
 }
-
 
 // Function to update Categories, ensuring only one is displayed
 function updateCategories(category, gender) {
