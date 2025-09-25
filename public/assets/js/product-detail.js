@@ -25,7 +25,7 @@ function transformBackendProduct(backendProduct) {
         console.warn("Could not parse gallery string for product:", backendProduct.id, e);
         galleryImages = [];
     }
-  
+
     // Combine main_image and thumb_image into thumbImage array, ensuring no duplicates
     const thumbImages = [];
     if (backendProduct.thumb_image) {
@@ -42,27 +42,27 @@ function transformBackendProduct(backendProduct) {
     if (thumbImages.length === 0) {
         thumbImages.push('./assets/images/placeholder.png'); // Fallback placeholder
     }
-  
+
     // Default values for sizes and variation, as they are not directly in the backend data
     // You might need to extend your backend API or add logic here to fetch/infer these
     const defaultSizes = ["S", "M", "L", "XL"];
-  
+
     // --- START OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
     let variations = [];
-  
+
     // Assuming backendProduct has an 'attributes' property which is an array
     // and one of its elements is a 'color' attribute with values and hex codes.
     if (backendProduct.attributes && Array.isArray(backendProduct.attributes)) {
         const colorAttribute = backendProduct.attributes.find(
             attr => attr.attribute_name && attr.attribute_name.toLowerCase() === 'color'
         );
-  
+
         if (colorAttribute && colorAttribute.attribute_values) {
             try {
                 const attributeValues = typeof colorAttribute.attribute_values === 'string'
                     ? JSON.parse(colorAttribute.attribute_values)
                     : colorAttribute.attribute_values;
-  
+
                 if (Array.isArray(attributeValues)) {
                     variations = attributeValues.map(valueObj => ({
                         color: valueObj.value,      // e.g., "Red"
@@ -76,7 +76,7 @@ function transformBackendProduct(backendProduct) {
             }
         }
     }
-  
+
     // Fallback to default variations if none are generated from backend attributes
     if (variations.length === 0) {
         variations = [
@@ -85,8 +85,8 @@ function transformBackendProduct(backendProduct) {
         ];
     }
     // --- END OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
-  
-  
+
+
     return {
         id: String(backendProduct.id), // Ensure ID is a string for consistency
         category: backendProduct.category,
@@ -109,7 +109,7 @@ function transformBackendProduct(backendProduct) {
         action: backendProduct.action,
         slug: backendProduct.slug
     };
-  }
+}
 
 // List scroll you'll love this to
 if (document.querySelector('.swiper-product-scroll')) {
@@ -147,44 +147,44 @@ let typePage = classes[1];
 
 
 function mapApiProductToFrontend(product) {
-  return {
-    id: String(product.id),
-    category: product.category,
-    type: product.type,
-    name: product.name,
-    new: !!product.is_new,
-    sale: !!product.on_sale,
-    rate: Number(product.rate),
-    price: Number(product.price),
-    originPrice: Number(product.origin_price),
-    brand: product.brand,
-    sold: product.sold,
-    quantity: product.quantity,
-    quantityPurchase: product.quantityPurchase || 1, // default to 1
-    sizes: Array.isArray(product.sizes)
-      ? product.sizes
-      : product.sizes
-      ? JSON.parse(product.sizes)
-      : [],
-    variation: Array.isArray(product.variation)
-      ? product.variation
-      : product.variations
-      ? JSON.parse(product.variations)
-      : [],
-    thumbImage: Array.isArray(product.thumbImage)
-      ? product.thumbImage
-      : product.thumb_image
-      ? [product.thumb_image]
-      : [],
-    images: Array.isArray(product.images)
-      ? product.images
-      : product.gallery
-      ? JSON.parse(product.gallery)
-      : [],
-    description: product.description,
-    action: product.action,
-    slug: product.slug,
-  };
+    return {
+        id: String(product.id),
+        category: product.category,
+        type: product.type,
+        name: product.name,
+        new: !!product.is_new,
+        sale: !!product.on_sale,
+        rate: Number(product.rate),
+        price: Number(product.price),
+        originPrice: Number(product.origin_price),
+        brand: product.brand,
+        sold: product.sold,
+        quantity: product.quantity,
+        quantityPurchase: product.quantityPurchase || 1, // default to 1
+        sizes: Array.isArray(product.sizes)
+            ? product.sizes
+            : product.sizes
+                ? JSON.parse(product.sizes)
+                : [],
+        variation: Array.isArray(product.variation)
+            ? product.variation
+            : product.variations
+                ? JSON.parse(product.variations)
+                : [],
+        thumbImage: Array.isArray(product.thumbImage)
+            ? product.thumbImage
+            : product.thumb_image
+                ? [product.thumb_image]
+                : [],
+        images: Array.isArray(product.images)
+            ? product.images
+            : product.gallery
+                ? JSON.parse(product.gallery)
+                : [],
+        description: product.description,
+        action: product.action,
+        slug: product.slug,
+    };
 }
 
 
@@ -627,7 +627,7 @@ function updateSizes(sizes) {
         sizes.forEach(item => {
             const sizeItem = document.createElement('div');
             sizeItem.classList.add('size-item', 'w-12', 'h-12', 'flex', 'items-center', 'justify-center', 'text-button', 'rounded-full', 'bg-white', 'border', 'border-line', 'cursor-pointer');
-            
+
             // Special handling for 'freesize'
             if (item.toLowerCase() === 'freesize') { // Use toLowerCase for robust comparison
                 sizeItem.classList.remove('w-12', 'h-12');
