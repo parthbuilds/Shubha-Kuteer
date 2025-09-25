@@ -549,44 +549,64 @@ function updateColors(variations) {
     const listColorContainer = productDetail.querySelector('.choose-color .list-color');
     const colorText = productDetail.querySelector('.choose-color .color');
 
-    if (!listColorContainer || !colorText) return;
+    if (!listColorContainer || !colorText) {
+        console.error("Error: Could not find color display elements. Check your HTML selectors.");
+        return; // Exit if elements are not found
+    }
 
     listColorContainer.innerHTML = ''; // Clear previous colors
 
+    // Ensure variations.colors exists and is an array with items
     if (variations && variations.colors && Array.isArray(variations.colors) && variations.colors.length > 0) {
         variations.colors.forEach(item => {
             const colorItem = document.createElement('div');
-            colorItem.classList.add('color-item', 'w-12', 'h-12', 'rounded-xl', 'duration-300', 'relative', 'cursor-pointer', 'overflow-hidden');
+            colorItem.classList.add('color-item', 'w-12', 'h-12', 'rounded-xl', 'duration-300', 'relative', 'cursor-pointer', 'overflow-hidden'); // Added overflow-hidden
 
-            // Background (hex, image, or default)
+            // Set background color using hex or colorImage as a fallback
             if (item.hex) {
                 colorItem.style.backgroundColor = item.hex;
+                // Add a border for light colors like white for visibility
                 if (['#FFFFFF', '#FFF', 'white'].includes(item.hex.toLowerCase())) {
                     colorItem.style.border = '1px solid #e0e0e0';
                 }
             } else if (item.colorImage) {
+                // Fallback to image if hex is not provided, using it as background
                 colorItem.style.backgroundImage = `url('${item.colorImage}')`;
                 colorItem.style.backgroundSize = 'cover';
                 colorItem.style.backgroundPosition = 'center';
                 colorItem.style.backgroundRepeat = 'no-repeat';
             } else {
+                // If neither hex nor colorImage, use a default fallback (e.g., grey)
                 colorItem.style.backgroundColor = '#cccccc';
             }
 
-            // Label
+
+            // Add the color name tag
             colorItem.innerHTML += `
                 <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm absolute bottom-1 left-1/2 -translate-x-1/2 text-xs">
                     ${item.color}
                 </div>
             `;
 
+            colorItem.addEventListener('click', () => {
+                // Remove 'active' class from all color items
+                listColorContainer.querySelectorAll('.color-item').forEach(el => el.classList.remove('active'));
+                // Add 'active' class to the clicked item
+                colorItem.classList.add('active');
+                colorText.textContent = item.color; // Update selected color text
+            });
             listColorContainer.appendChild(colorItem);
         });
 
-        // Show first color name
-        colorText.textContent = variations.colors[0].color;
+        // Set initial selected color if available
+        const firstColorItem = listColorContainer.querySelector('.color-item');
+        if (firstColorItem) {
+            firstColorItem.classList.add('active');
+            colorText.textContent = variations.colors[0].color;
+        }
     } else {
-        colorText.textContent = 'N/A';
+        colorText.textContent = 'N/A'; // No colors available
+        console.warn("No colors found in variations data or variations.colors is not an array.");
     }
 }
 
@@ -595,31 +615,69 @@ function updateSizes(sizes) {
     const listSizeContainer = productDetail.querySelector('.choose-size .list-size');
     const sizeText = productDetail.querySelector('.choose-size .size');
 
-    if (!listSizeContainer || !sizeText) return;
+    if (!listSizeContainer || !sizeText) {
+        console.error("Error: Could not find size display elements. Check your HTML selectors.");
+        return; // Exit if elements are not found
+    }
 
     listSizeContainer.innerHTML = ''; // Clear previous sizes
 
+    // Ensure sizes exists and is an array with items
     if (Array.isArray(sizes) && sizes.length > 0) {
         sizes.forEach(item => {
             const sizeItem = document.createElement('div');
             sizeItem.classList.add('size-item', 'w-12', 'h-12', 'flex', 'items-center', 'justify-center', 'text-button', 'rounded-full', 'bg-white', 'border', 'border-line', 'cursor-pointer');
 
-            if (item.toLowerCase() === 'freesize') {
+            // Special handling for 'freesize'
+            if (item.toLowerCase() === 'freesize') { // Use toLowerCase for robust comparison
                 sizeItem.classList.remove('w-12', 'h-12');
-                sizeItem.classList.add('px-3', 'py-2');
+                sizeItem.classList.add('px-3', 'py-2'); // Adjust padding for freesize
             }
-            sizeItem.textContent = item;
+            sizeItem.innerHTML = item; // Display the size text
 
+            sizeItem.addEventListener('click', () => {
+                // Remove 'active' class from all size items
+                listSizeContainer.querySelectorAll('.size-item').forEach(el => el.classList.remove('active'));
+                // Add 'active' class to the clicked item
+                sizeItem.classList.add('active');
+                sizeText.textContent = item; // Update selected size text
+            });
             listSizeContainer.appendChild(sizeItem);
         });
 
-        // Show first size
-        sizeText.textContent = sizes[0];
+        // Set initial selected size if available
+        const firstSizeItem = listSizeContainer.querySelector('.size-item');
+        if (firstSizeItem) {
+            firstSizeItem.classList.add('active');
+            sizeText.textContent = sizes[0];
+        }
     } else {
-        sizeText.textContent = 'N/A';
+        sizeText.textContent = 'N/A'; // No sizes available
+        console.warn("No sizes found in sizes data or sizes is not an array.");
     }
 }
 
+// --- Mocking Backend Data and Initialization ---
+
+// This simulates the product data you would get from your backend API
+// AFTER you have JSON.parse()'d the 'sizes' and 'variations' fields.
+const mockProductData = {
+    id: 1,
+    name: "Awesome T-Shirt",
+    price: 29.99,
+    // These would be JSON.parsed from the database strings
+    parsedVariations: {
+        colors: [
+            { color: "Red", hex: "#E53E3E" },       // Example with hex code
+            { color: "Blue", hex: "#3182CE" },      // Example with hex code
+            { color: "Green", hex: "#38A169" },     // Example with hex code
+            { color: "White", hex: "#FFFFFF" },     // Example with white hex
+            { color: "Black", hex: "#000000" },     // Example with black hex
+            { color: "Pattern", colorImage: "https://via.placeholder.com/48/FF5733/000000?text=P" } // Fallback to image
+        ]
+    },
+    parsedSizes: ["S", "M", "L", "XL", "XXL", "Freesize"] // Example array of sizes
+};
 
 // Call the update functions when the DOM is ready or after fetching data
 document.addEventListener('DOMContentLoaded', () => {
