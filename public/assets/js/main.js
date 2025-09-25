@@ -3656,17 +3656,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-//function to handle the new collection filter
-// // ===========================================
-// UTILITY FUNCTIONS
+//function to handle the new collection filter// ===========================================
+// UTILITY FUNCTIONS (Define these ONLY ONCE)
 // ===========================================
 
 /**
  * Transforms a product object from the backend API format
  * to the format expected by the frontend display logic.
- *
- * @param {Object} backendProduct - The product object received from the backend API.
- * @returns {Object} The transformed product object for frontend use.
  */
 function transformBackendProduct(backendProduct) {
   return {
@@ -3700,18 +3696,12 @@ function transformBackendProduct(backendProduct) {
 * Creates and returns an HTML element for a single product item.
 * This function *MUST* match the exact HTML structure and classes
 * of your product cards as seen in your index.html.
-*
-* @param {Object} product - The transformed product object.
-* @returns {HTMLElement} The HTML div element representing the product card.
 */
 function createProductItem(product) {
   const productElement = document.createElement("div");
   productElement.classList.add("product-item");
-  // Add a unique ID for easier targeting if needed, though data-product-id is often sufficient
-  productElement.dataset.productId = product.id; 
+  productElement.dataset.productId = product.id;
 
-  // This innerHTML includes a "Quick View" button for demonstration.
-  // Adjust its styling and placement to match your design.
   productElement.innerHTML = `
       <div class="product-item-main">
           <a href="/shop-product.html?slug=${product.slug}" class="product-item-img">
@@ -3736,13 +3726,12 @@ function createProductItem(product) {
           <div class="product-item-actions">
               ${product.on_sale ? '<span class="tag sale">Sale</span>' : ''}
               ${product.is_new ? '<span class="tag new">New</span>' : ''}
-              
+
               <button class="btn-add-to-cart" data-product-id="${product.id}" data-action="${product.action}">
                   ${product.action === 'add to cart' ? 'Add to Cart' : product.action}
               </button>
-              
-              <!-- NEW: Quick View Button -->
-              <button class="btn-quick-view mt-2 py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 duration-300" 
+
+              <button class="btn-quick-view mt-2 py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 duration-300"
                       data-product-id="${product.id}">
                   Quick View
               </button>
@@ -3753,12 +3742,12 @@ function createProductItem(product) {
   // (Optional) Add color variations rendering here if applicable
   if (product.variations && product.variations.color && product.variations.color.length > 0) {
       const colorOptionsDiv = document.createElement('div');
-      colorOptionsDiv.classList.add('product-color-options', 'flex', 'gap-2', 'mt-2'); // Added some basic styling classes
+      colorOptionsDiv.classList.add('product-color-options', 'flex', 'gap-2', 'mt-2');
       product.variations.color.forEach(colorObj => {
           const colorSpan = document.createElement('span');
           colorSpan.style.backgroundColor = colorObj.hex || colorObj.name;
           colorSpan.dataset.color = colorObj.name;
-          colorSpan.classList.add('w-6', 'h-6', 'rounded-full', 'cursor-pointer', 'border'); // Basic styling for color swatches
+          colorSpan.classList.add('w-6', 'h-6', 'rounded-full', 'cursor-pointer', 'border');
           colorOptionsDiv.appendChild(colorSpan);
       });
       productElement.querySelector('.product-item-content').appendChild(colorOptionsDiv);
@@ -3771,44 +3760,37 @@ function createProductItem(product) {
 * Attaches event listeners to product color options to change the main image.
 * This logic is highly dependent on your product data structure and UI.
 * This is a placeholder and may need significant customization.
-*
-* @param {Array} products - The array of all products, needed to find variation images.
 */
 function handleActiveImgWhenColorChange(products) {
   document.querySelectorAll('.product-item .product-color-options span').forEach(colorOption => {
       colorOption.addEventListener('click', function() {
           const productItem = this.closest('.product-item');
-          const productId = productItem.dataset.productId; // Using dataset from productElement now
+          const productId = productItem.dataset.productId;
           const selectedColor = this.dataset.color;
 
           const product = products.find(p => p.id == productId);
           if (product) {
-              let newImageSrc = product.main_image; 
+              let newImageSrc = product.main_image;
 
-              // Example: If gallery images are associated with colors
               if (product.gallery && product.gallery.length > 0) {
-                  // This is a simplified example. You might have a more complex
-                  // mapping like an array of objects: [{ url: 'img_red.jpg', color: 'Red' }]
-                  const colorSpecificImage = product.gallery.find(imgUrl => 
+                  const colorSpecificImage = product.gallery.find(imgUrl =>
                       imgUrl.toLowerCase().includes(selectedColor.toLowerCase())
                   );
                   if (colorSpecificImage) {
                       newImageSrc = colorSpecificImage;
                   } else {
-                      // Fallback: if no color-specific image found, use main image
-                      newImageSrc = product.main_image; 
+                      newImageSrc = product.main_image;
                   }
               }
-              
+
               const mainImageElement = productItem.querySelector('.product-item-img img');
               if (mainImageElement) {
                   mainImageElement.src = newImageSrc;
               }
           }
 
-          // Update active state for color options (visual feedback for selected color)
           this.parentElement.querySelectorAll('span').forEach(s => s.classList.remove('active'));
-          this.classList.add('active'); // You'd need CSS for '.active' on your color swatches
+          this.classList.add('active');
       });
   });
 }
@@ -3816,28 +3798,22 @@ function handleActiveImgWhenColorChange(products) {
 /**
 * Attaches general event listeners to product items, specifically for
 * "Add to Cart" and "Quick View" buttons.
-*
-* @param {Array} products - The array of all products for context.
 */
 function addEventToProductItem(products) {
   // --- Add to Cart Logic ---
   document.querySelectorAll('.product-item .btn-add-to-cart').forEach(button => {
       button.addEventListener('click', function(event) {
-          event.preventDefault(); // Prevent default link/button action if any
+          event.preventDefault();
           const productId = this.dataset.productId;
           const action = this.dataset.action;
-          
+
           const product = products.find(p => p.id == productId);
 
           if (product) {
               if (action === 'add to cart') {
                   console.log(`Adding product "${product.name}" (ID: ${productId}) to cart!`);
-                  // ===============================================
-                  //  *** YOUR ACTUAL ADD TO CART IMPLEMENTATION HERE ***
-                  //  This is where you'd update a cart state, add to localStorage,
-                  //  make an API call to a cart service, or dispatch a global event.
-                  // ===============================================
-                  alert(`${product.name} added to cart! (Placeholder)`); // Simple UI feedback
+                  // *** YOUR ACTUAL ADD TO CART IMPLEMENTATION HERE ***
+                  alert(`${product.name} added to cart! (Placeholder)`);
               } else {
                   console.log(`Performing custom action: "${action}" for product "${product.name}"`);
               }
@@ -3850,22 +3826,15 @@ function addEventToProductItem(products) {
   // --- Quick View Logic ---
   document.querySelectorAll('.product-item .btn-quick-view').forEach(button => {
       button.addEventListener('click', function(event) {
-          event.preventDefault(); // Prevent default link/button action if any
+          event.preventDefault();
           const productId = this.dataset.productId;
-          
+
           const product = products.find(p => p.id == productId);
 
           if (product) {
               console.log(`Opening Quick View for product "${product.name}" (ID: ${productId})`);
-              // ===============================================
-              //  *** YOUR ACTUAL QUICK VIEW IMPLEMENTATION HERE ***
-              //  This typically involves:
-              //  1. Fetching full details for the product (if not already loaded).
-              //  2. Populating a modal/dialog with product details (image gallery,
-              //     name, description, price, variations, add to cart form).
-              //  3. Displaying the modal.
-              // ===============================================
-              alert(`Quick View for: ${product.name}\nPrice: $${product.price.toFixed(2)}`); // Simple UI feedback
+              // *** YOUR ACTUAL QUICK VIEW IMPLEMENTATION HERE ***
+              alert(`Quick View for: ${product.name}\nPrice: $${product.price.toFixed(2)}`);
               // Example: openQuickViewModal(product);
           } else {
               console.error(`Product with ID ${productId} not found for quick view.`);
@@ -3874,18 +3843,8 @@ function addEventToProductItem(products) {
   });
 }
 
-
-// ===========================================
-// MAIN PRODUCT DISPLAY LOGIC
-// ===========================================
-
 /**
 * Displays the first four products in a given list element based on the active tab's data-item.
-* Filters by 'type' for specific categories, otherwise sorts by 'best sellers', 'on sale', or 'new arrivals'.
-*
-* @param {Array} products - The array of transformed product data from the backend.
-* @param {HTMLElement} listElement - The DOM element where product items will be appended (e.g., '.list-product.four-product').
-* @param {HTMLElement} menuTabElement - The DOM element representing the menu tab container (e.g., '.menu-tab .menu').
 */
 function displayFilteredProducts(products, listElement, menuTabElement) {
   listElement.querySelectorAll(".product-item").forEach((prd) => prd.remove());
@@ -3927,25 +3886,29 @@ function displayFilteredProducts(products, listElement, menuTabElement) {
       listElement.appendChild(productElement);
   });
 
-  handleActiveImgWhenColorChange(products); // Re-attach color change listeners
-  addEventToProductItem(products);         // Re-attach add to cart & quick view listeners
+  // Re-attach listeners after new products are rendered
+  handleActiveImgWhenColorChange(products);
+  addEventToProductItem(products);
 }
 
 // ===========================================
-// INITIALIZATION ON PAGE LOAD
+// INITIALIZATION ON PAGE LOAD (ONLY RUNS ONCE)
 // ===========================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  const listFourProduct = document.querySelector(".list-product.four-product[data-type='underwear']");
-  if (!listFourProduct) {
+  // Select the specific product list container.
+  // Ensure the selector matches your HTML, e.g., if it's unique by data-type or ID.
+  const listFourProductContainer = document.querySelector(".list-product.four-product[data-type='underwear']");
+  if (!listFourProductContainer) {
       console.error("Target element '.list-product.four-product[data-type=\"underwear\"]' not found. Ensure this HTML element exists.");
-      return;
+      return; // Stop execution if the container isn't found
   }
 
-  const menuTab = listFourProduct.closest(".tab-features-block")?.querySelector(".menu-tab .menu");
-  if (!menuTab) {
+  // Find the menu tab within the same block
+  const menuTabElement = listFourProductContainer.closest(".tab-features-block")?.querySelector(".menu-tab .menu");
+  if (!menuTabElement) {
       console.error("Menu tab element '.menu-tab .menu' not found within the tab-features-block. Ensure the HTML structure is correct.");
-      return;
+      return; // Stop execution if the menu tab isn't found
   }
 
   fetch("/api/admin/products")
@@ -3958,30 +3921,41 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((backendProducts) => {
           const products = backendProducts.map(transformBackendProduct);
 
-          displayFilteredProducts(products, listFourProduct, menuTab);
+          // Initial display of products based on the currently active tab
+          displayFilteredProducts(products, listFourProductContainer, menuTabElement);
 
-          menuTab.querySelectorAll(".tab-item").forEach((item) => {
+          // Add event listeners to all tab items for switching filters
+          menuTabElement.querySelectorAll(".tab-item").forEach((item) => {
               item.addEventListener("click", () => {
-                  menuTab.querySelectorAll(".tab-item").forEach(i => i.classList.remove('active'));
+                  // Update active class for visual feedback
+                  menuTabElement.querySelectorAll(".tab-item").forEach(i => i.classList.remove('active'));
                   item.classList.add('active');
 
-                  const indicator = menuTab.querySelector(".indicator");
+                  // Update indicator position and width (if your CSS/JS handles this)
+                  const indicator = menuTabElement.querySelector(".indicator");
                   if (indicator) {
                       indicator.style.left = item.offsetLeft + "px";
                       indicator.style.width = item.offsetWidth + "px";
                   }
 
-                  displayFilteredProducts(products, listFourProduct, menuTab);
+                  // Re-display products with the new filter
+                  displayFilteredProducts(products, listFourProductContainer, menuTabElement);
               });
           });
 
-          // Set initial indicator position
-          const initialActiveTab = menuTab.querySelector(".tab-item.active");
-          const indicator = menuTab.querySelector(".indicator");
+          // Set initial position of the indicator after the first render
+          const initialActiveTab = menuTabElement.querySelector(".tab-item.active");
+          const indicator = menuTabElement.querySelector(".indicator");
           if (initialActiveTab && indicator) {
               indicator.style.left = initialActiveTab.offsetLeft + "px";
               indicator.style.width = initialActiveTab.offsetWidth + "px";
           }
       })
-      .catch((error) => console.error("Error fetching or processing products:", error));
+      .catch((error) => {
+          console.error("Error fetching or processing products:", error);
+          // Optionally, display a user-friendly error message on the page
+          if (listFourProductContainer) {
+              listFourProductContainer.innerHTML = `<p class="text-red-500">Failed to load products. Please try again later.</p>`;
+          }
+      });
 });
