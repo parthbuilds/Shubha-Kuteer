@@ -551,62 +551,74 @@ function updateColors(variations) {
 
     if (!listColorContainer || !colorText) {
         console.error("Error: Could not find color display elements. Check your HTML selectors.");
-        return; // Exit if elements are not found
+        return;
     }
 
     listColorContainer.innerHTML = ''; // Clear previous colors
+    let colorsToDisplay = [];
 
-    // Ensure variations.colors exists and is an array with items
-    if (variations && variations.colors && Array.isArray(variations.colors) && variations.colors.length > 0) {
-        variations.colors.forEach(item => {
+    // Prioritize variations from productMain if available and structured correctly
+    if (variations && Array.isArray(variations) && variations.length > 0) {
+        colorsToDisplay = variations.map(v => ({
+            color: v.color,
+            hex: v.colorCode, // Use 'colorCode' from productMain's variation structure
+            colorImage: v.colorImage // Use 'colorImage' from productMain's variation structure
+        }));
+    } else if (mockProductData.parsedVariations && mockProductData.parsedVariations.colors && Array.isArray(mockProductData.parsedVariations.colors)) {
+        // Fallback to mock data if productMain's variations are not suitable
+        colorsToDisplay = mockProductData.parsedVariations.colors;
+    } else {
+        // If no variations are found at all, provide a default set
+        colorsToDisplay = [
+            { color: "Red", hex: "#DB4444" },
+            { color: "Blue", hex: "#4285F4" },
+            { color: "Green", hex: "#0F9D58" }
+        ];
+    }
+
+    if (colorsToDisplay.length > 0) {
+        colorsToDisplay.forEach(item => {
             const colorItem = document.createElement('div');
-            colorItem.classList.add('color-item', 'w-12', 'h-12', 'rounded-xl', 'duration-300', 'relative', 'cursor-pointer', 'overflow-hidden'); // Added overflow-hidden
+            colorItem.classList.add('color-item', 'w-12', 'h-12', 'rounded-xl', 'duration-300', 'relative', 'cursor-pointer', 'overflow-hidden');
 
             // Set background color using hex or colorImage as a fallback
             if (item.hex) {
                 colorItem.style.backgroundColor = item.hex;
-                // Add a border for light colors like white for visibility
                 if (['#FFFFFF', '#FFF', 'white'].includes(item.hex.toLowerCase())) {
                     colorItem.style.border = '1px solid #e0e0e0';
                 }
             } else if (item.colorImage) {
-                // Fallback to image if hex is not provided, using it as background
                 colorItem.style.backgroundImage = `url('${item.colorImage}')`;
                 colorItem.style.backgroundSize = 'cover';
                 colorItem.style.backgroundPosition = 'center';
                 colorItem.style.backgroundRepeat = 'no-repeat';
             } else {
-                // If neither hex nor colorImage, use a default fallback (e.g., grey)
-                colorItem.style.backgroundColor = '#cccccc';
+                colorItem.style.backgroundColor = '#cccccc'; // Default grey if no info
             }
 
-
-            // Add the color name tag
             colorItem.innerHTML += `
                 <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm absolute bottom-1 left-1/2 -translate-x-1/2 text-xs">
-                    ${item.color}
+                    ${item.color || 'N/A'}
                 </div>
             `;
 
             colorItem.addEventListener('click', () => {
-                // Remove 'active' class from all color items
                 listColorContainer.querySelectorAll('.color-item').forEach(el => el.classList.remove('active'));
-                // Add 'active' class to the clicked item
                 colorItem.classList.add('active');
-                colorText.textContent = item.color; // Update selected color text
+                colorText.textContent = item.color || 'N/A';
             });
             listColorContainer.appendChild(colorItem);
         });
 
-        // Set initial selected color if available
         const firstColorItem = listColorContainer.querySelector('.color-item');
         if (firstColorItem) {
             firstColorItem.classList.add('active');
-            colorText.textContent = variations.colors[0].color;
+            colorText.textContent = colorsToDisplay[0].color || 'N/A';
         }
     } else {
-        colorText.textContent = 'N/A'; // No colors available
-        console.warn("No colors found in variations data or variations.colors is not an array.");
+        // If no colors are available after all attempts, still show a default 'N/A'
+        colorText.textContent = 'N/A';
+        console.warn("No colors could be rendered.");
     }
 }
 
@@ -617,74 +629,66 @@ function updateSizes(sizes) {
 
     if (!listSizeContainer || !sizeText) {
         console.error("Error: Could not find size display elements. Check your HTML selectors.");
-        return; // Exit if elements are not found
+        return;
     }
 
     listSizeContainer.innerHTML = ''; // Clear previous sizes
+    let sizesToDisplay = [];
 
-    // Ensure sizes exists and is an array with items
+    // Prioritize sizes from productMain if available
     if (Array.isArray(sizes) && sizes.length > 0) {
-        sizes.forEach(item => {
+        sizesToDisplay = sizes;
+    } else if (Array.isArray(mockProductData.parsedSizes)) {
+        // Fallback to mock data if productMain's sizes are not suitable
+        sizesToDisplay = mockProductData.parsedSizes;
+    } else {
+        // If no sizes are found at all, provide a default set
+        sizesToDisplay = ["S", "M", "L", "XL"];
+    }
+
+
+    if (sizesToDisplay.length > 0) {
+        sizesToDisplay.forEach(item => {
             const sizeItem = document.createElement('div');
             sizeItem.classList.add('size-item', 'w-12', 'h-12', 'flex', 'items-center', 'justify-center', 'text-button', 'rounded-full', 'bg-white', 'border', 'border-line', 'cursor-pointer');
 
-            // Special handling for 'freesize'
-            if (item.toLowerCase() === 'freesize') { // Use toLowerCase for robust comparison
+            if (item.toLowerCase() === 'freesize') {
                 sizeItem.classList.remove('w-12', 'h-12');
-                sizeItem.classList.add('px-3', 'py-2'); // Adjust padding for freesize
+                sizeItem.classList.add('px-3', 'py-2');
             }
-            sizeItem.innerHTML = item; // Display the size text
+            sizeItem.innerHTML = item;
 
             sizeItem.addEventListener('click', () => {
-                // Remove 'active' class from all size items
                 listSizeContainer.querySelectorAll('.size-item').forEach(el => el.classList.remove('active'));
-                // Add 'active' class to the clicked item
                 sizeItem.classList.add('active');
-                sizeText.textContent = item; // Update selected size text
+                sizeText.textContent = item;
             });
             listSizeContainer.appendChild(sizeItem);
         });
 
-        // Set initial selected size if available
         const firstSizeItem = listSizeContainer.querySelector('.size-item');
         if (firstSizeItem) {
             firstSizeItem.classList.add('active');
-            sizeText.textContent = sizes[0];
+            sizeText.textContent = sizesToDisplay[0];
         }
     } else {
-        sizeText.textContent = 'N/A'; // No sizes available
-        console.warn("No sizes found in sizes data or sizes is not an array.");
+        // If no sizes are available after all attempts, still show a default 'N/A'
+        sizeText.textContent = 'N/A';
+        console.warn("No sizes could be rendered.");
     }
 }
 
-// --- Mocking Backend Data and Initialization ---
-
-// This simulates the product data you would get from your backend API
-// AFTER you have JSON.parse()'d the 'sizes' and 'variations' fields.
-const mockProductData = {
-    id: 1,
-    name: "Awesome T-Shirt",
-    price: 29.99,
-    // These would be JSON.parsed from the database strings
-    parsedVariations: {
-        colors: [
-            { color: "Red", hex: "#E53E3E" },       // Example with hex code
-            { color: "Blue", hex: "#3182CE" },      // Example with hex code
-            { color: "Green", hex: "#38A169" },     // Example with hex code
-            { color: "White", hex: "#FFFFFF" },     // Example with white hex
-            { color: "Black", hex: "#000000" },     // Example with black hex
-            { color: "Pattern", colorImage: "https://via.placeholder.com/48/FF5733/000000?text=P" } // Fallback to image
-        ]
-    },
-    parsedSizes: ["S", "M", "L", "XL", "XXL", "Freesize"] // Example array of sizes
-};
-
 // Call the update functions when the DOM is ready or after fetching data
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if productDetail was successfully selected
     if (productDetail) {
-        updateColors(mockProductData.parsedVariations);
-        updateSizes(mockProductData.parsedSizes);
+        // These calls will now correctly use productMain's data first,
+        // and fall back to mockProductData or a default if productMain's data is missing/empty.
+        // The actual productMain object is available within the fetch success callback.
+        // For DOMContentLoaded without a fetch, mockProductData is the only source.
+        // This setup ensures rendering happens even if fetch hasn't completed or fails.
+        // The subsequent fetch block will override with actual product data.
+        updateColors(null); // Pass null initially, letting the function decide fallback
+        updateSizes(null);  // Pass null initially, letting the function decide fallback
     } else {
         console.error("Critical Error: 'productDetail' element not found in the DOM. Please check your HTML structure and the selector.");
     }
