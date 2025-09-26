@@ -606,32 +606,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// Function to handle quantity selection
-function setupQuantitySelector(initialQuantity = 1) {
-    const quantityBlock = productDetail.querySelector('.choose-quantity .quantity-block');
-    const quantityDisplay = quantityBlock ? quantityBlock.querySelector('.quantity') : null;
-    const minusBtn = quantityBlock ? quantityBlock.querySelector('.ph-minus') : null;
-    const plusBtn = quantityBlock ? quantityBlock.querySelector('.ph-plus') : null;
+// // Function to handle quantity selection
+// function setupQuantitySelector(initialQuantity = 1) {
+//     const quantityBlock = productDetail.querySelector('.choose-quantity .quantity-block');
+//     const quantityDisplay = quantityBlock ? quantityBlock.querySelector('.quantity') : null;
+//     const minusBtn = quantityBlock ? quantityBlock.querySelector('.ph-minus') : null;
+//     const plusBtn = quantityBlock ? quantityBlock.querySelector('.ph-plus') : null;
 
-    if (quantityDisplay && minusBtn && plusBtn) {
-        let currentQuantity = initialQuantity;
-        quantityDisplay.textContent = currentQuantity;
+//     if (quantityDisplay && minusBtn && plusBtn) {
+//         let currentQuantity = initialQuantity;
+//         quantityDisplay.textContent = currentQuantity;
 
-        minusBtn.addEventListener('click', () => {
-            if (currentQuantity > 1) {
-                currentQuantity--;
-                quantityDisplay.textContent = currentQuantity;
-                // You might want to update a productMain.quantityPurchase here
-            }
-        });
+//         minusBtn.addEventListener('click', () => {
+//             if (currentQuantity > 1) {
+//                 currentQuantity--;
+//                 quantityDisplay.textContent = currentQuantity;
+//                 // You might want to update a productMain.quantityPurchase here
+//             }
+//         });
 
-        plusBtn.addEventListener('click', () => {
-            currentQuantity++;
-            quantityDisplay.textContent = currentQuantity;
-            // You might want to update a productMain.quantityPurchase here
-        });
-    }
-}
+//         plusBtn.addEventListener('click', () => {
+//             currentQuantity++;
+//             quantityDisplay.textContent = currentQuantity;
+//             // You might want to update a productMain.quantityPurchase here
+//         });
+//     }
+// }
 
 // Function to display estimated delivery date (10 days from today)
 function updateEstimatedDelivery() {
