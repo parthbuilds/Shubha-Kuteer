@@ -549,6 +549,9 @@ function setupQuantitySelector(initialQuantity = 1) {
             quantityDisplay.textContent = currentQuantity;
             // You might want to update a productMain.quantityPurchase here
         });
+
+
+        console.log(currentQuantity);
     }
 }
 
