@@ -15,7 +15,7 @@
 /**** list-img review ****/
 /**** Redirect filter type product-sidebar ****/
 
-let selectedQuantity = 1;
+
 
 // List scroll you'll love this to
 if (document.querySelector('.swiper-product-scroll')) {
@@ -525,8 +525,7 @@ function updateSizes(sizes) {
     }
 }
 
-
-
+// Function to handle quantity selection
 function setupQuantitySelector(initialQuantity = 1) {
     const quantityBlock = productDetail.querySelector('.choose-quantity .quantity-block');
     const quantityDisplay = quantityBlock ? quantityBlock.querySelector('.quantity') : null;
@@ -534,19 +533,21 @@ function setupQuantitySelector(initialQuantity = 1) {
     const plusBtn = quantityBlock ? quantityBlock.querySelector('.ph-plus') : null;
 
     if (quantityDisplay && minusBtn && plusBtn) {
-        selectedQuantity = initialQuantity;
-        quantityDisplay.textContent = selectedQuantity;
+        let currentQuantity = initialQuantity;
+        quantityDisplay.textContent = currentQuantity;
 
         minusBtn.addEventListener('click', () => {
-            if (selectedQuantity > 1) {
-                selectedQuantity--;
-                quantityDisplay.textContent = selectedQuantity;
+            if (currentQuantity > 1) {
+                currentQuantity--;
+                quantityDisplay.textContent = currentQuantity;
+                // You might want to update a productMain.quantityPurchase here
             }
         });
 
         plusBtn.addEventListener('click', () => {
-            selectedQuantity++;
-            quantityDisplay.textContent = selectedQuantity;
+            currentQuantity++;
+            quantityDisplay.textContent = currentQuantity;
+            // You might want to update a productMain.quantityPurchase here
         });
     }
 }
