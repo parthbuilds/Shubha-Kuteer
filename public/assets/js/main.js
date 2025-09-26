@@ -3381,177 +3381,94 @@ if (listProductCompare) {
   }
 }
 
-//cart page
+//Cart
 let listProductCart = document.querySelector(".cart-block .list-product-main");
 
-const handleInforCart = () => {
-  if (listProductCart) {
-    let cartStore = localStorage.getItem("cartStore");
-    cartStore = cartStore ? JSON.parse(cartStore) : [];
-
-    let moneyForFreeship = 2000;
-    let totalCart = 0;
-
-    listProductCart.innerHTML = "";
-
-    cartStore.forEach((product, idx) => {
-      const productElement = document.createElement("div");
-      productElement.setAttribute("data-item", product.id);
-      productElement.classList.add(
-        "item", "flex", "md:mt-7", "md:pb-7", "mt-5", "pb-5",
-        "border-b", "border-line", "w-full"
-      );
-      productElement.innerHTML = `
-        <div class="w-1/2">
-          <div class="flex items-center gap-6">
-            <div class="bg-img md:w-[100px] w-20 aspect-[3/4]">
-              <img src="${product.thumbImage[0]}" alt="img"
-                class="w-full h-full object-cover rounded-lg" />
-            </div>
-            <div>
-              <div class="text-title">${product.name}</div>
-              <div class="list-select mt-3"></div>
-            </div>
-          </div>
-        </div>
-        <div class="w-1/12 price flex items-center justify-center">
-          <div class="text-title text-center">₹${product.price}.00</div>
-        </div>
-        <div class="w-1/6 flex items-center justify-center">
-          <div class="quantity-block bg-surface md:p-3 p-2 flex items-center justify-between rounded-lg border border-line md:w-[100px] flex-shrink-0 w-20">
-            <i class="ph-bold ph-minus cursor-pointer text-base max-md:text-sm"></i>
-            <div class="text-button quantity">${product.quantityPurchase}</div>
-            <i class="ph-bold ph-plus cursor-pointer text-base max-md:text-sm"></i>
-          </div>
-        </div>
-        <div class="w-1/6 flex total-price items-center justify-center">
-          <div class="text-title text-center">₹${product.price * product.quantityPurchase}.00</div>
-        </div>
-        <div class="w-1/12 flex items-center justify-center">
-          <i class="remove-btn ph ph-x-circle text-xl max-md:text-base text-red cursor-pointer hover:text-black duration-300"></i>
-        </div>
-      `;
-
-      // Quantity logic
-      const quantityBlock = productElement.querySelector(".quantity-block");
-      const quantityProduct = quantityBlock.querySelector(".quantity");
-      const totalPriceProduct = productElement.querySelector(".total-price .text-title");
-
-      quantityBlock.querySelector(".ph-plus").addEventListener("click", () => {
-        cartStore[idx].quantityPurchase++;
-        quantityProduct.textContent = cartStore[idx].quantityPurchase;
-        totalPriceProduct.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
-        localStorage.setItem("cartStore", JSON.stringify(cartStore));
-        updateTotalCart();
-        console.log('PLUS clicked:', cartStore[idx]);
-        console.log('CartStore after PLUS:', cartStore);
-        console.log('LocalStorage:', localStorage.getItem("cartStore"));
-      });
-
-      quantityBlock.querySelector(".ph-minus").addEventListener("click", () => {
-        if (cartStore[idx].quantityPurchase > 1) {
-          cartStore[idx].quantityPurchase--;
-          quantityProduct.textContent = cartStore[idx].quantityPurchase;
-          totalPriceProduct.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
-          localStorage.setItem("cartStore", JSON.stringify(cartStore));
-          updateTotalCart();
-          console.log('MINUS clicked:', cartStore[idx]);
-          console.log('CartStore after MINUS:', cartStore);
-          console.log('LocalStorage:', localStorage.getItem("cartStore"));
-        }
-      });
-
-      listProductCart.appendChild(productElement);
-      totalCart += product.price * product.quantityPurchase;
-    });
-
-    // Update totals everywhere
-    const updateTotalCart = () => {
-      totalCart = 0;
-      cartStore.forEach((product) => {
-        totalCart += product.price * product.quantityPurchase;
-      });
-      window.cartTotal = totalCart;
-      if (document.querySelector(".total-block .total-product"))
-        document.querySelector(".total-block .total-product").innerHTML = totalCart;
-      if (document.querySelector(".total-cart-block .total-cart"))
-        document.querySelector(".total-cart-block .total-cart").innerHTML = totalCart;
-      if (document.querySelector(".heading.banner .more-price"))
-        document.querySelector(".heading.banner .more-price").innerHTML =
-          totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
-      if (typeof moneyFreeshipProgress !== "undefined" && moneyFreeshipProgress)
-        moneyFreeshipProgress.style.width =
-          totalCart <= moneyForFreeship
-            ? `${(totalCart / moneyForFreeship) * 100}%`
-            : `100%`;
-      console.log('Cart total updated:', totalCart);
-    };
-
-    updateTotalCart();
-
-    // Remove item logic
-    const prdItems = listProductCart.querySelectorAll(".item");
-    prdItems.forEach((prd) => {
-      const removeCartBtn = prd.querySelector(".remove-btn");
-      removeCartBtn.addEventListener("click", () => {
-        const prdId = removeCartBtn.closest(".item").getAttribute("data-item");
-        const newArray = cartStore.filter((item) => item.id !== prdId);
-        localStorage.setItem("cartStore", JSON.stringify(newArray));
-        handleInforCart();
-      });
-    });
-  }
-};
-
-handleInforCart();
-
-// Checkout
-if (listProductCheckout) {
+function renderCart() {
   let cartStore = localStorage.getItem("cartStore");
   cartStore = cartStore ? JSON.parse(cartStore) : [];
   let totalCart = 0;
+  listProductCart.innerHTML = "";
+
+  cartStore.forEach((product, idx) => {
+    const productElement = document.createElement("div");
+    productElement.classList.add("item");
+    productElement.innerHTML = `
+      <div class="quantity-block">
+        <button class="minus">-</button>
+        <span class="quantity">${product.quantityPurchase}</span>
+        <button class="plus">+</button>
+      </div>
+      <span class="name">${product.name}</span>
+      <span class="price">₹${product.price}.00</span>
+      <span class="total">₹${product.price * product.quantityPurchase}.00</span>
+    `;
+    listProductCart.appendChild(productElement);
+
+    // Quantity buttons
+    const minusBtn = productElement.querySelector(".minus");
+    const plusBtn = productElement.querySelector(".plus");
+    const quantitySpan = productElement.querySelector(".quantity");
+    const totalSpan = productElement.querySelector(".total");
+
+    plusBtn.onclick = () => {
+      cartStore[idx].quantityPurchase++;
+      quantitySpan.textContent = cartStore[idx].quantityPurchase;
+      totalSpan.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
+      localStorage.setItem("cartStore", JSON.stringify(cartStore));
+      renderCheckout();
+      renderCart();
+    };
+
+    minusBtn.onclick = () => {
+      if (cartStore[idx].quantityPurchase > 1) {
+        cartStore[idx].quantityPurchase--;
+        quantitySpan.textContent = cartStore[idx].quantityPurchase;
+        totalSpan.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
+        localStorage.setItem("cartStore", JSON.stringify(cartStore));
+        renderCheckout();
+        renderCart();
+      }
+    };
+
+    totalCart += product.price * product.quantityPurchase;
+  });
+
+  // Update total in cart UI
+  const totalBlock = document.querySelector(".total-block .total-product");
+  if (totalBlock) totalBlock.textContent = totalCart;
+}
+
+renderCart();
+
+// Checkout
+function renderCheckout() {
+  const listProductCheckout = document.querySelector(".checkout-block .list-product-main");
+  if (!listProductCheckout) return;
+  let cartStore = localStorage.getItem("cartStore");
+  cartStore = cartStore ? JSON.parse(cartStore) : [];
+  let totalCart = 0;
+  listProductCheckout.innerHTML = "";
 
   cartStore.forEach((product) => {
     const productElement = document.createElement("div");
-    productElement.classList.add(
-      "item",
-      "flex",
-      "items-center",
-      "justify-between",
-      "w-full",
-      "pb-5",
-      "border-b",
-      "border-line",
-      "gap-6",
-      "mt-5"
-    );
+    productElement.classList.add("item");
     productElement.innerHTML = `
-      <div class="bg-img w-[100px] aspect-square flex-shrink-0 rounded-lg overflow-hidden">
-        <img src=${product.thumbImage[0]} alt='img' class='w-full h-full' />
-      </div>
-      <div class="flex items-center justify-between w-full">
-        <div>
-          <div class="name text-title">${product.name}</div>
-          <div class="caption1 text-secondary mt-2">
-            <span class='size capitalize'>${product.sizes[0]}</span>
-            <span>/</span>
-            <span class='color capitalize'>${product.variation[0].color}</span>
-          </div>
-        </div>
-        <div class="text-title">
-          <span class='quantity'>${product.quantityPurchase}</span>
-          <span class='px-1'>x</span>
-          <span>₹${product.price}.00</span>
-        </div>
-      </div>
+      <span class="name">${product.name}</span>
+      <span class="quantity">${product.quantityPurchase}</span>
+      <span class="price">₹${product.price}.00</span>
+      <span class="total">₹${product.price * product.quantityPurchase}.00</span>
     `;
     listProductCheckout.appendChild(productElement);
     totalCart += product.price * product.quantityPurchase;
-    document.querySelector(
-      ".total-cart-block .total-cart"
-    ).innerHTML = `₹${totalCart}.00`;
   });
+
+  // Update total in checkout UI
+  const totalCheckoutBlock = document.querySelector(".total-cart-block .total-cart");
+  if (totalCheckoutBlock) totalCheckoutBlock.textContent = `₹${totalCart}.00`;
 }
+
+renderCheckout();
 // Show, hide login block in checkout
 const formLoginHeading = document.querySelector(
   ".checkout-block .form-login-block"
