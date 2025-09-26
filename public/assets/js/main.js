@@ -3778,3 +3778,128 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+
+function updateCartUI() {
+  let cartStore = localStorage.getItem("cartStore");
+  cartStore = cartStore ? JSON.parse(cartStore) : [];
+  let totalCart = 0;
+
+  // --- Cart Modal ---
+  const modalList = document.querySelector(".modal-cart .list-item-cart");
+  if (modalList) {
+    modalList.innerHTML = "";
+    cartStore.forEach((item, idx) => {
+      totalCart += item.price * (item.quantityPurchase || 1);
+      const row = document.createElement("div");
+      row.className = "item flex justify-between py-3 border-b border-line";
+      row.setAttribute("data-item", item.id);
+      row.innerHTML = `
+        <div class="flex items-center gap-3">
+          <img src="${item.thumbImage[0]}" class="w-[80px] h-[80px] rounded-lg"/>
+          <div>
+            <div class="font-semibold">${item.name}</div>
+            <div class="text-sm text-secondary">₹${item.price}.00 each</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="decrease-qty border rounded px-2">-</button>
+          <span class="quantity">${item.quantityPurchase || 1}</span>
+          <button class="increase-qty border rounded px-2">+</button>
+        </div>
+        <div class="text-title">₹${item.price * (item.quantityPurchase || 1)}.00</div>
+        <i class="remove-btn ph ph-x-circle text-xl text-red cursor-pointer"></i>
+      `;
+      modalList.appendChild(row);
+    });
+  }
+
+  // --- Cart Page ---
+  const cartPageList = document.querySelector(".cart-block .list-product-main");
+  if (cartPageList) {
+    cartPageList.innerHTML = "";
+    cartStore.forEach((item, idx) => {
+      totalCart += item.price * (item.quantityPurchase || 1);
+      const row = document.createElement("div");
+      row.className = "item flex justify-between py-5 border-b border-line";
+      row.setAttribute("data-item", item.id);
+      row.innerHTML = `
+        <div class="flex items-center gap-6 w-1/2">
+          <img src="${item.thumbImage[0]}" class="w-[80px] h-[80px] rounded-lg"/>
+          <div>
+            <div class="font-semibold">${item.name}</div>
+          </div>
+        </div>
+        <div class="w-1/6 text-center">₹${item.price}.00</div>
+        <div class="w-1/6 flex items-center justify-center gap-3">
+          <button class="decrease-qty border rounded px-2">-</button>
+          <span class="quantity">${item.quantityPurchase || 1}</span>
+          <button class="increase-qty border rounded px-2">+</button>
+        </div>
+        <div class="w-1/6 text-center">₹${item.price * (item.quantityPurchase || 1)}.00</div>
+        <i class="remove-btn ph ph-x-circle text-xl text-red cursor-pointer"></i>
+      `;
+      cartPageList.appendChild(row);
+    });
+  }
+
+  // --- Checkout Page ---
+  const checkoutList = document.querySelector(".checkout-block .list-product-checkout");
+  if (checkoutList) {
+    checkoutList.innerHTML = "";
+    cartStore.forEach((item, idx) => {
+      totalCart += item.price * (item.quantityPurchase || 1);
+      const row = document.createElement("div");
+      row.className = "item flex justify-between py-3 border-b border-line";
+      row.setAttribute("data-item", item.id);
+      row.innerHTML = `
+        <div class="flex items-center gap-4">
+          <img src="${item.thumbImage[0]}" class="w-[60px] h-[60px] rounded-lg"/>
+          <div>
+            <div class="font-semibold">${item.name}</div>
+            <div class="text-sm text-secondary">₹${item.price}.00 each</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="decrease-qty border rounded px-2">-</button>
+          <span class="quantity">${item.quantityPurchase || 1}</span>
+          <button class="increase-qty border rounded px-2">+</button>
+        </div>
+        <div class="text-title">₹${item.price * (item.quantityPurchase || 1)}.00</div>
+        <i class="remove-btn ph ph-x-circle text-xl text-red cursor-pointer"></i>
+      `;
+      checkoutList.appendChild(row);
+    });
+  }
+
+  // --- Update totals everywhere ---
+  const totalEls = document.querySelectorAll(".total-product, .total-cart");
+  totalEls.forEach((el) => (el.textContent = "₹" + totalCart.toFixed(2)));
+
+  // --- Bind events (all rows) ---
+  document.querySelectorAll(".increase-qty").forEach((btn, i) => {
+    btn.addEventListener("click", () => {
+      cartStore[i].quantityPurchase++;
+      localStorage.setItem("cartStore", JSON.stringify(cartStore));
+      updateCartUI();
+    });
+  });
+
+  document.querySelectorAll(".decrease-qty").forEach((btn, i) => {
+    btn.addEventListener("click", () => {
+      if (cartStore[i].quantityPurchase > 1) {
+        cartStore[i].quantityPurchase--;
+        localStorage.setItem("cartStore", JSON.stringify(cartStore));
+        updateCartUI();
+      }
+    });
+  });
+
+  document.querySelectorAll(".remove-btn").forEach((btn, i) => {
+    btn.addEventListener("click", () => {
+      cartStore.splice(i, 1);
+      localStorage.setItem("cartStore", JSON.stringify(cartStore));
+      updateCartUI();
+    });
+  });
+}
