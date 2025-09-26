@@ -572,27 +572,6 @@ function updateSizes(sizes) {
     }
 }
 
-// --- Mocking Backend Data and Initialization ---
-
-// This simulates the product data you would get from your backend API
-// AFTER you have JSON.parse()'d the 'sizes' and 'variations' fields.
-const mockProductData = {
-    id: 1,
-    name: "Awesome T-Shirt",
-    price: 29.99,
-    // These would be JSON.parsed from the database strings
-    parsedVariations: {
-        colors: [
-            { color: "Red", hex: "#E53E3E" },       // Example with hex code
-            { color: "Blue", hex: "#3182CE" },      // Example with hex code
-            { color: "Green", hex: "#38A169" },     // Example with hex code
-            { color: "White", hex: "#FFFFFF" },     // Example with white hex
-            { color: "Black", hex: "#000000" },     // Example with black hex
-            { color: "Pattern", colorImage: "https://via.placeholder.com/48/FF5733/000000?text=P" } // Fallback to image
-        ]
-    },
-    parsedSizes: ["S", "M", "L", "XL", "XXL", "Freesize"] // Example array of sizes
-};
 
 // Call the update functions when the DOM is ready or after fetching data
 document.addEventListener('DOMContentLoaded', () => {
