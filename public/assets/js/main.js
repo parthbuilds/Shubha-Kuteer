@@ -2022,7 +2022,7 @@ if (filterProductImg) {
       const prdId = filterProductImg
         .querySelector(".product-infor")
         .getAttribute("data-item");
-      let productMain = data.find((product) => product.id === prdId);
+      let productMain = products.find((product) => product.id === prdId);
       const colorItems = filterProductImg.querySelectorAll(".color-item");
 
       colorItems.forEach((colorItem) => {
