@@ -184,7 +184,7 @@ function transformBackendProduct(backendProduct) {
         brand: backendProduct.brand,
         sold: backendProduct.sold,
         quantity: backendProduct.quantity,
-        quantityPurchase: 1, // Default, not in backend data
+        quantityPurchase: 1 // Default, not in backend data
         sizes: defaultSizes, // Default sizes, or fetch/infer from backend if available
         variation: variations, // Use the dynamically generated variations
         thumbImage: thumbImages, // Combined main and thumb image
@@ -1025,9 +1025,29 @@ function addEventToProductItem(products) {
             if (productId) {
                 const product = products.find(p => p.id === productId);
                 if (product) {
-                    console.log('Add to Cart clicked for product:', product.name);
-                    // Implement your add to cart logic here
-                    alert(`Added to cart: ${product.name}`);
+                    let cartStore = localStorage.getItem("cartStore");
+                    cartStore = cartStore ? JSON.parse(cartStore) : [];
+                    const existingIndex = cartStore.findIndex(item => item.id === productId);
+
+                    // Get selected quantity from quick shop block if present
+                    let selectedQuantity = 1;
+                    const quickShopBlock = productElement.querySelector('.quick-shop-block');
+                    if (quickShopBlock) {
+                        const quantityInput = quickShopBlock.querySelector('.quantity');
+                        if (quantityInput) {
+                            selectedQuantity = parseInt(quantityInput.textContent) || 1;
+                        }
+                    }
+
+                    if (existingIndex > -1) {
+                        cartStore[existingIndex].quantityPurchase += selectedQuantity;
+                    } else {
+                        product.quantityPurchase = selectedQuantity;
+                        cartStore.push(product);
+                    }
+                    localStorage.setItem("cartStore", JSON.stringify(cartStore));
+                    alert(`Added to cart: ${product.name} (x${selectedQuantity})`);
+                    // Optionally, call handleInforCart() to update cart UI
                 }
             }
         };
@@ -1110,6 +1130,75 @@ function addEventToProductItem(products) {
                 alert(`Product ${productId} added to compare!`);
             }
         };
+    });
+
+    document.querySelectorAll('.quick-shop-block').forEach(block => {
+        let selectedQuantity = 1;
+        const minusBtn = block.querySelector('.ph-minus');
+        const plusBtn = block.querySelector('.ph-plus');
+        const quantityDisplay = block.querySelector('.quantity');
+        if (quantityDisplay) quantityDisplay.textContent = selectedQuantity;
+
+        if (minusBtn && quantityDisplay) {
+            minusBtn.addEventListener('click', () => {
+                if (selectedQuantity > 1) {
+                    selectedQuantity--;
+                    quantityDisplay.textContent = selectedQuantity;
+                }
+            });
+        }
+        if (plusBtn && quantityDisplay) {
+            plusBtn.addEventListener('click', () => {
+                selectedQuantity++;
+                quantityDisplay.textContent = selectedQuantity;
+            });
+        }
+
+        // Add to Cart from quick shop
+        const addCartBtn = block.querySelector('.add-cart-btn');
+        if (addCartBtn) {
+            addCartBtn.addEventListener('click', () => {
+                let cartStore = localStorage.getItem("cartStore");
+                cartStore = cartStore ? JSON.parse(cartStore) : [];
+                const productId = block.getAttribute('data-item');
+                const product = products.find(p => p.id === productId);
+                const existingIndex = cartStore.findIndex(item => item.id === productId);
+
+                if (existingIndex > -1) {
+                    cartStore[existingIndex].quantityPurchase += selectedQuantity;
+                } else {
+                    product.quantityPurchase = selectedQuantity;
+                    cartStore.push(product);
+                }
+                localStorage.setItem("cartStore", JSON.stringify(cartStore));
+                // Optionally, update cart UI/modal here
+            });
+        }
+    });
+}
+
+
+// Quantity selector setup
+function setupQuantitySelector(initialQuantity = 1) {
+    const quantityBlock = document.querySelector('.choose-quantity .quantity-block');
+    if (!quantityBlock) return;
+    const quantityDisplay = quantityBlock.querySelector('.quantity');
+    const minusBtn = quantityBlock.querySelector('.ph-minus');
+    const plusBtn = quantityBlock.querySelector('.ph-plus');
+
+    selectedQuantity = initialQuantity;
+    quantityDisplay.textContent = selectedQuantity;
+
+    minusBtn.addEventListener('click', () => {
+        if (selectedQuantity > 1) {
+            selectedQuantity--;
+            quantityDisplay.textContent = selectedQuantity;
+        }
+    });
+
+    plusBtn.addEventListener('click', () => {
+        selectedQuantity++;
+        quantityDisplay.textContent = selectedQuantity;
     });
 }
 

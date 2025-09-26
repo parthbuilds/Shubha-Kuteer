@@ -624,6 +624,8 @@ function setupQuantitySelector(initialQuantity = 1) {
     }
 }
 
+let selectedQuantity = 1;
+
 // Function to display estimated delivery date (10 days from today)
 function updateEstimatedDelivery() {
     const estimatedDeliveryElement = productDetail.querySelector('.more-infor .flex.items-center.gap-1.mt-3:nth-of-type(2) .text-secondary');
