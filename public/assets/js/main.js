@@ -3381,41 +3381,69 @@ if (listProductCompare) {
   }
 }
 
-//cart page
-let listProductCart = document.querySelector(".cart-block .list-product-main");
+// --- Cart page logic ---
+let listProductCart = document.querySelector(".cart-block .list-product-main"); // Ensure this selector is correct for your cart page
 
 const handleInforCart = () => {
   if (listProductCart) {
     let cartStore = localStorage.getItem("cartStore");
     cartStore = cartStore ? JSON.parse(cartStore) : [];
 
-    let moneyForFreeship = 2000;
+    let moneyForFreeship = 2000; // Example value
     let totalCart = 0;
 
-    listProductCart.innerHTML = "";
+    listProductCart.innerHTML = ""; // Clear existing items
+
+    if (cartStore.length === 0) {
+      listProductCart.innerHTML = '<p class="text-secondary text-center py-4">Your cart is empty.</p>';
+      // Also update total cart display to 0 if cart is empty
+      const totalCartDisplay = document.querySelector(".total-block .total-product") || document.querySelector(".total-cart-block .total-cart");
+      if (totalCartDisplay) totalCartDisplay.innerHTML = '0.00'; // Or whatever default format
+      // If you have a freeship progress, reset it too
+      const moneyFreeshipProgress = document.querySelector('.freeship-progress-bar-class'); // Replace with actual class/ID
+      if (moneyFreeshipProgress) moneyFreeshipProgress.style.width = '0%';
+      return; // Exit if cart is empty
+    }
+
 
     cartStore.forEach((product, idx) => {
+      // Basic validation for product data
+      if (!product || !product.id || !product.name || typeof product.price !== 'number' || !product.thumbImage || product.thumbImage.length === 0) {
+          console.warn('Skipping invalid product in cart:', product);
+          return; // Skip this product if essential data is missing
+      }
+
       const productElement = document.createElement("div");
       productElement.setAttribute("data-item", product.id);
       productElement.classList.add(
         "item", "flex", "md:mt-7", "md:pb-7", "mt-5", "pb-5",
         "border-b", "border-line", "w-full"
       );
+
+      // Default values for size/color if not present
+      const displaySize = (product.sizes && product.sizes[0]) ? product.sizes[0] : 'N/A';
+      const displayColor = (product.variation && product.variation[0] && product.variation[0].color) ? product.variation[0].color : 'N/A';
+      const displayThumbImage = (product.thumbImage && product.thumbImage[0]) ? product.thumbImage[0] : 'https://via.placeholder.com/100x133?text=No+Image';
+
       productElement.innerHTML = `
         <div class="w-1/2">
           <div class="flex items-center gap-6">
             <div class="bg-img md:w-[100px] w-20 aspect-[3/4]">
-              <img src="${product.thumbImage[0]}" alt="img"
+              <img src="${displayThumbImage}" alt="${product.name}"
                 class="w-full h-full object-cover rounded-lg" />
             </div>
             <div>
               <div class="text-title">${product.name}</div>
-              <div class="list-select mt-3"></div>
+              <div class="list-select mt-3 caption1 text-secondary">
+                  <span class='size capitalize'>${displaySize}</span>
+                  <span>/</span>
+                  <span class='color capitalize'>${displayColor}</span>
+              </div>
             </div>
           </div>
         </div>
         <div class="w-1/12 price flex items-center justify-center">
-          <div class="text-title text-center">₹${product.price}.00</div>
+          <div class="text-title text-center">₹${product.price.toFixed(2)}</div>
         </div>
         <div class="w-1/6 flex items-center justify-center">
           <div class="quantity-block bg-surface md:p-3 p-2 flex items-center justify-between rounded-lg border border-line md:w-[100px] flex-shrink-0 w-20">
@@ -3425,7 +3453,7 @@ const handleInforCart = () => {
           </div>
         </div>
         <div class="w-1/6 flex total-price items-center justify-center">
-          <div class="text-title text-center">₹${product.price * product.quantityPurchase}.00</div>
+          <div class="text-title text-center">₹${(product.price * product.quantityPurchase).toFixed(2)}</div>
         </div>
         <div class="w-1/12 flex items-center justify-center">
           <i class="remove-btn ph ph-x-circle text-xl max-md:text-base text-red cursor-pointer hover:text-black duration-300"></i>
@@ -3440,24 +3468,20 @@ const handleInforCart = () => {
       quantityBlock.querySelector(".ph-plus").addEventListener("click", () => {
         cartStore[idx].quantityPurchase++;
         quantityProduct.textContent = cartStore[idx].quantityPurchase;
-        totalPriceProduct.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
+        totalPriceProduct.textContent = `₹${(cartStore[idx].quantityPurchase * cartStore[idx].price).toFixed(2)}`;
         localStorage.setItem("cartStore", JSON.stringify(cartStore));
         updateTotalCart();
-        console.log('PLUS clicked:', cartStore[idx]);
-        console.log('CartStore after PLUS:', cartStore);
-        console.log('LocalStorage:', localStorage.getItem("cartStore"));
+        console.log('PLUS clicked - Product:', cartStore[idx].name, 'New Quantity:', cartStore[idx].quantityPurchase);
       });
 
       quantityBlock.querySelector(".ph-minus").addEventListener("click", () => {
         if (cartStore[idx].quantityPurchase > 1) {
           cartStore[idx].quantityPurchase--;
           quantityProduct.textContent = cartStore[idx].quantityPurchase;
-          totalPriceProduct.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
+          totalPriceProduct.textContent = `₹${(cartStore[idx].quantityPurchase * cartStore[idx].price).toFixed(2)}`;
           localStorage.setItem("cartStore", JSON.stringify(cartStore));
           updateTotalCart();
-          console.log('MINUS clicked:', cartStore[idx]);
-          console.log('CartStore after MINUS:', cartStore);
-          console.log('LocalStorage:', localStorage.getItem("cartStore"));
+          console.log('MINUS clicked - Product:', cartStore[idx].name, 'New Quantity:', cartStore[idx].quantityPurchase);
         }
       });
 
@@ -3465,103 +3489,136 @@ const handleInforCart = () => {
       totalCart += product.price * product.quantityPurchase;
     });
 
-    // Update totals everywhere
+    // Update totals everywhere function (defined inside handleInforCart to access cartStore)
     const updateTotalCart = () => {
       totalCart = 0;
       cartStore.forEach((product) => {
-        totalCart += product.price * product.quantityPurchase;
+        totalCart += (product.price || 0) * (product.quantityPurchase || 0); // Handle potential undefined values
       });
-      window.cartTotal = totalCart;
-      if (document.querySelector(".total-block .total-product"))
-        document.querySelector(".total-block .total-product").innerHTML = totalCart;
-      if (document.querySelector(".total-cart-block .total-cart"))
-        document.querySelector(".total-cart-block .total-cart").innerHTML = totalCart;
-      if (document.querySelector(".heading.banner .more-price"))
-        document.querySelector(".heading.banner .more-price").innerHTML =
-          totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
-      if (typeof moneyFreeshipProgress !== "undefined" && moneyFreeshipProgress)
-        moneyFreeshipProgress.style.width =
-          totalCart <= moneyForFreeship
-            ? `${(totalCart / moneyForFreeship) * 100}%`
-            : `100%`;
-      console.log('Cart total updated:', totalCart);
+      window.cartTotal = totalCart; // Expose to global scope if needed elsewhere
+
+      // Update total on cart page
+      const totalProductElement = document.querySelector(".total-block .total-product");
+      if (totalProductElement) totalProductElement.innerHTML = totalCart.toFixed(2);
+
+      // Update total on checkout page (assuming it's loaded)
+      const checkoutTotalCartElement = document.querySelector(".total-cart-block .total-cart");
+      if (checkoutTotalCartElement) checkoutTotalCartElement.innerHTML = `₹${totalCart.toFixed(2)}`;
+
+      // Freeship logic
+      const morePriceElement = document.querySelector(".heading.banner .more-price");
+      if (morePriceElement) {
+        morePriceElement.innerHTML = totalCart <= moneyForFreeship ? (moneyForFreeship - totalCart).toFixed(2) : "0.00";
+      }
+
+      const moneyFreeshipProgress = document.querySelector('.freeship-progress-bar-class'); // Replace with actual class/ID
+      if (moneyFreeshipProgress) {
+        moneyFreeshipProgress.style.width = totalCart <= moneyForFreeship ? `${(totalCart / moneyForFreeship) * 100}%` : `100%`;
+      }
+      console.log('Cart total updated:', totalCart.toFixed(2));
     };
 
-    updateTotalCart();
+    updateTotalCart(); // Initial call to update totals
 
     // Remove item logic
-    const prdItems = listProductCart.querySelectorAll(".item");
+    const prdItems = listProductCart.querySelectorAll(".item"); // Re-select items after they've been added
     prdItems.forEach((prd) => {
       const removeCartBtn = prd.querySelector(".remove-btn");
       removeCartBtn.addEventListener("click", () => {
         const prdId = removeCartBtn.closest(".item").getAttribute("data-item");
         const newArray = cartStore.filter((item) => item.id !== prdId);
         localStorage.setItem("cartStore", JSON.stringify(newArray));
-        handleInforCart();
+        handleInforCart(); // Re-render cart after removal
+        console.log('Product removed:', prdId);
       });
     });
   }
 };
 
-handleInforCart();
+handleInforCart(); // Initial call to load cart information
 
-// Checkout
-if (listProductCheckout) {
-  let cartStore = localStorage.getItem("cartStore");
-  cartStore = cartStore ? JSON.parse(cartStore) : [];
-  let totalCart = 0;
+// --- Checkout page logic ---
+// Ensure this selector targets the correct HTML element for the list of products on the checkout page
+const listProductCheckout = document.querySelector(".checkout-block .list-product-checkout");
 
-  cartStore.forEach((product) => {
-    const productElement = document.createElement("div");
-    productElement.classList.add(
-      "item",
-      "flex",
-      "items-center",
-      "justify-between",
-      "w-full",
-      "pb-5",
-      "border-b",
-      "border-line",
-      "gap-6",
-      "mt-5"
-    );
-    productElement.innerHTML = `
-      <div class="bg-img w-[100px] aspect-square flex-shrink-0 rounded-lg overflow-hidden">
-        <img src=${product.thumbImage[0]} alt='img' class='w-full h-full' />
-      </div>
-      <div class="flex items-center justify-between w-full">
-        <div>
-          <div class="name text-title">${product.name}</div>
-          <div class="caption1 text-secondary mt-2">
-            <span class='size capitalize'>${product.sizes[0]}</span>
-            <span>/</span>
-            <span class='color capitalize'>${product.variation[0].color}</span>
-          </div>
-        </div>
-        <div class="text-title">
-          <span class='quantity'>${product.quantityPurchase}</span>
-          <span class='px-1'>x</span>
-          <span>₹${product.price}.00</span>
-        </div>
-      </div>
-    `;
-    listProductCheckout.appendChild(productElement);
-    totalCart += product.price * product.quantityPurchase;
-    document.querySelector(
-      ".total-cart-block .total-cart"
-    ).innerHTML = `₹${totalCart}.00`;
-  });
-}
-// Show, hide login block in checkout
-const formLoginHeading = document.querySelector(
-  ".checkout-block .form-login-block"
-);
-const loginHeading = document.querySelector(
-  ".checkout-block .login .left span.text-button"
-);
-const iconDownHeading = document.querySelector(
-  ".checkout-block .login .right i"
-);
+// This function needs to be called when the checkout page loads.
+// You can either call it directly, or have a main 'init' function that calls it.
+const renderCheckoutProducts = () => {
+  if (listProductCheckout) {
+    let cartStore = localStorage.getItem("cartStore");
+    cartStore = cartStore ? JSON.parse(cartStore) : [];
+    let totalCart = 0;
+
+    listProductCheckout.innerHTML = ""; // Clear previous items
+
+    if (cartStore.length === 0) {
+      listProductCheckout.innerHTML = '<p class="text-secondary text-center py-4">Your cart is empty.</p>';
+    } else {
+        cartStore.forEach((product) => {
+            // Basic validation for product data
+            if (!product || !product.id || !product.name || typeof product.price !== 'number' || !product.thumbImage || product.thumbImage.length === 0) {
+                console.warn('Skipping invalid product in checkout:', product);
+                return; // Skip this product if essential data is missing
+            }
+
+            const productElement = document.createElement("div");
+            productElement.classList.add(
+              "item",
+              "flex",
+              "items-center",
+              "justify-between",
+              "w-full",
+              "pb-5",
+              "border-b",
+              "border-line",
+              "gap-6",
+              "mt-5"
+            );
+
+            // Default values for size/color if not present
+            const displaySize = (product.sizes && product.sizes[0]) ? product.sizes[0] : 'N/A';
+            const displayColor = (product.variation && product.variation[0] && product.variation[0].color) ? product.variation[0].color : 'N/A';
+            const displayThumbImage = (product.thumbImage && product.thumbImage[0]) ? product.thumbImage[0] : 'https://via.placeholder.com/100x100?text=No+Image';
+
+            productElement.innerHTML = `
+              <div class="bg-img w-[100px] aspect-square flex-shrink-0 rounded-lg overflow-hidden">
+                <img src=${displayThumbImage} alt='${product.name}' class='w-full h-full object-cover' />
+              </div>
+              <div class="flex items-center justify-between w-full">
+                <div>
+                  <div class="name text-title">${product.name}</div>
+                  <div class="caption1 text-secondary mt-2">
+                    <span class='size capitalize'>${displaySize}</span>
+                    <span>/</span>
+                    <span class='color capitalize'>${displayColor}</span>
+                  </div>
+                </div>
+                <div class="text-title">
+                  <span class='quantity'>${product.quantityPurchase}</span>
+                  <span class='px-1'>x</span>
+                  <span>₹${product.price.toFixed(2)}</span>
+                </div>
+              </div>
+            `;
+            listProductCheckout.appendChild(productElement);
+            totalCart += (product.price || 0) * (product.quantityPurchase || 0);
+        });
+    }
+
+    const totalCartDisplay = document.querySelector(".total-cart-block .total-cart");
+    if (totalCartDisplay) {
+        totalCartDisplay.innerHTML = `₹${totalCart.toFixed(2)}`;
+    }
+  }
+};
+
+// Call this function when the checkout page is ready
+document.addEventListener('DOMContentLoaded', renderCheckoutProducts);
+
+// Show, hide login block in checkout (your original code)
+const formLoginHeading = document.querySelector(".checkout-block .form-login-block");
+const loginHeading = document.querySelector(".checkout-block .login .left span.text-button");
+const iconDownHeading = document.querySelector(".checkout-block .login .right i");
 
 if (loginHeading) {
   loginHeading.addEventListener("click", () => {
@@ -3575,11 +3632,9 @@ if (loginHeading) {
   });
 }
 
-// Show, hide payment type in checkout
+// Show, hide payment type in checkout (your original code)
 const listPayment = document.querySelector(".payment-block .list-payment");
-const paymentCheckbox = document.querySelectorAll(
-  ".payment-block .list-payment .type>input"
-);
+const paymentCheckbox = document.querySelectorAll(".payment-block .list-payment .type>input");
 
 if (paymentCheckbox) {
   paymentCheckbox.forEach((item) => {

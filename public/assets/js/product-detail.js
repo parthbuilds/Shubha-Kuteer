@@ -16,6 +16,7 @@
 /**** Redirect filter type product-sidebar ****/
 
 
+let selectedQuantity = 1;
 
 // List scroll you'll love this to
 if (document.querySelector('.swiper-product-scroll')) {
@@ -631,8 +632,6 @@ function setupQuantitySelector(initialQuantity = 1) {
         });
     }
 }
-
-let selectedQuantity = 1;
 
 // Function to display estimated delivery date (10 days from today)
 function updateEstimatedDelivery() {
