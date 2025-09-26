@@ -3388,35 +3388,21 @@ const handleInforCart = () => {
     let moneyForFreeship = 2000;
     let totalCart = 0;
 
-    const moneyFreeshipProgress = cartPage.querySelector(
-      ".tow-bar-block .progress-line"
-    );
-
     listProductCart.innerHTML = "";
 
     cartStore.forEach((product, idx) => {
-      const calculateProductTotal = () =>
-        product.price * product.quantityPurchase;
-
       const productElement = document.createElement("div");
       productElement.setAttribute("data-item", product.id);
       productElement.classList.add(
-        "item",
-        "flex",
-        "md:mt-7",
-        "md:pb-7",
-        "mt-5",
-        "pb-5",
-        "border-b",
-        "border-line",
-        "w-full"
+        "item", "flex", "md:mt-7", "md:pb-7", "mt-5", "pb-5",
+        "border-b", "border-line", "w-full"
       );
       productElement.innerHTML = `
         <div class="w-1/2">
           <div class="flex items-center gap-6">
             <div class="bg-img md:w-[100px] w-20 aspect-[3/4]">
-              <img src=${product.thumbImage[0]} alt='img'
-                class='w-full h-full object-cover rounded-lg' />
+              <img src="${product.thumbImage[0]}" alt="img"
+                class="w-full h-full object-cover rounded-lg" />
             </div>
             <div>
               <div class="text-title">${product.name}</div>
@@ -3435,76 +3421,71 @@ const handleInforCart = () => {
           </div>
         </div>
         <div class="w-1/6 flex total-price items-center justify-center">
-          <div class="text-title text-center">₹${
-            product.price * product.quantityPurchase
-          }.00</div>
+          <div class="text-title text-center">₹${product.price * product.quantityPurchase}.00</div>
         </div>
         <div class="w-1/12 flex items-center justify-center">
           <i class="remove-btn ph ph-x-circle text-xl max-md:text-base text-red cursor-pointer hover:text-black duration-300"></i>
         </div>
       `;
 
+      // Quantity logic
       const quantityBlock = productElement.querySelector(".quantity-block");
       const quantityProduct = quantityBlock.querySelector(".quantity");
-      const totalPriceProduct = productElement.querySelector(
-        ".total-price .text-title"
-      );
+      const totalPriceProduct = productElement.querySelector(".total-price .text-title");
 
       quantityBlock.querySelector(".ph-plus").addEventListener("click", () => {
         cartStore[idx].quantityPurchase++;
         quantityProduct.textContent = cartStore[idx].quantityPurchase;
-        totalPriceProduct.textContent = `₹${
-          cartStore[idx].quantityPurchase * cartStore[idx].price
-        }.00`;
-        updateTotalCart();
+        totalPriceProduct.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
         localStorage.setItem("cartStore", JSON.stringify(cartStore));
-        console.log("PLUS clicked:", cartStore[idx]);
-        console.log("CartStore after PLUS:", cartStore);
-        console.log("LocalStorage:", localStorage.getItem("cartStore"));
+        updateTotalCart();
+        console.log('PLUS clicked:', cartStore[idx]);
+        console.log('CartStore after PLUS:', cartStore);
+        console.log('LocalStorage:', localStorage.getItem("cartStore"));
       });
 
       quantityBlock.querySelector(".ph-minus").addEventListener("click", () => {
         if (cartStore[idx].quantityPurchase > 1) {
           cartStore[idx].quantityPurchase--;
           quantityProduct.textContent = cartStore[idx].quantityPurchase;
-          totalPriceProduct.textContent = `₹${
-            cartStore[idx].quantityPurchase * cartStore[idx].price
-          }.00`;
-          updateTotalCart();
+          totalPriceProduct.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
           localStorage.setItem("cartStore", JSON.stringify(cartStore));
-          console.log("MINUS clicked:", cartStore[idx]);
-          console.log("CartStore after MINUS:", cartStore);
-          console.log("LocalStorage:", localStorage.getItem("cartStore"));
+          updateTotalCart();
+          console.log('MINUS clicked:', cartStore[idx]);
+          console.log('CartStore after MINUS:', cartStore);
+          console.log('LocalStorage:', localStorage.getItem("cartStore"));
         }
       });
 
       listProductCart.appendChild(productElement);
-      totalCart += calculateProductTotal();
-      document.querySelector(".total-block .total-product").innerHTML =
-        totalCart;
+      totalCart += product.price * product.quantityPurchase;
     });
 
+    // Update totals everywhere
     const updateTotalCart = () => {
       totalCart = 0;
       cartStore.forEach((product) => {
         totalCart += product.price * product.quantityPurchase;
       });
       window.cartTotal = totalCart;
-      document.querySelector(".total-block .total-product").innerHTML =
-        totalCart;
-      document.querySelector(".total-cart-block .total-cart").innerHTML =
-        totalCart;
-      document.querySelector(".heading.banner .more-price").innerHTML =
-        totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
-      moneyFreeshipProgress.style.width =
-        totalCart <= moneyForFreeship
-          ? `${(totalCart / moneyForFreeship) * 100}%`
-          : `100%`;
-      console.log("Cart total updated:", totalCart);
+      if (document.querySelector(".total-block .total-product"))
+        document.querySelector(".total-block .total-product").innerHTML = totalCart;
+      if (document.querySelector(".total-cart-block .total-cart"))
+        document.querySelector(".total-cart-block .total-cart").innerHTML = totalCart;
+      if (document.querySelector(".heading.banner .more-price"))
+        document.querySelector(".heading.banner .more-price").innerHTML =
+          totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
+      if (typeof moneyFreeshipProgress !== "undefined" && moneyFreeshipProgress)
+        moneyFreeshipProgress.style.width =
+          totalCart <= moneyForFreeship
+            ? `${(totalCart / moneyForFreeship) * 100}%`
+            : `100%`;
+      console.log('Cart total updated:', totalCart);
     };
 
     updateTotalCart();
 
+    // Remove item logic
     const prdItems = listProductCart.querySelectorAll(".item");
     prdItems.forEach((prd) => {
       const removeCartBtn = prd.querySelector(".remove-btn");

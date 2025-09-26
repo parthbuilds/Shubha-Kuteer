@@ -550,8 +550,6 @@ function setupQuantitySelector(initialQuantity = 1) {
             // You might want to update a productMain.quantityPurchase here
         });
 
-
-        console.log(currentQuantity);
     }
 }
 
