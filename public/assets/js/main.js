@@ -50,33 +50,39 @@
 /**** Display wishlist, cart, compare item from localStorage ****/
 /**** faqs ****/
 
-
 //function to modulate data
 function transformBackendProduct(backendProduct) {
   // Attempt to parse gallery string into an array, default to empty array if parsing fails
   let galleryImages = [];
   try {
-      galleryImages = JSON.parse(backendProduct.gallery);
+    galleryImages = JSON.parse(backendProduct.gallery);
   } catch (e) {
-      console.warn("Could not parse gallery string for product:", backendProduct.id, e);
-      galleryImages = [];
+    console.warn(
+      "Could not parse gallery string for product:",
+      backendProduct.id,
+      e
+    );
+    galleryImages = [];
   }
 
   // Combine main_image and thumb_image into thumbImage array, ensuring no duplicates
   const thumbImages = [];
   if (backendProduct.thumb_image) {
-      thumbImages.push(backendProduct.thumb_image);
+    thumbImages.push(backendProduct.thumb_image);
   }
-  if (backendProduct.main_image && !thumbImages.includes(backendProduct.main_image)) {
-      thumbImages.push(backendProduct.main_image);
+  if (
+    backendProduct.main_image &&
+    !thumbImages.includes(backendProduct.main_image)
+  ) {
+    thumbImages.push(backendProduct.main_image);
   }
   // If no specific thumb_image or main_image, use first from gallery if available
   if (thumbImages.length === 0 && galleryImages.length > 0) {
-      thumbImages.push(galleryImages[0]);
+    thumbImages.push(galleryImages[0]);
   }
   // Ensure at least one image if possible, using a placeholder if absolutely nothing is found
   if (thumbImages.length === 0) {
-      thumbImages.push('./assets/images/placeholder.png'); // Fallback placeholder
+    thumbImages.push("./assets/images/placeholder.png"); // Fallback placeholder
   }
 
   // Default values for sizes and variation, as they are not directly in the backend data
@@ -89,89 +95,105 @@ function transformBackendProduct(backendProduct) {
   // Assuming backendProduct has an 'attributes' property which is an array
   // and one of its elements is a 'color' attribute with values and hex codes.
   if (backendProduct.attributes && Array.isArray(backendProduct.attributes)) {
-      const colorAttribute = backendProduct.attributes.find(
-          attr => attr.attribute_name && attr.attribute_name.toLowerCase() === 'color'
-      );
+    const colorAttribute = backendProduct.attributes.find(
+      (attr) =>
+        attr.attribute_name && attr.attribute_name.toLowerCase() === "color"
+    );
 
-      if (colorAttribute && colorAttribute.attribute_values) {
-          try {
-              const attributeValues = typeof colorAttribute.attribute_values === 'string'
-                  ? JSON.parse(colorAttribute.attribute_values)
-                  : colorAttribute.attribute_values;
+    if (colorAttribute && colorAttribute.attribute_values) {
+      try {
+        const attributeValues =
+          typeof colorAttribute.attribute_values === "string"
+            ? JSON.parse(colorAttribute.attribute_values)
+            : colorAttribute.attribute_values;
 
-              if (Array.isArray(attributeValues)) {
-                  variations = attributeValues.map(valueObj => ({
-                      color: valueObj.value,      // e.g., "Red"
-                      colorCode: valueObj.code,   // <--- CHANGED FROM 'hex_code' TO 'code'
-                      colorImage: "./assets/images/product/color/48x48.png", // This might still be a generic placeholder or dynamic based on color name
-                      image: backendProduct.main_image || "./assets/images/product/bag-1.png" // Use main product image or default
-                  }));
-              }
-          } catch (e) {
-              console.warn("Could not parse color attribute_values for product:", backendProduct.id, e);
-          }
+        if (Array.isArray(attributeValues)) {
+          variations = attributeValues.map((valueObj) => ({
+            color: valueObj.value, // e.g., "Red"
+            colorCode: valueObj.code, // <--- CHANGED FROM 'hex_code' TO 'code'
+            colorImage: "./assets/images/product/color/48x48.png", // This might still be a generic placeholder or dynamic based on color name
+            image:
+              backendProduct.main_image || "./assets/images/product/bag-1.png", // Use main product image or default
+          }));
+        }
+      } catch (e) {
+        console.warn(
+          "Could not parse color attribute_values for product:",
+          backendProduct.id,
+          e
+        );
       }
+    }
   }
 
   // Fallback to default variations if none are generated from backend attributes
   if (variations.length === 0) {
-      variations = [
-          { color: "red", colorCode: "#DB4444", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" },
-          { color: "yellow", colorCode: "#ECB018", colorImage: "./assets/images/product/color/48x48.png", image: backendProduct.main_image || "./assets/images/product/bag-1.png" }
-      ];
+    variations = [
+      {
+        color: "red",
+        colorCode: "#DB4444",
+        colorImage: "./assets/images/product/color/48x48.png",
+        image: backendProduct.main_image || "./assets/images/product/bag-1.png",
+      },
+      {
+        color: "yellow",
+        colorCode: "#ECB018",
+        colorImage: "./assets/images/product/color/48x48.png",
+        image: backendProduct.main_image || "./assets/images/product/bag-1.png",
+      },
+    ];
   }
   // --- END OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
 
-
   return {
-      id: String(backendProduct.id), // Ensure ID is a string for consistency
-      category: backendProduct.category,
-      type: backendProduct.type,
-      name: backendProduct.name,
-      new: Boolean(backendProduct.is_new),
-      sale: Boolean(backendProduct.on_sale),
-      rate: parseFloat(backendProduct.rate),
-      price: parseFloat(backendProduct.price),
-      originPrice: parseFloat(backendProduct.origin_price),
-      brand: backendProduct.brand,
-      sold: backendProduct.sold,
-      quantity: backendProduct.quantity,
-      quantityPurchase: 1, // Default, not in backend data
-      sizes: defaultSizes, // Default sizes, or fetch/infer from backend if available
-      variation: variations, // Use the dynamically generated variations
-      thumbImage: thumbImages, // Combined main and thumb image
-      images: galleryImages.length > 0 ? galleryImages : thumbImages, // Use gallery if available, otherwise thumbImages
-      description: backendProduct.description,
-      action: backendProduct.action,
-      slug: backendProduct.slug
+    id: String(backendProduct.id), // Ensure ID is a string for consistency
+    category: backendProduct.category,
+    type: backendProduct.type,
+    name: backendProduct.name,
+    new: Boolean(backendProduct.is_new),
+    sale: Boolean(backendProduct.on_sale),
+    rate: parseFloat(backendProduct.rate),
+    price: parseFloat(backendProduct.price),
+    originPrice: parseFloat(backendProduct.origin_price),
+    brand: backendProduct.brand,
+    sold: backendProduct.sold,
+    quantity: backendProduct.quantity,
+    quantityPurchase: 1, // Default, not in backend data
+    sizes: defaultSizes, // Default sizes, or fetch/infer from backend if available
+    variation: variations, // Use the dynamically generated variations
+    thumbImage: thumbImages, // Combined main and thumb image
+    images: galleryImages.length > 0 ? galleryImages : thumbImages, // Use gallery if available, otherwise thumbImages
+    description: backendProduct.description,
+    action: backendProduct.action,
+    slug: backendProduct.slug,
   };
 }
 
-
 // Select language, currency top nav
 const chooseType = document.querySelectorAll(".top-nav .choose-type");
-const optionItems = document.querySelectorAll(".top-nav .choose-type .list-option li");
+const optionItems = document.querySelectorAll(
+  ".top-nav .choose-type .list-option li"
+);
 
 if (chooseType) {
-  chooseType.forEach(item => {
-    item.addEventListener('click', () => {
-      item.querySelector('.list-option').classList.toggle('open')
-    })
-  })
+  chooseType.forEach((item) => {
+    item.addEventListener("click", () => {
+      item.querySelector(".list-option").classList.toggle("open");
+    });
+  });
 
-  optionItems.forEach(item => {
-    item.addEventListener('click', () => {
-      item.parentElement.querySelector('.active').classList.remove('active')
-      item.classList.add('active')
+  optionItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      item.parentElement.querySelector(".active").classList.remove("active");
+      item.classList.add("active");
 
-      let dataItem = item.getAttribute('data-item')
-      item.parentElement.parentElement.querySelector('.selected').innerHTML = dataItem
-      item.closest('choose-type').classList.remove('open')
-    })
-  })
+      let dataItem = item.getAttribute("data-item");
+      item.parentElement.parentElement.querySelector(".selected").innerHTML =
+        dataItem;
+      item.closest("choose-type").classList.remove("open");
+    });
+  });
 }
-
-
 
 // Add fixed header
 const headerMain = document.querySelector(".header-menu");
@@ -241,7 +263,6 @@ backMenuBtns.forEach((btn) => {
     subNavParent.classList.remove("open");
   });
 });
-
 
 // Filter product in search-results
 const listSearchResults = document.querySelector(".search-result-block");
@@ -504,7 +525,6 @@ modalCartMain.addEventListener("click", (e) => {
   e.stopPropagation();
 });
 
-
 // Set cart length
 const handleItemModalCart = () => {
   cartStore = localStorage.getItem("cartStore");
@@ -525,11 +545,11 @@ const handleItemModalCart = () => {
     listItemCart.innerHTML = `<p class='mt-1'>No product in cart</p>`;
   } else {
     // Initial money to freeship in cart
-    let moneyForFreeship = 150;
+    let moneyForFreeship = 2000;
     let totalCart = 0;
 
     cartStore.forEach((item) => {
-      totalCart = Number(totalCart) + Number(item.price)
+      totalCart = Number(totalCart) + Number(item.price);
 
       // Create prd
       const prdItem = document.createElement("div");
@@ -572,12 +592,15 @@ const handleItemModalCart = () => {
     });
 
     // Set money to freeship in cart
-    modalCart.querySelector('.more-price').innerHTML = moneyForFreeship - totalCart
-    modalCart.querySelector('.tow-bar-block .progress-line').style.width = (totalCart / moneyForFreeship * 100) + '%'
-    modalCart.querySelector('.total-cart').innerHTML = '₹' + totalCart + '.00'
+    modalCart.querySelector(".more-price").innerHTML =
+      moneyForFreeship - totalCart;
+    modalCart.querySelector(".tow-bar-block .progress-line").style.width =
+      (totalCart / moneyForFreeship) * 100 + "%";
+    modalCart.querySelector(".total-cart").innerHTML = "₹" + totalCart + ".00";
     if (moneyForFreeship - totalCart <= 0) {
-      modalCart.querySelector('.more-price').innerHTML = 0
-      modalCart.querySelector('.tow-bar-block .progress-line').style.width = '100%'
+      modalCart.querySelector(".more-price").innerHTML = 0;
+      modalCart.querySelector(".tow-bar-block .progress-line").style.width =
+        "100%";
     }
   }
 
@@ -592,9 +615,10 @@ const handleItemModalCart = () => {
       handleItemModalCart();
 
       if (cartStore.length === 0) {
-        modalCart.querySelector('.more-price').innerHTML = 0
-        modalCart.querySelector('.tow-bar-block .progress-line').style.width = '0'
-        modalCart.querySelector('.total-cart').innerHTML = '₹0.00'
+        modalCart.querySelector(".more-price").innerHTML = 0;
+        modalCart.querySelector(".tow-bar-block .progress-line").style.width =
+          "0";
+        modalCart.querySelector(".total-cart").innerHTML = "₹0.00";
       }
     });
   });
@@ -1128,7 +1152,7 @@ var swiper2 = new Swiper(".mySwiper2", {
       // Add class 'swiper-slide-thumb-active' to slide in swiper 2
       document
         .querySelectorAll(".mySwiper .swiper-slide")
-      [activeIndex].classList.add("swiper-slide-thumb-active");
+        [activeIndex].classList.add("swiper-slide-thumb-active");
     },
   },
 });
@@ -1277,12 +1301,14 @@ const handleItemModalQuickview = () => {
 
   // Set quickView item
   quickViewStore.forEach((item) => {
-    modalQuickviewMain.setAttribute('data-item', item.id)
+    modalQuickviewMain.setAttribute("data-item", item.id);
 
-    const listImg = modalQuickviewMain.querySelector('.list-img')
+    const listImg = modalQuickviewMain.querySelector(".list-img");
     listImg.innerHTML = `
-      ${item.images.map((img) => (
-      `
+      ${item.images
+        .map(
+          (img) =>
+            `
         <div class="bg-img w-full aspect-[3/4] max-md:w-[150px] max-md:flex-shrink-0 rounded-[20px] overflow-hidden md:mt-6">
           <img
             src=${img}
@@ -1291,11 +1317,14 @@ const handleItemModalQuickview = () => {
           />
         </div>
         `
-    )).join('')}
-    `
+        )
+        .join("")}
+    `;
 
-    modalQuickviewMain.querySelector('.product-infor .category').innerHTML = item.category
-    modalQuickviewMain.querySelector('.product-infor .name').innerHTML = item.name
+    modalQuickviewMain.querySelector(".product-infor .category").innerHTML =
+      item.category;
+    modalQuickviewMain.querySelector(".product-infor .name").innerHTML =
+      item.name;
 
     let arrOfStar = "";
     for (let i = 0; i < 5; i++) {
@@ -1307,16 +1336,25 @@ const handleItemModalQuickview = () => {
         }
       }
     }
-    modalQuickviewMain.querySelector('.product-infor .rate').innerHTML = arrOfStar
-    modalQuickviewMain.querySelector('.product-infor .product-price').innerHTML = '₹' + item.price + '.00'
-    modalQuickviewMain.querySelector('.product-infor .product-origin-price del').innerHTML = '₹' + item.originPrice + '.00'
-    modalQuickviewMain.querySelector('.product-infor .product-sale').innerHTML = '-' + Math.floor(100 - (item.price / item.originPrice) * 100) + '%'
-    modalQuickviewMain.querySelector('.product-infor .desc').innerHTML = item.description
+    modalQuickviewMain.querySelector(".product-infor .rate").innerHTML =
+      arrOfStar;
+    modalQuickviewMain.querySelector(
+      ".product-infor .product-price"
+    ).innerHTML = "₹" + item.price + ".00";
+    modalQuickviewMain.querySelector(
+      ".product-infor .product-origin-price del"
+    ).innerHTML = "₹" + item.originPrice + ".00";
+    modalQuickviewMain.querySelector(".product-infor .product-sale").innerHTML =
+      "-" + Math.floor(100 - (item.price / item.originPrice) * 100) + "%";
+    modalQuickviewMain.querySelector(".product-infor .desc").innerHTML =
+      item.description;
 
-    const listColor = modalQuickviewMain.querySelector('.list-color')
+    const listColor = modalQuickviewMain.querySelector(".list-color");
     listColor.innerHTML = `
-      ${item.variation.map((color) => (
-      `
+      ${item.variation
+        .map(
+          (color) =>
+            `
         <div class="color-item w-12 h-12 rounded-xl duration-300 relative">
           <img
               src="${color.colorImage}"
@@ -1326,29 +1364,29 @@ const handleItemModalQuickview = () => {
           <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${color.color}</div>
         </div>
         `
-    )).join('')}
-    `
+        )
+        .join("")}
+    `;
 
-    const listCategory = modalQuickviewMain.querySelector('.list-category')
+    const listCategory = modalQuickviewMain.querySelector(".list-category");
 
     listCategory.innerHTML = `
       <a href="shop.html" class="text-secondary">${item.category},</a>
       <a href="shop.html" class="text-secondary"> ${item.gender}</a>
-    `
+    `;
 
-    const listTag = modalQuickviewMain.querySelector('.list-tag')
+    const listTag = modalQuickviewMain.querySelector(".list-tag");
 
     listTag.innerHTML = `
       <a href="shop.html" class="text-secondary">${item.type}</a>
-    `
+    `;
 
     let wishlistStore = localStorage.getItem("wishlistStore");
     wishlistStore = wishlistStore ? JSON.parse(wishlistStore) : [];
-    const addWishlistIcon = modalQuickviewMain.querySelector('.add-wishlist-btn')
+    const addWishlistIcon =
+      modalQuickviewMain.querySelector(".add-wishlist-btn");
 
-    const existingIndex = wishlistStore.findIndex(
-      (prd) => prd.id === item.id
-    );
+    const existingIndex = wishlistStore.findIndex((prd) => prd.id === item.id);
 
     if (existingIndex > -1) {
       // If prd existed in wishlist, remove it from wishlist
@@ -1384,20 +1422,18 @@ const handleItemModalQuickview = () => {
       // Save wishlist to localStorage
       localStorage.setItem("wishlistStore", JSON.stringify(wishlistStore));
 
-      handleItemModalWishlist()
-      openModalWishlist()
+      handleItemModalWishlist();
+      openModalWishlist();
     });
 
     let cartStore = localStorage.getItem("cartStore");
     cartStore = cartStore ? JSON.parse(cartStore) : [];
-    const addCartIcon = modalQuickviewMain.querySelector('.add-cart-btn')
+    const addCartIcon = modalQuickviewMain.querySelector(".add-cart-btn");
 
     addCartIcon.addEventListener("click", (e) => {
       e.stopPropagation();
 
-      const existingIndex = cartStore.findIndex(
-        (prd) => prd.id === item.id
-      );
+      const existingIndex = cartStore.findIndex((prd) => prd.id === item.id);
 
       if (existingIndex > -1) {
         // If prd existed in cart
@@ -1413,12 +1449,10 @@ const handleItemModalQuickview = () => {
       handleItemModalCart();
     });
 
-    handleActiveSizeChange()
-    handleActiveColorChange()
+    handleActiveSizeChange();
+    handleActiveColorChange();
   });
 };
-
-
 
 // Modal SizeGuide
 const openModalSizeGuideBtn = document.querySelectorAll(".size-guide");
@@ -1556,11 +1590,13 @@ const createProductItem = (product) => {
         </div>
       `;
     }
-    return '';
+    return "";
   };
 
   productItem.innerHTML = `
-        <div class="product-main cursor-pointer block" data-item="${product.id}">
+        <div class="product-main cursor-pointer block" data-item="${
+          product.id
+        }">
             <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
                 ${productTags}
                 <div class="list-action-right absolute top-3 right-3 max-lg:hidden">
@@ -1579,7 +1615,9 @@ const createProductItem = (product) => {
                 <div class="product-img w-full h-full aspect-[3/4]">
                     ${productImages}
                 </div>
-                ${product.sale ? (`
+                ${
+                  product.sale
+                    ? `
                   <div class="countdown-time-block py-1.5 flex items-center justify-center">
                     <div class="text-xs font-semibold uppercase text-red">
                       <span class='countdown-day'>24</span>
@@ -1592,20 +1630,23 @@ const createProductItem = (product) => {
                       <span>S</span>
                     </div>
                   </div>
-                `) : ''}
+                `
+                    : ""
+                }
                 <div class="list-action grid grid-cols-2 gap-3 px-5 absolute w-full bottom-5">
                     <div class="quick-view-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white">
                         <span class="max-lg:hidden">Quick View</span>
                         <i class="ph ph-eye lg:hidden text-xl"></i>
                         </div>
-                        ${product.action === "add to cart"
-      ? `
+                        ${
+                          product.action === "add to cart"
+                            ? `
                             <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white">
                                 <span class="max-lg:hidden">Add To Cart</span>
                                 <i class="ph ph-shopping-bag-open lg:hidden text-xl"></i>
                             </div>
                         `
-      : `
+                            : `
                             <div class="quick-shop-btn text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white max-lg:hidden">
                                 Quick Shop</div>
                             <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white lg:hidden">
@@ -1614,28 +1655,29 @@ const createProductItem = (product) => {
                             </div>
                             <div class="quick-shop-block absolute left-5 right-5 bg-white p-5 rounded-[20px]">
                                 <div class="list-size flex items-center justify-center flex-wrap gap-2">
-                                    ${product.sizes &&
-      product.sizes
-        .map(
-          (size, index) =>
-            `<div key="${index}" class="size-item w-10 h-10 rounded-full flex items-center justify-center text-button bg-white border border-line">${size.trim()}</div>`
-        )
-        .join("")
-      }
+                                    ${
+                                      product.sizes &&
+                                      product.sizes
+                                        .map(
+                                          (size, index) =>
+                                            `<div key="${index}" class="size-item w-10 h-10 rounded-full flex items-center justify-center text-button bg-white border border-line">${size.trim()}</div>`
+                                        )
+                                        .join("")
+                                    }
                                 </div >
     <div class="add-cart-btn button-main w-full text-center rounded-full py-3 mt-4">Add
         To cart</div>
                             </div >
     `
-    }
+                        }
                 </div>
             </div>
             <div class="product-infor mt-4 lg:mb-7">
                 <div class="product-sold sm:pb-4 pb-2">
                     <div class="progress bg-line h-1.5 w-full rounded-full overflow-hidden relative">
                         <div class='progress-sold bg-red absolute left-0 top-0 h-full' style="width: ${Math.floor(
-      (product.sold / product.quantity) * 100
-    )}%">
+                          (product.sold / product.quantity) * 100
+                        )}%">
                         </div>
                     </div>
                     <div class="flex items-center justify-between gap-3 gap-y-1 flex-wrap mt-2">
@@ -1647,43 +1689,46 @@ const createProductItem = (product) => {
                         <div class="text-button-uppercase">
                             <span class='text-secondary2 max-sm:text-xs'>Available:
                             </span>
-                            <span class='max-sm:text-xs'>${product.quantity - product.sold
-    }</span>
+                            <span class='max-sm:text-xs'>${
+                              product.quantity - product.sold
+                            }</span>
                         </div>
                     </div>
                 </div>
-                <div class="product-name text-title duration-300">${product.name}</div>
-                ${product.variation.length > 0 &&
-      product.action === "add to cart"
-      ? `
+                <div class="product-name text-title duration-300">${
+                  product.name
+                }</div>
+                ${
+                  product.variation.length > 0 &&
+                  product.action === "add to cart"
+                    ? `
                         <div class="list-color py-2 max-md:hidden flex items-center gap-3 flex-wrap duration-500">
                             ${product.variation
-        .map(formatColorVariation)
-        .join("")}
+                              .map(formatColorVariation)
+                              .join("")}
                         </div>`
-      : `
+                    : `
                     <div class="list-color list-color-image max-md:hidden flex items-center gap-3 flex-wrap duration-500">
-                        ${product.variation
-        .map(formatColorVariation)
-        .join("")}
+                        ${product.variation.map(formatColorVariation).join("")}
                     </div>
                 `
-    }
+                }
         <div class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
         <div class="product-price text-title">₹${product.price}.00</div>
-        ${Math.floor(100 - (product.price / product.originPrice) * 100) > 0
-      ? `
+        ${
+          Math.floor(100 - (product.price / product.originPrice) * 100) > 0
+            ? `
                 <div class="product-origin-price caption1 text-secondary2">
                     <del>₹${product.originPrice}.00</del>
                 </div>
                 <div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">
                     -${Math.floor(
-        100 - (product.price / product.originPrice) * 100
-      )}%
+                      100 - (product.price / product.originPrice) * 100
+                    )}%
                 </div>
         `
-      : ""
-    }
+            : ""
+        }
             </div>
         </div>
         </div>
@@ -1745,7 +1790,9 @@ function addEventToProductItem(products) {
             addWishlistIcon.querySelector("i").classList.remove("ph-fill");
           } else {
             // If prd not exist in wishlist, add it to wishlist
-            const productToAdd = products?.find((item) => item.id === productId);
+            const productToAdd = products?.find(
+              (item) => item.id === productId
+            );
             if (productToAdd) {
               wishlistStore.push(productToAdd);
               addWishlistIcon.classList.add("active");
@@ -1833,40 +1880,44 @@ function addEventToProductItem(products) {
             JSON.stringify(quickViewStore)
           );
           handleItemModalQuickview();
-          closeModalCart()
+          closeModalCart();
           openModalQuickview();
         });
       }
 
       if (addCartIcon) {
-        addCartIcon.forEach(icon => icon.addEventListener("click", (e) => {
-          e.stopPropagation();
-          // save prd to cart in local storage
-          const productItem = icon.closest(".product-item");
-          const productId = productItem.getAttribute("data-item");
-          let cartStore = localStorage.getItem("cartStore");
-          cartStore = cartStore ? JSON.parse(cartStore) : [];
+        addCartIcon.forEach((icon) =>
+          icon.addEventListener("click", (e) => {
+            e.stopPropagation();
+            // save prd to cart in local storage
+            const productItem = icon.closest(".product-item");
+            const productId = productItem.getAttribute("data-item");
+            let cartStore = localStorage.getItem("cartStore");
+            cartStore = cartStore ? JSON.parse(cartStore) : [];
 
-          const existingIndex = cartStore.findIndex(
-            (item) => item.id === productId
-          );
+            const existingIndex = cartStore.findIndex(
+              (item) => item.id === productId
+            );
 
-          if (existingIndex > -1) {
-            // If prd existed in cart
-            openModalCart();
-          } else {
-            // If prd not exist in cart, add it to cart
-            const productToAdd = products?.find((item) => item.id === productId);
-            if (productToAdd) {
-              cartStore.push(productToAdd);
+            if (existingIndex > -1) {
+              // If prd existed in cart
               openModalCart();
+            } else {
+              // If prd not exist in cart, add it to cart
+              const productToAdd = products?.find(
+                (item) => item.id === productId
+              );
+              if (productToAdd) {
+                cartStore.push(productToAdd);
+                openModalCart();
+              }
             }
-          }
 
-          // Save cart to localStorage
-          localStorage.setItem("cartStore", JSON.stringify(cartStore));
-          handleItemModalCart();
-        }));
+            // Save cart to localStorage
+            localStorage.setItem("cartStore", JSON.stringify(cartStore));
+            handleItemModalCart();
+          })
+        );
       }
 
       if (quickshopIcon) {
@@ -1876,22 +1927,23 @@ function addEventToProductItem(products) {
         });
 
         if (addCartIcon) {
-          addCartIcon.forEach(icon => icon.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (modalQuickshop.classList.contains("open")) {
-              modalQuickshop.classList.remove("open");
-            }
-            openModalCart();
-          }));
+          addCartIcon.forEach((icon) =>
+            icon.addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (modalQuickshop.classList.contains("open")) {
+                modalQuickshop.classList.remove("open");
+              }
+              openModalCart();
+            })
+          );
         }
       }
     });
   }
 
-  handleActiveSizeChange()
-  handleActiveColorChange()
+  handleActiveSizeChange();
+  handleActiveColorChange();
 }
-
 
 // Active size
 const handleActiveSizeChange = () => {
@@ -1924,8 +1976,7 @@ const handleActiveSizeChange = () => {
       }
     });
   });
-}
-
+};
 
 // Active size
 const handleActiveColorChange = () => {
@@ -1958,40 +2009,46 @@ const handleActiveColorChange = () => {
       }
     });
   });
-}
-
+};
 
 // filter product img in home6, product detail
-const filterProductImg = document.querySelector('.filter-product-img')
+const filterProductImg = document.querySelector(".filter-product-img");
 
 if (filterProductImg) {
-  fetch('api/admin/products')
-    .then(response => response.json())
-    .then(backendProducts => {
+  fetch("api/admin/products")
+    .then((response) => response.json())
+    .then((backendProducts) => {
       const products = backendProducts.map(transformBackendProduct);
-      const prdId = filterProductImg.querySelector('.product-infor').getAttribute('data-item')
-      let productMain = data.find(product => product.id === prdId);
-      const colorItems = filterProductImg.querySelectorAll('.color-item');
+      const prdId = filterProductImg
+        .querySelector(".product-infor")
+        .getAttribute("data-item");
+      let productMain = data.find((product) => product.id === prdId);
+      const colorItems = filterProductImg.querySelectorAll(".color-item");
 
       colorItems.forEach((colorItem) => {
-        colorItem.addEventListener('click', () => {
-          const selectedColor = colorItem.querySelector('.tag-action').textContent.trim()
+        colorItem.addEventListener("click", () => {
+          const selectedColor = colorItem
+            .querySelector(".tag-action")
+            .textContent.trim();
           console.log(selectedColor);
-          const selectedVariation = productMain.variation.find(variation => variation.color === selectedColor);
+          const selectedVariation = productMain.variation.find(
+            (variation) => variation.color === selectedColor
+          );
           console.log(selectedVariation);
           const selectedImage = selectedVariation.image;
 
-          const swiperSlides = filterProductImg.querySelectorAll('.swiper-slide');
+          const swiperSlides =
+            filterProductImg.querySelectorAll(".swiper-slide");
           let targetIndex = -1;
 
           swiperSlides.forEach((slide, index) => {
-            const imgSrc = slide.querySelector('img').getAttribute('src');
+            const imgSrc = slide.querySelector("img").getAttribute("src");
             if (imgSrc === selectedImage) {
               targetIndex = index;
-              if (document.querySelector('.product-detail')) {
+              if (document.querySelector(".product-detail")) {
                 targetIndex = index - 4;
               }
-              if (document.querySelector('.underwear')) {
+              if (document.querySelector(".underwear")) {
                 targetIndex = index - 4;
               }
               return; // stop loop when found index
@@ -1999,18 +2056,20 @@ if (filterProductImg) {
           });
 
           if (targetIndex !== -1) {
-            if (document.querySelector('.swiper-img-scroll')) swiperScrollImg.slideTo(targetIndex); // scroll slide to index
-            if (document.querySelector('.underwear .mySwiper2')) swiper2.slideTo(targetIndex); // scroll slide to index
-            if (document.querySelector('.product-detail .mySwiper2')) swiper2.slideTo(targetIndex); // scroll slide to index
+            if (document.querySelector(".swiper-img-scroll"))
+              swiperScrollImg.slideTo(targetIndex); // scroll slide to index
+            if (document.querySelector(".underwear .mySwiper2"))
+              swiper2.slideTo(targetIndex); // scroll slide to index
+            if (document.querySelector(".product-detail .mySwiper2"))
+              swiper2.slideTo(targetIndex); // scroll slide to index
           } else {
-            console.log('Can not find Image :', selectedImage);
+            console.log("Can not find Image :", selectedImage);
           }
         });
       });
     })
-    .catch(error => console.error('Error fetching products:', error));
+    .catch((error) => console.error("Error fetching products:", error));
 }
-
 
 // Change product img when active color in list color
 const handleActiveImgWhenColorChange = (products) => {
@@ -2104,7 +2163,9 @@ fetch("api/admin/products")
           // ✅ Tab click handler
           menuItems.forEach((item) => {
             item.addEventListener("click", () => {
-              list.querySelectorAll(".product-item").forEach((prd) => prd.remove());
+              list
+                .querySelectorAll(".product-item")
+                .forEach((prd) => prd.remove());
 
               const tab = item.getAttribute("data-item");
 
@@ -2222,7 +2283,7 @@ fetch("api/admin/products")
                     (product) =>
                       product.sale &&
                       product.category ===
-                      listSixProduct.getAttribute("data-type")
+                        listSixProduct.getAttribute("data-type")
                   )
                   .slice(0, 6)
                   .forEach((product) => {
@@ -2238,7 +2299,7 @@ fetch("api/admin/products")
                     (product) =>
                       product.new &&
                       product.category ===
-                      listSixProduct.getAttribute("data-type")
+                        listSixProduct.getAttribute("data-type")
                   )
                   .slice(0, 6)
                   .forEach((product) => {
@@ -2463,13 +2524,18 @@ fetch("api/admin/products")
   })
   .catch((error) => console.error("Error loading products:", error));
 
-
-
 // create product marketplace
 // Create product item
 const createProductItemMarketplace = (product) => {
   const productItem = document.createElement("div");
-  productItem.classList.add("product-item", "style-marketplace", "p-4", "border", "border-line", "rounded-2xl");
+  productItem.classList.add(
+    "product-item",
+    "style-marketplace",
+    "p-4",
+    "border",
+    "border-line",
+    "rounded-2xl"
+  );
   productItem.setAttribute("data-item", product.id);
 
   let productTags = "";
@@ -2523,13 +2589,15 @@ const createProductItemMarketplace = (product) => {
 };
 
 // fetch product in marketplace
-if (document.querySelector('.tab-features-block.style-marketplace')) {
+if (document.querySelector(".tab-features-block.style-marketplace")) {
   fetch("api/admin/products")
     .then((response) => response.json())
     .then((backendProducts) => {
       const products = backendProducts.map(transformBackendProduct);
       // Display the first 4 products
-      const listProduct = document.querySelector('.tab-features-block.style-marketplace .list-product')
+      const listProduct = document.querySelector(
+        ".tab-features-block.style-marketplace .list-product"
+      );
 
       if (listProduct) {
         const parent = listProduct.parentElement;
@@ -2550,14 +2618,16 @@ if (document.querySelector('.tab-features-block.style-marketplace')) {
           menuItems.forEach((item) => {
             item.addEventListener("click", () => {
               // remove old product
-              const productItems = listProduct.querySelectorAll(".product-item");
+              const productItems =
+                listProduct.querySelectorAll(".product-item");
               productItems.forEach((prdItem) => {
                 prdItem.remove();
               });
 
               products
                 .filter(
-                  (product) => product.category === item.getAttribute("data-item")
+                  (product) =>
+                    product.category === item.getAttribute("data-item")
                 )
                 .slice(0, 5)
                 .forEach((product) => {
@@ -2582,7 +2652,6 @@ if (document.querySelector('.tab-features-block.style-marketplace')) {
     .catch((error) => console.error("Error loading products:", error));
 }
 
-
 // Featured product underwear
 const handleQuantity = () => {
   const quantityBlock = document.querySelectorAll(".quantity-block");
@@ -2597,7 +2666,7 @@ const handleQuantity = () => {
     }
 
     minus.addEventListener("click", (e) => {
-      e.stopPropagation()
+      e.stopPropagation();
       if (Number(quantity.textContent) > 2) {
         quantity.innerHTML = Number(quantity.innerHTML) - 1;
         minus.classList.remove("disabled");
@@ -2608,7 +2677,7 @@ const handleQuantity = () => {
     });
 
     plus.addEventListener("click", (e) => {
-      e.stopPropagation()
+      e.stopPropagation();
       quantity.innerHTML = Number(quantity.innerHTML) + 1;
       if (Number(quantity.textContent) >= 2) {
         minus.classList.remove("disabled");
@@ -2811,7 +2880,6 @@ var swiperListInstagram = new Swiper(".swiper-instagram-three", {
   },
 });
 
-
 // list-brand
 var swiperListBrand = new Swiper(".swiper-list-brand", {
   pagination: { clickable: true, el: ".swiper-pagination" },
@@ -2872,25 +2940,26 @@ var swiperListBrand = new Swiper(".swiper-list-five-brand", {
   },
 });
 
-
 // Before After Cosmetic1
-const imageComparisonSlider = document.querySelector('[data-component="image-comparison-slider"]')
+const imageComparisonSlider = document.querySelector(
+  '[data-component="image-comparison-slider"]'
+);
 
 function setSliderstate(e, element) {
-  const sliderRange = element.querySelector('[data-image-comparison-range]');
+  const sliderRange = element.querySelector("[data-image-comparison-range]");
 
-  if (e.type === 'input') {
-    sliderRange.classList.add('image-comparison__range--active');
+  if (e.type === "input") {
+    sliderRange.classList.add("image-comparison__range--active");
     return;
   }
 
-  sliderRange.classList.remove('image-comparison__range--active');
-  element.removeEventListener('mousemove', moveSliderThumb);
+  sliderRange.classList.remove("image-comparison__range--active");
+  element.removeEventListener("mousemove", moveSliderThumb);
 }
 
 function moveSliderThumb(e) {
-  const sliderRange = document.querySelector('[data-image-comparison-range]');
-  const thumb = document.querySelector('[data-image-comparison-thumb]');
+  const sliderRange = document.querySelector("[data-image-comparison-range]");
+  const thumb = document.querySelector("[data-image-comparison-thumb]");
   let position = e.layerY - 20;
 
   if (e.layerY <= sliderRange.offsetTop) {
@@ -2906,27 +2975,31 @@ function moveSliderThumb(e) {
 
 function moveSliderRange(e, element) {
   const value = e.target.value;
-  const slider = element.querySelector('[data-image-comparison-slider]');
-  const imageWrapperOverlay = element.querySelector('[data-image-comparison-overlay]');
+  const slider = element.querySelector("[data-image-comparison-slider]");
+  const imageWrapperOverlay = element.querySelector(
+    "[data-image-comparison-overlay]"
+  );
 
   slider.style.left = `${value}%`;
   imageWrapperOverlay.style.width = `${value}%`;
 
-  element.addEventListener('mousemove', moveSliderThumb);
+  element.addEventListener("mousemove", moveSliderThumb);
   setSliderstate(e, element);
 }
 
 function init(element) {
-  const sliderRange = element.querySelector('[data-image-comparison-range]');
+  const sliderRange = element.querySelector("[data-image-comparison-range]");
 
   if (sliderRange) {
-    if ('ontouchstart' in window === false) {
-      sliderRange.addEventListener('mouseup', e => setSliderstate(e, element));
-      sliderRange.addEventListener('mousedown', moveSliderThumb);
+    if ("ontouchstart" in window === false) {
+      sliderRange.addEventListener("mouseup", (e) =>
+        setSliderstate(e, element)
+      );
+      sliderRange.addEventListener("mousedown", moveSliderThumb);
     }
 
-    sliderRange.addEventListener('input', e => moveSliderRange(e, element));
-    sliderRange.addEventListener('change', e => moveSliderRange(e, element));
+    sliderRange.addEventListener("input", (e) => moveSliderRange(e, element));
+    sliderRange.addEventListener("change", (e) => moveSliderRange(e, element));
   }
 }
 
@@ -2934,9 +3007,10 @@ if (imageComparisonSlider) {
   init(imageComparisonSlider);
 }
 
-
 // Change active category
-const categoryItems = document.querySelectorAll(".list-category .category-item");
+const categoryItems = document.querySelectorAll(
+  ".list-category .category-item"
+);
 const filterItems = document.querySelectorAll(".list-filter .filter-item");
 
 if (categoryItems) {
@@ -2946,9 +3020,15 @@ if (categoryItems) {
         if (
           item.getAttribute("data-item") === category.getAttribute("data-item")
         ) {
-          category.closest('.list-category').querySelector(".category-item.active").classList.remove("active");
+          category
+            .closest(".list-category")
+            .querySelector(".category-item.active")
+            .classList.remove("active");
           category.classList.add("active");
-          item.closest('.list-filter').querySelector(".filter-item.active").classList.remove("active");
+          item
+            .closest(".list-filter")
+            .querySelector(".filter-item.active")
+            .classList.remove("active");
           item.classList.add("active");
         }
       });
@@ -2964,9 +3044,15 @@ if (tabBtn) {
     btn.addEventListener("click", () => {
       formAddress.forEach((form) => {
         if (form.getAttribute("data-item") === btn.getAttribute("data-item")) {
-          btn.closest('.tab_address').querySelector(".tab_btn.active").classList.remove("active");
+          btn
+            .closest(".tab_address")
+            .querySelector(".tab_btn.active")
+            .classList.remove("active");
           btn.classList.add("active");
-          form.closest('.tab_address').querySelector(".form_address.active").classList.remove("active");
+          form
+            .closest(".tab_address")
+            .querySelector(".form_address.active")
+            .classList.remove("active");
           form.classList.add("active");
         }
       });
@@ -3309,13 +3395,21 @@ const handleInforCart = () => {
     listProductCart.innerHTML = "";
 
     cartStore.forEach((product, idx) => {
-      const calculateProductTotal = () => product.price * product.quantityPurchase;
+      const calculateProductTotal = () =>
+        product.price * product.quantityPurchase;
 
       const productElement = document.createElement("div");
       productElement.setAttribute("data-item", product.id);
       productElement.classList.add(
-        "item", "flex", "md:mt-7", "md:pb-7", "mt-5", "pb-5",
-        "border-b", "border-line", "w-full"
+        "item",
+        "flex",
+        "md:mt-7",
+        "md:pb-7",
+        "mt-5",
+        "pb-5",
+        "border-b",
+        "border-line",
+        "w-full"
       );
       productElement.innerHTML = `
         <div class="w-1/2">
@@ -3341,7 +3435,9 @@ const handleInforCart = () => {
           </div>
         </div>
         <div class="w-1/6 flex total-price items-center justify-center">
-          <div class="text-title text-center">₹${product.price * product.quantityPurchase}.00</div>
+          <div class="text-title text-center">₹${
+            product.price * product.quantityPurchase
+          }.00</div>
         </div>
         <div class="w-1/12 flex items-center justify-center">
           <i class="remove-btn ph ph-x-circle text-xl max-md:text-base text-red cursor-pointer hover:text-black duration-300"></i>
@@ -3350,29 +3446,42 @@ const handleInforCart = () => {
 
       const quantityBlock = productElement.querySelector(".quantity-block");
       const quantityProduct = quantityBlock.querySelector(".quantity");
-      const totalPriceProduct = productElement.querySelector(".total-price .text-title");
+      const totalPriceProduct = productElement.querySelector(
+        ".total-price .text-title"
+      );
 
       quantityBlock.querySelector(".ph-plus").addEventListener("click", () => {
         cartStore[idx].quantityPurchase++;
         quantityProduct.textContent = cartStore[idx].quantityPurchase;
-        totalPriceProduct.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
+        totalPriceProduct.textContent = `₹${
+          cartStore[idx].quantityPurchase * cartStore[idx].price
+        }.00`;
         updateTotalCart();
         localStorage.setItem("cartStore", JSON.stringify(cartStore));
+        console.log("PLUS clicked:", cartStore[idx]);
+        console.log("CartStore after PLUS:", cartStore);
+        console.log("LocalStorage:", localStorage.getItem("cartStore"));
       });
 
       quantityBlock.querySelector(".ph-minus").addEventListener("click", () => {
         if (cartStore[idx].quantityPurchase > 1) {
           cartStore[idx].quantityPurchase--;
           quantityProduct.textContent = cartStore[idx].quantityPurchase;
-          totalPriceProduct.textContent = `₹${cartStore[idx].quantityPurchase * cartStore[idx].price}.00`;
+          totalPriceProduct.textContent = `₹${
+            cartStore[idx].quantityPurchase * cartStore[idx].price
+          }.00`;
           updateTotalCart();
           localStorage.setItem("cartStore", JSON.stringify(cartStore));
+          console.log("MINUS clicked:", cartStore[idx]);
+          console.log("CartStore after MINUS:", cartStore);
+          console.log("LocalStorage:", localStorage.getItem("cartStore"));
         }
       });
 
       listProductCart.appendChild(productElement);
       totalCart += calculateProductTotal();
-      document.querySelector(".total-block .total-product").innerHTML = totalCart;
+      document.querySelector(".total-block .total-product").innerHTML =
+        totalCart;
     });
 
     const updateTotalCart = () => {
@@ -3381,15 +3490,17 @@ const handleInforCart = () => {
         totalCart += product.price * product.quantityPurchase;
       });
       window.cartTotal = totalCart;
-      document.querySelector(".total-block .total-product").innerHTML = totalCart;
-      document.querySelector(".total-cart-block .total-cart").innerHTML = totalCart;
+      document.querySelector(".total-block .total-product").innerHTML =
+        totalCart;
+      document.querySelector(".total-cart-block .total-cart").innerHTML =
+        totalCart;
       document.querySelector(".heading.banner .more-price").innerHTML =
         totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
       moneyFreeshipProgress.style.width =
         totalCart <= moneyForFreeship
           ? `${(totalCart / moneyForFreeship) * 100}%`
           : `100%`;
-      console.log('Cart total updated:', totalCart);
+      console.log("Cart total updated:", totalCart);
     };
 
     updateTotalCart();
@@ -3418,8 +3529,16 @@ if (listProductCheckout) {
   cartStore.forEach((product) => {
     const productElement = document.createElement("div");
     productElement.classList.add(
-      "item", "flex", "items-center", "justify-between", "w-full",
-      "pb-5", "border-b", "border-line", "gap-6", "mt-5"
+      "item",
+      "flex",
+      "items-center",
+      "justify-between",
+      "w-full",
+      "pb-5",
+      "border-b",
+      "border-line",
+      "gap-6",
+      "mt-5"
     );
     productElement.innerHTML = `
       <div class="bg-img w-[100px] aspect-square flex-shrink-0 rounded-lg overflow-hidden">
@@ -3443,7 +3562,9 @@ if (listProductCheckout) {
     `;
     listProductCheckout.appendChild(productElement);
     totalCart += product.price * product.quantityPurchase;
-    document.querySelector(".total-cart-block .total-cart").innerHTML = `₹${totalCart}.00`;
+    document.querySelector(
+      ".total-cart-block .total-cart"
+    ).innerHTML = `₹${totalCart}.00`;
   });
 }
 // Show, hide login block in checkout
@@ -3539,12 +3660,11 @@ if (paymentCheckbox) {
 //   });
 // }
 
-
 // // Function to remove the "open" class from all question items except the one at the specified index.
 // function removeOpen(index1) {
 //     // Get all elements with the class 'question-item'.
 //     const questionItems = document.querySelectorAll(".question-item");
-    
+
 //     // Check if the 'questionItems' NodeList exists and contains elements.
 //     if (questionItems && questionItems.length > 0) {
 //         // Iterate through each 'questionItem'.
@@ -3559,53 +3679,65 @@ if (paymentCheckbox) {
 
 // Ensure the DOM is fully loaded before running the script.
 document.addEventListener("DOMContentLoaded", () => {
-    // Select all elements that are part of the FAQs section.
-    const menuTab = document.querySelector(".menu-tab");
-    const listQuestion = document.querySelector(".list-question");
-    const tabItems = document.querySelectorAll(".tab-item");
-    const tabQuestions = document.querySelectorAll(".tab-question");
-    const questionItems = document.querySelectorAll(".question-item");
+  // Select all elements that are part of the FAQs section.
+  const menuTab = document.querySelector(".menu-tab");
+  const listQuestion = document.querySelector(".list-question");
+  const tabItems = document.querySelectorAll(".tab-item");
+  const tabQuestions = document.querySelectorAll(".tab-question");
+  const questionItems = document.querySelectorAll(".question-item");
 
-    // Only proceed with the FAQs logic if the required elements are found on the page.
-    if (menuTab && listQuestion && tabItems.length > 0 && tabQuestions.length > 0) {
-        // Loop through each tab item.
-        tabItems.forEach((tabItem) => {
-            // Loop through each set of tab questions.
-            tabQuestions.forEach((tabQuestion) => {
-                // Find the currently active menu tab.
-                const activeMenuTab = menuTab.querySelector(".active");
+  // Only proceed with the FAQs logic if the required elements are found on the page.
+  if (
+    menuTab &&
+    listQuestion &&
+    tabItems.length > 0 &&
+    tabQuestions.length > 0
+  ) {
+    // Loop through each tab item.
+    tabItems.forEach((tabItem) => {
+      // Loop through each set of tab questions.
+      tabQuestions.forEach((tabQuestion) => {
+        // Find the currently active menu tab.
+        const activeMenuTab = menuTab.querySelector(".active");
 
-                // If an active tab is found and its data attribute matches the current tab question, activate the tab question.
-                if (activeMenuTab && activeMenuTab.getAttribute("data-item") === tabQuestion.getAttribute("data-item")) {
-                    tabQuestion.classList.add("active");
-                }
+        // If an active tab is found and its data attribute matches the current tab question, activate the tab question.
+        if (
+          activeMenuTab &&
+          activeMenuTab.getAttribute("data-item") ===
+            tabQuestion.getAttribute("data-item")
+        ) {
+          tabQuestion.classList.add("active");
+        }
 
-                // Add a click event listener to each tab item.
-                tabItem.addEventListener("click", () => {
-                    // If the tab item's data attribute matches the tab question's, handle the UI change.
-                    if (tabItem.getAttribute("data-item") === tabQuestion.getAttribute("data-item")) {
-                        // Find the currently active question list and remove its active class.
-                        const currentActiveList = listQuestion.querySelector(".active");
-                        if (currentActiveList) {
-                            currentActiveList.classList.remove("active");
-                        }
-                        // Add the 'active' class to the new tab question.
-                        tabQuestion.classList.add("active");
-                    }
-                });
-            });
+        // Add a click event listener to each tab item.
+        tabItem.addEventListener("click", () => {
+          // If the tab item's data attribute matches the tab question's, handle the UI change.
+          if (
+            tabItem.getAttribute("data-item") ===
+            tabQuestion.getAttribute("data-item")
+          ) {
+            // Find the currently active question list and remove its active class.
+            const currentActiveList = listQuestion.querySelector(".active");
+            if (currentActiveList) {
+              currentActiveList.classList.remove("active");
+            }
+            // Add the 'active' class to the new tab question.
+            tabQuestion.classList.add("active");
+          }
         });
-    }
+      });
+    });
+  }
 
-    // Only proceed with the question items logic if they are found on the page.
-    if (questionItems && questionItems.length > 0) {
-        // Loop through each question item.
-        questionItems.forEach((item, index) => {
-            // Add a click event listener to toggle the 'open' class.
-            item.addEventListener("click", () => {
-                item.classList.toggle("open");
-                removeOpen(index);
-            });
-        });
-    }
+  // Only proceed with the question items logic if they are found on the page.
+  if (questionItems && questionItems.length > 0) {
+    // Loop through each question item.
+    questionItems.forEach((item, index) => {
+      // Add a click event listener to toggle the 'open' class.
+      item.addEventListener("click", () => {
+        item.classList.toggle("open");
+        removeOpen(index);
+      });
+    });
+  }
 });
