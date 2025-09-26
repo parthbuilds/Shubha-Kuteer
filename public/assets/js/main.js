@@ -3291,205 +3291,451 @@ if (listProductCompare) {
   }
 }
 
-// Cart
-let listProductCart = document.querySelector(".cart-block .list-product-main");
+// // Cart
+// let listProductCart = document.querySelector(".cart-block .list-product-main");
 
+// const handleInforCart = () => {
+//   if (listProductCart) {
+//     let cartStore = localStorage.getItem("cartStore");
+//     cartStore = cartStore ? JSON.parse(cartStore) : [];
+
+//     // Initial value in cart page
+//     let moneyForFreeship = 2000;
+//     let totalCart = 0;
+
+//     const moneyFreeshipProgress = cartPage.querySelector(
+//       ".tow-bar-block .progress-line"
+//     );
+
+//     listProductCart.innerHTML = "";
+
+//     cartStore.forEach((product) => {
+//       // calculate for prd item
+//       const calculateProductTotal = () => {
+//         const productTotal = product.price * product.quantityPurchase;
+//         return productTotal;
+//       };
+
+//       const productElement = document.createElement("div");
+//       productElement.setAttribute("data-item", product.id);
+//       productElement.classList.add(
+//         "item",
+//         "flex",
+//         "md:mt-7",
+//         "md:pb-7",
+//         "mt-5",
+//         "pb-5",
+//         "border-b",
+//         "border-line",
+//         "w-full"
+//       );
+//       productElement.innerHTML = `
+//                 <div class="w-1/2">
+//                     <div class="flex items-center gap-6">
+//                         <div class="bg-img md:w-[100px] w-20 aspect-[3/4]">
+//                             <img src=${product.thumbImage[0]} alt='img'
+//                                 class='w-full h-full object-cover rounded-lg' />
+//                         </div>
+//                         <div>
+//                             <div class="text-title">${product.name}</div>
+//                             <div class="list-select mt-3"></div>
+//                         </div>
+//                     </div>
+//                 </div>
+//                 <div class="w-1/12 price flex items-center justify-center">
+//                     <div class="text-title text-center">₹${product.price}.00</div>
+//                 </div>
+//                 <div class="w-1/6 flex items-center justify-center">
+//                     <div
+//                         class="quantity-block bg-surface md:p-3 p-2 flex items-center justify-between rounded-lg border border-line md:w-[100px] flex-shrink-0 w-20">
+//                         <i class="ph-bold ph-minus cursor-pointer text-base max-md:text-sm"></i>
+//                         <div class="text-button quantity">${product.quantityPurchase}</div>
+//                         <i class="ph-bold ph-plus cursor-pointer text-base max-md:text-sm"></i>
+//                     </div>
+//                 </div>
+//                 <div class="w-1/6 flex total-price items-center justify-center">
+//                     <div class="text-title text-center">₹${product.price}.00
+//                     </div>
+//                 </div>
+//                 <div class="w-1/12 flex items-center justify-center">
+//                     <i
+//                         class="remove-btn ph ph-x-circle text-xl max-md:text-base text-red cursor-pointer hover:text-black duration-300"></i>
+//                 </div>
+//             `;
+
+//       const quantityBlock = productElement.querySelector(".quantity-block");
+//       const quantityProduct = quantityBlock.querySelector(".quantity");
+//       const totalPriceProduct = productElement.querySelector(
+//         ".total-price .text-title"
+//       );
+
+//       quantityBlock.querySelector(".ph-plus").addEventListener("click", () => {
+//         product.quantityPurchase++;
+//         quantityProduct.textContent = product.quantityPurchase;
+//         totalPriceProduct.textContent = `₹${product.quantityPurchase * product.price
+//           }.00`;
+//         updateTotalCart();
+
+//         // Update quantity localStorage
+//         localStorage.setItem("cartStore", JSON.stringify(cartStore));
+//       });
+
+//       quantityBlock.querySelector(".ph-minus").addEventListener("click", () => {
+//         if (product.quantityPurchase > 1) {
+//           product.quantityPurchase--;
+//           quantityProduct.textContent = product.quantityPurchase;
+//           totalPriceProduct.textContent = `₹${product.quantityPurchase * product.price
+//             }.00`;
+//           updateTotalCart();
+
+//           // Update quantity localStorage
+//           localStorage.setItem("cartStore", JSON.stringify(cartStore));
+//         }
+//       });
+
+//       listProductCart.appendChild(productElement);
+//       totalCart += calculateProductTotal();
+
+//       // Change value in cart page
+//       document.querySelector(".total-block .total-product").innerHTML =
+//         totalCart;
+//     });
+
+//     const updateTotalCart = () => {
+//       totalCart = 0;
+//       cartStore.forEach((product) => {
+//         totalCart += product.price * product.quantityPurchase;
+//       });
+      
+//       // Update the global cart total
+//       window.cartTotal = totalCart;
+      
+//       // Change value in cart page
+//       document.querySelector(".total-block .total-product").innerHTML = totalCart;
+//       document.querySelector(".total-cart-block .total-cart").innerHTML = totalCart;
+//       document.querySelector(".heading.banner .more-price").innerHTML =
+//         totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
+//       moneyFreeshipProgress.style.width =
+//         totalCart <= moneyForFreeship
+//           ? `${(totalCart / moneyForFreeship) * 100}%`
+//           : `100%`;
+//       console.log('Cart total updated:', totalCart);
+//     };
+
+//     updateTotalCart();
+
+//     const prdItems = listProductCart.querySelectorAll(".item");
+//     prdItems.forEach((prd) => {
+//       const removeCartBtn = prd.querySelector(".remove-btn");
+//       removeCartBtn.addEventListener("click", () => {
+//         const prdId = removeCartBtn.closest(".item").getAttribute("data-item");
+//         // cartStore
+//         const newArray = cartStore.filter((item) => item.id !== prdId);
+//         localStorage.setItem("cartStore", JSON.stringify(newArray));
+//         handleInforCart();
+//       });
+//     });
+//   }
+// };
+
+// handleInforCart();
+
+// // Checkout
+// if (listProductCheckout) {
+//   let cartStore = localStorage.getItem("cartStore");
+//   cartStore = cartStore ? JSON.parse(cartStore) : [];
+//   let totalCart = 0;
+
+//   cartStore.forEach((product) => {
+//     const productElement = document.createElement("div");
+//     productElement.classList.add(
+//       "item",
+//       "flex",
+//       "items-center",
+//       "justify-between",
+//       "w-full",
+//       "pb-5",
+//       "border-b",
+//       "border-line",
+//       "gap-6",
+//       "mt-5"
+//     );
+//     productElement.innerHTML = `
+//             <div class="bg-img w-[100px] aspect-square flex-shrink-0 rounded-lg overflow-hidden">
+//                 <img src=${product.thumbImage[0]} alt='img'
+//                     class='w-full h-full' />
+//             </div>
+//             <div class="flex items-center justify-between w-full">
+//                 <div>
+//                     <div class="name text-title">${product.name}</div>
+//                     <div class="caption1 text-secondary mt-2">
+//                         <span class='size capitalize'>${product.sizes[0]}</span>
+//                         <span>/</span>
+//                         <span class='color capitalize'>${product.variation[0].color}</span>
+//                     </div>
+//                 </div>
+//                 <div class="text-title">
+//                     <span class='quantity'>${product.quantityPurchase}</span>
+//                     <span class='px-1'>x</span>
+//                     <span>
+//                         ₹${product.price}.00
+//                     </span>
+//                 </div>
+//             </div>
+//         `;
+
+//     listProductCheckout.appendChild(productElement);
+//     totalCart += product.price * product.quantityPurchase;
+//     document.querySelector(
+//       ".total-cart-block .total-cart"
+//     ).innerHTML = `₹${totalCart}.00`;
+//   });
+// }
+
+const CART_STORAGE_KEY = "cartItems"; // Standardized local storage key
+
+// Select relevant DOM elements once at the top
+const listProductCart = document.querySelector(".cart-block .list-product-main");
+// const cartPage = document.querySelector(".cart-page"); 
+// const listProductCheckout = document.querySelector(".checkout-product-list"); 
+
+// Helper function to get cart items from local storage
+function getCartItems() {
+    try {
+        const cart = localStorage.getItem(CART_STORAGE_KEY);
+        return cart ? JSON.parse(cart) : [];
+    } catch (e) {
+        console.error("Error reading cart from local storage:", e);
+        return [];
+    }
+}
+
+// Helper function to save cart items to local storage
+function saveCartItems(cart) {
+    try {
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+        // Optional: Dispatch a custom event here if other parts of your app
+        // need to react to cart changes (e.g., header cart icon)
+        // window.dispatchEvent(new Event('cartUpdated'));
+    } catch (e) {
+        console.error("Error saving cart to local storage:", e);
+    }
+}
+
+// Function to handle displaying and interacting with cart items
 const handleInforCart = () => {
-  if (listProductCart) {
-    let cartStore = localStorage.getItem("cartStore");
-    cartStore = cartStore ? JSON.parse(cartStore) : [];
+    if (!listProductCart) {
+        console.log("Cart list element not found. Skipping cart display.");
+        return; // Exit if the cart display element isn't on the page
+    }
 
-    // Initial value in cart page
+    let cartItems = getCartItems(); // Use the standardized function
     let moneyForFreeship = 2000;
-    let totalCart = 0;
+    let totalCart = 0; // Initialize totalCart for this scope
 
-    const moneyFreeshipProgress = cartPage.querySelector(
-      ".tow-bar-block .progress-line"
-    );
+    const moneyFreeshipProgress = cartPage ? cartPage.querySelector(".tow-bar-block .progress-line") : null;
+    const totalProductDisplay = document.querySelector(".total-block .total-product");
+    const totalCartBlockDisplay = document.querySelector(".total-cart-block .total-cart");
+    const morePriceDisplay = document.querySelector(".heading.banner .more-price");
 
-    listProductCart.innerHTML = "";
+    listProductCart.innerHTML = ""; // Clear previous items
 
-    cartStore.forEach((product) => {
-      // calculate for prd item
-      const calculateProductTotal = () => {
-        const productTotal = product.price * product.quantityPurchase;
-        return productTotal;
-      };
+    if (cartItems.length === 0) {
+        listProductCart.innerHTML = "<p class='text-center text-secondary py-10'>Your cart is empty.</p>";
+    }
 
-      const productElement = document.createElement("div");
-      productElement.setAttribute("data-item", product.id);
-      productElement.classList.add(
-        "item",
-        "flex",
-        "md:mt-7",
-        "md:pb-7",
-        "mt-5",
-        "pb-5",
-        "border-b",
-        "border-line",
-        "w-full"
-      );
-      productElement.innerHTML = `
-                <div class="w-1/2">
-                    <div class="flex items-center gap-6">
-                        <div class="bg-img md:w-[100px] w-20 aspect-[3/4]">
-                            <img src=${product.thumbImage[0]} alt='img'
-                                class='w-full h-full object-cover rounded-lg' />
+    cartItems.forEach((product) => {
+        // Ensure thumbImage is an array and has at least one item, or provide a fallback
+        const displayImage = (Array.isArray(product.thumbImage) && product.thumbImage.length > 0)
+            ? product.thumbImage[0]
+            : './assets/images/placeholder.png'; // Fallback image
+
+        // Ensure sizes is an array and has at least one item, or provide a fallback
+        const displaySize = (Array.isArray(product.sizes) && product.sizes.length > 0)
+            ? product.sizes[0]
+            : 'N/A';
+
+        // Ensure variation is an array and has at least one item, and has a color property
+        const displayColor = (Array.isArray(product.variation) && product.variation.length > 0 && product.variation[0].color)
+            ? product.variation[0].color
+            : 'N/A';
+
+        const productElement = document.createElement("div");
+        productElement.setAttribute("data-item", product.id);
+        productElement.classList.add(
+            "item", "flex", "md:mt-7", "md:pb-7", "mt-5", "pb-5",
+            "border-b", "border-line", "w-full"
+        );
+        productElement.innerHTML = `
+            <div class="w-1/2">
+                <div class="flex items-center gap-6">
+                    <div class="bg-img md:w-[100px] w-20 aspect-[3/4]">
+                        <img src=${displayImage} alt='img'
+                            class='w-full h-full object-cover rounded-lg' />
+                    </div>
+                    <div>
+                        <div class="text-title">${product.name}</div>
+                        <div class="list-select mt-3">
+                            <span class='caption1 text-secondary'>Size: ${displaySize}</span>
+                            <span class='caption1 text-secondary ml-2'>Color: ${displayColor}</span>
                         </div>
-                        <div>
-                            <div class="text-title">${product.name}</div>
-                            <div class="list-select mt-3"></div>
-                        </div>
                     </div>
                 </div>
-                <div class="w-1/12 price flex items-center justify-center">
-                    <div class="text-title text-center">₹${product.price}.00</div>
+            </div>
+            <div class="w-1/12 price flex items-center justify-center">
+                <div class="text-title text-center">₹${product.price.toFixed(2)}</div>
+            </div>
+            <div class="w-1/6 flex items-center justify-center">
+                <div
+                    class="quantity-block bg-surface md:p-3 p-2 flex items-center justify-between rounded-lg border border-line md:w-[100px] flex-shrink-0 w-20">
+                    <i class="ph-bold ph-minus cursor-pointer text-base max-md:text-sm"></i>
+                    <div class="text-button quantity">${product.quantityPurchase}</div>
+                    <i class="ph-bold ph-plus cursor-pointer text-base max-md:text-sm"></i>
                 </div>
-                <div class="w-1/6 flex items-center justify-center">
-                    <div
-                        class="quantity-block bg-surface md:p-3 p-2 flex items-center justify-between rounded-lg border border-line md:w-[100px] flex-shrink-0 w-20">
-                        <i class="ph-bold ph-minus cursor-pointer text-base max-md:text-sm"></i>
-                        <div class="text-button quantity">${product.quantityPurchase}</div>
-                        <i class="ph-bold ph-plus cursor-pointer text-base max-md:text-sm"></i>
-                    </div>
-                </div>
-                <div class="w-1/6 flex total-price items-center justify-center">
-                    <div class="text-title text-center">₹${product.price}.00
-                    </div>
-                </div>
-                <div class="w-1/12 flex items-center justify-center">
-                    <i
-                        class="remove-btn ph ph-x-circle text-xl max-md:text-base text-red cursor-pointer hover:text-black duration-300"></i>
-                </div>
-            `;
+            </div>
+            <div class="w-1/6 flex total-price items-center justify-center">
+                <div class="text-title text-center">₹${(product.price * product.quantityPurchase).toFixed(2)}</div>
+            </div>
+            <div class="w-1/12 flex items-center justify-center">
+                <i
+                    class="remove-btn ph ph-x-circle text-xl max-md:text-base text-red cursor-pointer hover:text-black duration-300"></i>
+            </div>
+        `;
 
-      const quantityBlock = productElement.querySelector(".quantity-block");
-      const quantityProduct = quantityBlock.querySelector(".quantity");
-      const totalPriceProduct = productElement.querySelector(
-        ".total-price .text-title"
-      );
+        const quantityBlock = productElement.querySelector(".quantity-block");
+        const quantityProduct = quantityBlock.querySelector(".quantity");
+        const totalPriceProduct = productElement.querySelector(".total-price .text-title");
 
-      quantityBlock.querySelector(".ph-plus").addEventListener("click", () => {
-        product.quantityPurchase++;
-        quantityProduct.textContent = product.quantityPurchase;
-        totalPriceProduct.textContent = `₹${product.quantityPurchase * product.price
-          }.00`;
-        updateTotalCart();
+        quantityBlock.querySelector(".ph-plus").addEventListener("click", () => {
+            // Optional: Add stock check here if product.quantity (total stock) is available
+            // if (product.quantity && product.quantityPurchase >= product.quantity) {
+            //     alert(`Maximum stock reached for ${product.name}`);
+            //     return;
+            // }
+            product.quantityPurchase++;
+            quantityProduct.textContent = product.quantityPurchase;
+            totalPriceProduct.textContent = `₹${(product.quantityPurchase * product.price).toFixed(2)}`;
+            saveCartItems(cartItems); // Save changes immediately
+            updateAllCartTotals(); // Recalculate and update all totals
+        });
 
-        // Update quantity localStorage
-        localStorage.setItem("cartStore", JSON.stringify(cartStore));
-      });
+        quantityBlock.querySelector(".ph-minus").addEventListener("click", () => {
+            if (product.quantityPurchase > 1) {
+                product.quantityPurchase--;
+                quantityProduct.textContent = product.quantityPurchase;
+                totalPriceProduct.textContent = `₹${(product.quantityPurchase * product.price).toFixed(2)}`;
+                saveCartItems(cartItems); // Save changes immediately
+                updateAllCartTotals(); // Recalculate and update all totals
+            }
+        });
 
-      quantityBlock.querySelector(".ph-minus").addEventListener("click", () => {
-        if (product.quantityPurchase > 1) {
-          product.quantityPurchase--;
-          quantityProduct.textContent = product.quantityPurchase;
-          totalPriceProduct.textContent = `₹${product.quantityPurchase * product.price
-            }.00`;
-          updateTotalCart();
+        listProductCart.appendChild(productElement);
+    }); // End of cartItems.forEach
 
-          // Update quantity localStorage
-          localStorage.setItem("cartStore", JSON.stringify(cartStore));
+    // Function to update all cart totals dynamically
+    const updateAllCartTotals = () => {
+        totalCart = 0; // Reset total for recalculation
+        cartItems.forEach((product) => {
+            totalCart += product.price * product.quantityPurchase;
+        });
+
+        // Update the global cart total (if still desired)
+        window.cartTotal = totalCart;
+
+        if (totalProductDisplay) totalProductDisplay.innerHTML = `₹${totalCart.toFixed(2)}`;
+        if (totalCartBlockDisplay) totalCartBlockDisplay.innerHTML = `₹${totalCart.toFixed(2)}`;
+        if (morePriceDisplay) {
+            morePriceDisplay.innerHTML = totalCart < moneyForFreeship
+                ? `₹${(moneyForFreeship - totalCart).toFixed(2)}`
+                : "0";
         }
-      });
-
-      listProductCart.appendChild(productElement);
-      totalCart += calculateProductTotal();
-
-      // Change value in cart page
-      document.querySelector(".total-block .total-product").innerHTML =
-        totalCart;
-    });
-
-    const updateTotalCart = () => {
-      totalCart = 0;
-      cartStore.forEach((product) => {
-        totalCart += product.price * product.quantityPurchase;
-      });
-      
-      // Update the global cart total
-      window.cartTotal = totalCart;
-      
-      // Change value in cart page
-      document.querySelector(".total-block .total-product").innerHTML = totalCart;
-      document.querySelector(".total-cart-block .total-cart").innerHTML = totalCart;
-      document.querySelector(".heading.banner .more-price").innerHTML =
-        totalCart <= moneyForFreeship ? moneyForFreeship - totalCart : "0";
-      moneyFreeshipProgress.style.width =
-        totalCart <= moneyForFreeship
-          ? `${(totalCart / moneyForFreeship) * 100}%`
-          : `100%`;
-      console.log('Cart total updated:', totalCart);
+        if (moneyFreeshipProgress) {
+            moneyFreeshipProgress.style.width = totalCart < moneyForFreeship
+                ? `${(totalCart / moneyForFreeship) * 100}%`
+                : `100%`;
+        }
+        console.log('Cart total updated:', totalCart.toFixed(2));
     };
 
-    updateTotalCart();
+    updateAllCartTotals(); // Call once after initial loop to set all totals
 
+    // Setup remove buttons
     const prdItems = listProductCart.querySelectorAll(".item");
     prdItems.forEach((prd) => {
-      const removeCartBtn = prd.querySelector(".remove-btn");
-      removeCartBtn.addEventListener("click", () => {
-        const prdId = removeCartBtn.closest(".item").getAttribute("data-item");
-        // cartStore
-        const newArray = cartStore.filter((item) => item.id !== prdId);
-        localStorage.setItem("cartStore", JSON.stringify(newArray));
-        handleInforCart();
-      });
+        const removeCartBtn = prd.querySelector(".remove-btn");
+        removeCartBtn.addEventListener("click", () => {
+            const prdId = prd.getAttribute("data-item"); // Get from the item itself
+            cartItems = cartItems.filter((item) => item.id !== prdId); // Update cartItems array
+            saveCartItems(cartItems); // Save the filtered array
+            handleInforCart(); // Re-render the cart
+        });
     });
-  }
 };
 
+// Initial call to set up the cart display
 handleInforCart();
 
-// Checkout
+// Checkout page product list display
 if (listProductCheckout) {
-  let cartStore = localStorage.getItem("cartStore");
-  cartStore = cartStore ? JSON.parse(cartStore) : [];
-  let totalCart = 0;
+    let cartItems = getCartItems(); // Use the standardized function
+    let totalCartCheckout = 0; // Use a different variable name to avoid confusion with cart page total
 
-  cartStore.forEach((product) => {
-    const productElement = document.createElement("div");
-    productElement.classList.add(
-      "item",
-      "flex",
-      "items-center",
-      "justify-between",
-      "w-full",
-      "pb-5",
-      "border-b",
-      "border-line",
-      "gap-6",
-      "mt-5"
-    );
-    productElement.innerHTML = `
+    if (cartItems.length === 0) {
+        listProductCheckout.innerHTML = "<p class='text-center text-secondary py-10'>No items in checkout.</p>";
+    }
+
+    cartItems.forEach((product) => {
+        // Safe access for thumbImage, sizes, variation
+        const displayImage = (Array.isArray(product.thumbImage) && product.thumbImage.length > 0)
+            ? product.thumbImage[0]
+            : './assets/images/placeholder.png';
+
+        const displaySize = (Array.isArray(product.sizes) && product.sizes.length > 0)
+            ? product.sizes[0]
+            : 'N/A';
+
+        const displayColor = (Array.isArray(product.variation) && product.variation.length > 0 && product.variation[0].color)
+            ? product.variation[0].color
+            : 'N/A';
+
+        const productElement = document.createElement("div");
+        productElement.classList.add(
+            "item", "flex", "items-center", "justify-between", "w-full",
+            "pb-5", "border-b", "border-line", "gap-6", "mt-5"
+        );
+        productElement.innerHTML = `
             <div class="bg-img w-[100px] aspect-square flex-shrink-0 rounded-lg overflow-hidden">
-                <img src=${product.thumbImage[0]} alt='img'
+                <img src=${displayImage} alt='img'
                     class='w-full h-full' />
             </div>
             <div class="flex items-center justify-between w-full">
                 <div>
                     <div class="name text-title">${product.name}</div>
                     <div class="caption1 text-secondary mt-2">
-                        <span class='size capitalize'>${product.sizes[0]}</span>
+                        <span class='size capitalize'>${displaySize}</span>
                         <span>/</span>
-                        <span class='color capitalize'>${product.variation[0].color}</span>
+                        <span class='color capitalize'>${displayColor}</span>
                     </div>
                 </div>
                 <div class="text-title">
                     <span class='quantity'>${product.quantityPurchase}</span>
                     <span class='px-1'>x</span>
                     <span>
-                        ₹${product.price}.00
+                        ₹${product.price.toFixed(2)}
                     </span>
                 </div>
             </div>
         `;
 
-    listProductCheckout.appendChild(productElement);
-    totalCart += product.price * product.quantityPurchase;
-    document.querySelector(
-      ".total-cart-block .total-cart"
-    ).innerHTML = `₹${totalCart}.00`;
-  });
+        listProductCheckout.appendChild(productElement);
+        totalCartCheckout += product.price * product.quantityPurchase;
+    });
+
+    // Update checkout total AFTER the loop
+    const checkoutTotalDisplay = document.querySelector(".total-cart-block .total-cart");
+    if (checkoutTotalDisplay) {
+        checkoutTotalDisplay.innerHTML = `₹${totalCartCheckout.toFixed(2)}`;
+    }
 }
 
 // Show, hide login block in checkout
