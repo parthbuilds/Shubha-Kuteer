@@ -133,20 +133,20 @@ function transformBackendProduct(backendProduct) {
 
     // --- START OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
     let variations = [];
-
+  
     // Assuming backendProduct has an 'attributes' property which is an array
     // and one of its elements is a 'color' attribute with values and hex codes.
     if (backendProduct.attributes && Array.isArray(backendProduct.attributes)) {
         const colorAttribute = backendProduct.attributes.find(
             attr => attr.attribute_name && attr.attribute_name.toLowerCase() === 'color'
         );
-
+  
         if (colorAttribute && colorAttribute.attribute_values) {
             try {
                 const attributeValues = typeof colorAttribute.attribute_values === 'string'
                     ? JSON.parse(colorAttribute.attribute_values)
                     : colorAttribute.attribute_values;
-
+  
                 if (Array.isArray(attributeValues)) {
                     variations = attributeValues.map(valueObj => ({
                         color: valueObj.value,      // e.g., "Red"
@@ -160,7 +160,7 @@ function transformBackendProduct(backendProduct) {
             }
         }
     }
-
+  
     // Fallback to default variations if none are generated from backend attributes
     if (variations.length === 0) {
         variations = [
@@ -169,8 +169,8 @@ function transformBackendProduct(backendProduct) {
         ];
     }
     // --- END OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
-
-
+  
+  
     return {
         id: String(backendProduct.id), // Ensure ID is a string for consistency
         category: backendProduct.category,
@@ -184,7 +184,7 @@ function transformBackendProduct(backendProduct) {
         brand: backendProduct.brand,
         sold: backendProduct.sold,
         quantity: backendProduct.quantity,
-        quantityPurchase: 1,// Default, not in backend data
+        quantityPurchase: 1, // Default, not in backend data
         sizes: defaultSizes, // Default sizes, or fetch/infer from backend if available
         variation: variations, // Use the dynamically generated variations
         thumbImage: thumbImages, // Combined main and thumb image
@@ -193,7 +193,7 @@ function transformBackendProduct(backendProduct) {
         action: backendProduct.action,
         slug: backendProduct.slug
     };
-}
+  }
 
 // Function to fetch products from backend API
 async function fetchProductsFromBackend() {
@@ -329,40 +329,40 @@ async function fetchProductsFromBackend() {
                 <div class="list flex items-center gap-3">
                     <div class='w-px h-4 bg-line'></div>
                     ${selectedFilters.type ? ( // Check if type is selected
-                    `
+                        `
                             <div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="type">
                                 <i class='ph ph-x cursor-pointer'></i>
                                 <span>${selectedFilters.type}</span>
                             </div>
                         `
-                ) : ''}
+                    ) : ''}
                     ${selectedFilters.size?.length ? (
-                    `${selectedFilters.size.map(item => (
-                        `<div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="size" data-item="${item}">
+                        `${selectedFilters.size.map(item => (
+                            `<div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="size" data-item="${item}">
                                 <i class='ph ph-x cursor-pointer'></i>
                                 <span>${item}</span>
                             </div>`
-                    )).join('')}`
-                ) : ''}
+                        )).join('')}`
+                    ) : ''}
                     ${selectedFilters.color?.length ? (
-                    `${selectedFilters.color.map(item => (
-                        `<div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="color" data-item="${item}">
+                        `${selectedFilters.color.map(item => (
+                            `<div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="color" data-item="${item}">
                                 <i class='ph ph-x cursor-pointer'></i>
                                 <span>${item}</span>
                             </div>`
-                    )).join('')}`
-                ) : ''}
+                        )).join('')}`
+                    ) : ''}
                     ${selectedFilters.brand?.length ? (
-                    `${selectedFilters.brand.map(item => (
-                        `
+                        `${selectedFilters.brand.map(item => (
+                            `
                                 <div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="brand" data-item=${item}>
                                     <i class='ph ph-x cursor-pointer'></i>
                                     <span>${item}</span>
                                 </div>
                             `
-                    )).join('')}
+                        )).join('')}
                     `
-                ) : ''}
+                    ) : ''}
                 </div>
                 <div
                     class="clear-btn flex items-center px-2 py-1 gap-1 rounded-full w-fit border border-red cursor-pointer">
@@ -747,10 +747,10 @@ function renderProducts(page, products = []) {
 </div>
 <div class="product-name text-title duration-300">${product.name}</div>
 ${product.variation.length > 0 && product.action === 'add to cart' ? (
-                    `
+    `
         <div class="list-color py-2 max-md:hidden flex items-center gap-3 flex-wrap duration-500">
             ${product.variation.map((item, index) => (
-                        `<div
+        `<div
                     key="${index}"
                     class="color-item w-8 h-8 rounded-full duration-300 relative"
                     style="background-color:${item.colorCode};"
@@ -758,13 +758,13 @@ ${product.variation.length > 0 && product.action === 'add to cart' ? (
                     <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${item.color}</div>
                 </div>
                 `
-                    )).join('')}
+    )).join('')}
         </div>`
-                ) : (
-                    `
+) : (
+    `
         <div class="list-color list-color-image max-md:hidden flex items-center gap-3 flex-wrap duration-500">
             ${product.variation.map((item, index) => (
-                        `
+        `
                 <div
                     class="color-item w-12 h-12 rounded-xl duration-300 relative"
                     key="${index}"
@@ -777,15 +777,15 @@ ${product.variation.length > 0 && product.action === 'add to cart' ? (
                     <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${item.color}</div>
                 </div>
             `
-                    )).join('')}
+    )).join('')}
         </div>
     `
-                )}
+)}
 <div
     class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
     <div class="product-price text-title">₹${product.price}.00</div>
     ${Math.floor(100 - ((product.price / product.originPrice) * 100)) > 0 ? (
-                    `
+        `
             <div class="product-origin-price caption1 text-secondary2">
                 <del>₹${product.originPrice}.00</del>
             </div>
@@ -794,7 +794,7 @@ ${product.variation.length > 0 && product.action === 'add to cart' ? (
                 -${Math.floor(100 - ((product.price / product.originPrice) * 100))}%
             </div>
     `
-                ) : ('')}
+    ) : ('')}
 </div>
 </div>
 </div>
@@ -1025,29 +1025,9 @@ function addEventToProductItem(products) {
             if (productId) {
                 const product = products.find(p => p.id === productId);
                 if (product) {
-                    let cartStore = localStorage.getItem("cartStore");
-                    cartStore = cartStore ? JSON.parse(cartStore) : [];
-                    const existingIndex = cartStore.findIndex(item => item.id === productId);
-
-                    // Get selected quantity from quick shop block if present
-                    let selectedQuantity = 1;
-                    const quickShopBlock = productElement.querySelector('.quick-shop-block');
-                    if (quickShopBlock) {
-                        const quantityInput = quickShopBlock.querySelector('.quantity');
-                        if (quantityInput) {
-                            selectedQuantity = parseInt(quantityInput.textContent) || 1;
-                        }
-                    }
-
-                    if (existingIndex > -1) {
-                        cartStore[existingIndex].quantityPurchase += selectedQuantity;
-                    } else {
-                        product.quantityPurchase = selectedQuantity;
-                        cartStore.push(product);
-                    }
-                    localStorage.setItem("cartStore", JSON.stringify(cartStore));
-                    alert(`Added to cart: ${product.name} (x${selectedQuantity})`);
-                    // Optionally, call handleInforCart() to update cart UI
+                    console.log('Add to Cart clicked for product:', product.name);
+                    // Implement your add to cart logic here
+                    alert(`Added to cart: ${product.name}`);
                 }
             }
         };
@@ -1130,75 +1110,6 @@ function addEventToProductItem(products) {
                 alert(`Product ${productId} added to compare!`);
             }
         };
-    });
-
-    document.querySelectorAll('.quick-shop-block').forEach(block => {
-        let selectedQuantity = 1;
-        const minusBtn = block.querySelector('.ph-minus');
-        const plusBtn = block.querySelector('.ph-plus');
-        const quantityDisplay = block.querySelector('.quantity');
-        if (quantityDisplay) quantityDisplay.textContent = selectedQuantity;
-
-        if (minusBtn && quantityDisplay) {
-            minusBtn.addEventListener('click', () => {
-                if (selectedQuantity > 1) {
-                    selectedQuantity--;
-                    quantityDisplay.textContent = selectedQuantity;
-                }
-            });
-        }
-        if (plusBtn && quantityDisplay) {
-            plusBtn.addEventListener('click', () => {
-                selectedQuantity++;
-                quantityDisplay.textContent = selectedQuantity;
-            });
-        }
-
-        // Add to Cart from quick shop
-        const addCartBtn = block.querySelector('.add-cart-btn');
-        if (addCartBtn) {
-            addCartBtn.onclick = () => {
-                let cartStore = localStorage.getItem("cartStore");
-                cartStore = cartStore ? JSON.parse(cartStore) : [];
-                const productId = productMain.id;
-                const existingIndex = cartStore.findIndex(item => item.id === productId);
-
-                if (existingIndex > -1) {
-                    cartStore[existingIndex].quantityPurchase += selectedQuantity;
-                } else {
-                    productMain.quantityPurchase = selectedQuantity;
-                    cartStore.push(productMain);
-                }
-                localStorage.setItem("cartStore", JSON.stringify(cartStore));
-                renderCart();
-                renderCheckout();
-            };
-        }
-    });
-}
-
-
-// Quantity selector setup
-function setupQuantitySelector(initialQuantity = 1) {
-    const quantityBlock = document.querySelector('.choose-quantity .quantity-block');
-    if (!quantityBlock) return;
-    const quantityDisplay = quantityBlock.querySelector('.quantity');
-    const minusBtn = quantityBlock.querySelector('.ph-minus');
-    const plusBtn = quantityBlock.querySelector('.ph-plus');
-
-    selectedQuantity = initialQuantity;
-    quantityDisplay.textContent = selectedQuantity;
-
-    minusBtn.addEventListener('click', () => {
-        if (selectedQuantity > 1) {
-            selectedQuantity--;
-            quantityDisplay.textContent = selectedQuantity;
-        }
-    });
-
-    plusBtn.addEventListener('click', () => {
-        selectedQuantity++;
-        quantityDisplay.textContent = selectedQuantity;
     });
 }
 
