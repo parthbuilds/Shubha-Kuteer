@@ -3067,21 +3067,25 @@ const modalOrderDetailMain = document.querySelector(
   ".modal-order-detail-block .modal-order-detail-main"
 );
 
-if (btnOrderDetail && modalOrderDetail) {
-  btnOrderDetail.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      modalOrderDetailMain.classList.add("open");
+btnOrderDetail.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const orderId = btn.getAttribute("data-order-id");
+    const orderData = getOrderData(orderId); // implement this function
+    // Render order details
+    modalOrderDetailMain.innerHTML = `
+      <div>Order ID: ${orderData.id}</div>
+      <div>Items: ${orderData.items.map(item => `
+        <div>${item.name} x ${item.quantity}</div>
+      `).join('')}</div>
+      <div>Total: ₹${orderData.total}</div>
+      <button class="close-btn">Close</button>
+    `;
+    modalOrderDetailMain.classList.add("open");
+    modalOrderDetailMain.querySelector(".close-btn").addEventListener("click", () => {
+      modalOrderDetailMain.classList.remove("open");
     });
   });
-
-  modalOrderDetail.addEventListener("click", () => {
-    modalOrderDetailMain.classList.remove("open");
-  });
-
-  modalOrderDetailMain.addEventListener("click", (e) => {
-    e.stopPropagation();
-  });
-}
+});
 
 // Modal Video
 const playIcons = document.querySelectorAll(".btn-play");
