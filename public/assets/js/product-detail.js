@@ -299,6 +299,14 @@ if (productDetail) {
             productDetail.querySelector('.product-origin-price').innerHTML = '<del>₹' + productMain.originPrice + '.00</del>'
             productDetail.querySelector('.product-sale').innerHTML = '-' + Math.floor(100 - ((productMain.price / productMain.originPrice) * 100)) + '%'
 
+            // Call new functions here after productMain is available
+            updateColors(productMain.variations); // Assuming 'variations' contains colors
+            updateSizes(productMain.sizes);
+            setupQuantitySelector(productMain.quantityPurchase); // Pass initial quantity (e.g., 1)
+            updateEstimatedDelivery(); // Sets date to 10 days from today
+            updateSKU(productMain.quantity); // Using product quantity as SKU
+            updateCategories(productMain.category, productMain.gender); // Pass category and gender
+
             productMain.variation.map((item) => {
                 const colorItem = document.createElement('div')
                 colorItem.classList.add('color-item', 'w-12', 'h-12', 'rounded-xl', 'duration-300', 'relative')
@@ -678,31 +686,4 @@ function updateCategories(category, gender) {
         //     listCategoryElement.appendChild(genderLink);
         // }
     }
-}
-
-
-if (productDetail) {
-    fetch('/api/admin/products')
-        .then(response => response.json())
-        .then(data => {
-            const mappedProducts = data.map(mapApiProductToFrontend);
-            let productMain = mappedProducts.find(product => product.id === productId);
-
-            // ... (existing code) ...
-
-            // Call new functions here after productMain is available
-            updateColors(productMain.variations); // Assuming 'variations' contains colors
-            updateSizes(productMain.sizes);
-            setupQuantitySelector(productMain.quantityPurchase); // Pass initial quantity (e.g., 1)
-            updateEstimatedDelivery(); // Sets date to 10 days from today
-            updateSKU(productMain.quantity); // Using product quantity as SKU
-            updateCategories(productMain.category, productMain.gender); // Pass category and gender
-
-
-            // existing productMain.variation.map((item) => { ... }) code can be removed/modified if updateColors fully replaces it
-            // existing productMain.sizes.map((item) => { ... }) code can be removed/modified if updateSizes fully replaces it
-            // existing listCategory.innerHTML = ... code can be removed/modified if updateCategories fully replaces it
-
-        })
-        .catch(error => console.error('Error fetching products:', error));
 }
