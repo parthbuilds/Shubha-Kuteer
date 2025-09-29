@@ -3169,7 +3169,6 @@ const listProductWishlist = document.querySelector(
 );
 const cartPage = document.querySelector(".cart-block");
 const checkoutPage = document.querySelector(".checkout-block");
-
 const listProductCompare = document.querySelector(
   ".compare-block .content-main"
 );
