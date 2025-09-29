@@ -683,3 +683,115 @@ function updateCategories(category, gender) {
         // }
     }
 }
+
+if (productDetail) {
+    fetch('/api/admin/products')
+        .then(response => response.json())
+        .then(data => {
+            const mappedProducts = data.map(mapApiProductToFrontend);
+            let productMain = mappedProducts.find(product => product.id === productId);
+
+            // find location of current product in array
+            currentIndex = mappedProducts.findIndex(product => product.id === productId);
+
+            // Next, Prev buttons
+            const prevBtn = document.querySelector('.breadcrumb-product .prev-btn');
+            const nextBtn = document.querySelector('.breadcrumb-product .next-btn');
+
+            nextBtn.addEventListener('click', () => {
+                currentIndex = (currentIndex + 1) % mappedProducts.length;
+                const nextProduct = mappedProducts[currentIndex];
+                window.location.href = `product-${typePage}.html?id=${nextProduct.id}`;
+            });
+
+            if (productId === '1') {
+                prevBtn.remove();
+            } else {
+                prevBtn.addEventListener('click', () => {
+                    currentIndex = (currentIndex - 1) % mappedProducts.length;
+                    const nextProduct = mappedProducts[currentIndex];
+                    window.location.href = `product-${typePage}.html?id=${nextProduct.id}`;
+                });
+            }
+
+            // --- Render product info ---
+            productDetail.querySelector('.product-infor').setAttribute('data-item', productId);
+            productDetail.querySelector('.product-category').innerHTML = productMain.category;
+            productDetail.querySelector('.product-name').innerHTML = productMain.name;
+            productDetail.querySelector('.product-description').innerHTML = productMain.description;
+            productDetail.querySelector('.product-price').innerHTML = '₹' + productMain.price + '.00';
+            productDetail.querySelector('.product-origin-price').innerHTML =
+                '<del>₹' + productMain.originPrice + '.00</del>';
+            productDetail.querySelector('.product-sale').innerHTML =
+                '-' + Math.floor(100 - ((productMain.price / productMain.originPrice) * 100)) + '%';
+
+            // Categories/Tags
+            const listCategory = productDetail.querySelector('.list-category');
+            if (listCategory) {
+                listCategory.innerHTML = `<a href="shop.html" class="text-secondary">${productMain.category}</a>`;
+            }
+            const listTag = productDetail.querySelector('.list-tag');
+            if (listTag) {
+                listTag.innerHTML = `<a href="shop.html" class="text-secondary">${productMain.type}</a>`;
+            }
+
+            // --- QUANTITY + ADD TO CART LOGIC ---
+            const quantityBlock = productDetail.querySelector(".choose-quantity .quantity-block");
+            const quantityDisplay = quantityBlock ? quantityBlock.querySelector(".quantity") : null;
+            const btnMinus = quantityBlock ? quantityBlock.querySelector(".ph-minus") : null;
+            const btnPlus = quantityBlock ? quantityBlock.querySelector(".ph-plus") : null;
+            const addCartBtn = productDetail.querySelector(".add-cart-btn");
+
+            let currentQuantity = 1;
+
+            const updateQuantityDisplay = () => {
+                if (quantityDisplay) quantityDisplay.textContent = currentQuantity;
+            };
+
+            if (btnPlus) {
+                btnPlus.addEventListener("click", () => {
+                    currentQuantity++;
+                    updateQuantityDisplay();
+                });
+            }
+
+            if (btnMinus) {
+                btnMinus.addEventListener("click", () => {
+                    if (currentQuantity > 1) {
+                        currentQuantity--;
+                        updateQuantityDisplay();
+                    }
+                });
+            }
+
+            if (addCartBtn) {
+                addCartBtn.addEventListener("click", () => {
+                    let cartStore = localStorage.getItem("cartStore");
+                    cartStore = cartStore ? JSON.parse(cartStore) : [];
+
+                    const existingIndex = cartStore.findIndex(p => p.id === productMain.id);
+
+                    if (existingIndex > -1) {
+                        cartStore[existingIndex].quantityPurchase += currentQuantity;
+                    } else {
+                        cartStore.push({
+                            ...productMain,
+                            quantityPurchase: currentQuantity
+                        });
+                    }
+
+                    localStorage.setItem("cartStore", JSON.stringify(cartStore));
+
+                    // reset quantity back to 1
+                    currentQuantity = 1;
+                    updateQuantityDisplay();
+
+                    // refresh cart everywhere
+                    updateCartUI();
+                });
+            }
+
+            updateQuantityDisplay();
+        })
+        .catch(error => console.error('Error fetching products:', error));
+}

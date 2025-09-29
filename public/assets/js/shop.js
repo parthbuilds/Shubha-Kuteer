@@ -1016,7 +1016,6 @@ function addEventToProductItem(products) {
         };
     });
 
-    // Example: Attach event listeners for add to cart buttons
     document.querySelectorAll('.add-cart-btn').forEach(button => {
         button.onclick = (e) => {
             e.preventDefault();
@@ -1033,7 +1032,6 @@ function addEventToProductItem(products) {
         };
     });
 
-    // Example: Attach event listeners for quick shop buttons
     document.querySelectorAll('.quick-shop-btn').forEach(button => {
         button.onclick = (e) => {
             e.preventDefault();

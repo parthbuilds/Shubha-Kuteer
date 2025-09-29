@@ -3903,3 +3903,5 @@ function updateCartUI() {
     });
   });
 }
+
+updateCartUI();
