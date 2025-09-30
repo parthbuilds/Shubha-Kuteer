@@ -3009,6 +3009,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('userToken');
+            const logoutBtn = document.getElementById('logoutBtn');
+
             if (!token) {
                 alert('Please log in to access your account.');
                 window.location.href = '/login.html';
@@ -3016,6 +3018,7 @@
             }
 
             // Check authentication
+            let isAuthenticated = false;
             try {
                 const authResponse = await fetch('/api/auth/check', {
                     method: 'GET',
@@ -3025,92 +3028,104 @@
                     }
                 });
                 const authData = await authResponse.json();
-                if (!authResponse.ok) {
+                if (authResponse.ok && authData.message === 'Authorized ✅') {
+                    isAuthenticated = true;
+                    logoutBtn.classList.remove('hidden'); // Show logout button
+                } else {
                     throw new Error(authData.message || 'Session invalid');
                 }
             } catch (error) {
                 console.error('Auth check error:', error);
-                alert('Session expired. Please log in again.');
+                alert('Session expired or invalid. Please log in again.');
                 localStorage.removeItem('userToken');
                 window.location.href = '/login.html';
                 return;
             }
 
+            // Handle logout
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('userToken');
+                alert('Logged out successfully.');
+                window.location.href = '/login.html';
+            });
+
             // Fetch and display profile data
-            try {
-                const response = await fetch('/api/user/profile', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+            if (isAuthenticated) {
+                try {
+                    const response = await fetch('/api/user/profile', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to fetch profile');
                     }
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.message || 'Failed to fetch profile');
+
+                    const { user } = data;
+                    document.querySelector('input[placeholder="First Name *"]').value = user.first_name || '';
+                    document.querySelector('input[placeholder="Last Name *"]').value = user.last_name || '';
+                    document.querySelector('input[placeholder="Phone Number *"]').value = user.phone_number || '';
+                    document.querySelector('input[placeholder="Email Address *"]').value = user.email || '';
+                    document.querySelector('input[placeholder="Day of Birth *"]').value = user.dob || '';
+                } catch (error) {
+                    console.error('Error fetching profile:', error);
+                    alert('Error fetching profile. Please try again.');
                 }
 
-                const { user } = data;
-                document.querySelector('input[placeholder="First Name *"]').value = user.first_name || '';
-                document.querySelector('input[placeholder="Last Name *"]').value = user.last_name || '';
-                document.querySelector('input[placeholder="Phone Number *"]').value = user.phone_number || '';
-                document.querySelector('input[placeholder="Email Address *"]').value = user.email || '';
-                document.querySelector('input[placeholder="Day of Birth *"]').value = user.dob || '';
-            } catch (error) {
-                console.error('Error fetching profile:', error);
-                alert('Error fetching profile. Please try again.');
-            }
-
-            // Fetch and display order history
-            try {
-                const ordersResponse = await fetch('/api/orders', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                // Fetch and display order history
+                try {
+                    const ordersResponse = await fetch('/api/orders', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const ordersData = await ordersResponse.json();
+                    if (ordersResponse.ok && ordersData.orders) {
+                        const orderHistoryDiv = document.createElement('div');
+                        orderHistoryDiv.innerHTML = '<h3>Order History</h3>';
+                        if (ordersData.orders.length === 0) {
+                            orderHistoryDiv.innerHTML += '<p>No orders found.</p>';
+                        } else {
+                            const ul = document.createElement('ul');
+                            ordersData.orders.forEach(order => {
+                                const li = document.createElement('li');
+                                li.innerHTML = `
+                            Order #${order.id} - ${order.amount} INR, Status: ${order.status}<br>
+                            Address: ${order.apartment || ''}, ${order.city || ''}, ${order.postal_code || ''}<br>
+                            Placed: ${new Date(order.created_at).toLocaleDateString()}
+                        `;
+                                ul.appendChild(li);
+                            });
+                            orderHistoryDiv.appendChild(ul);
+                        }
+                        document.querySelector('.account-details').appendChild(orderHistoryDiv);
                     }
-                });
-                const ordersData = await ordersResponse.json();
-                if (ordersResponse.ok && ordersData.orders) {
-                    const orderHistoryDiv = document.createElement('div');
-                    orderHistoryDiv.innerHTML = '<h3>Order History</h3>';
-                    if (ordersData.orders.length === 0) {
-                        orderHistoryDiv.innerHTML += '<p>No orders found.</p>';
-                    } else {
-                        const ul = document.createElement('ul');
-                        ordersData.orders.forEach(order => {
-                            const li = document.createElement('li');
-                            li.innerHTML = `
-                        Order #${order.id} - ${order.amount} INR, Status: ${order.status}<br>
-                        Address: ${order.apartment || ''}, ${order.city || ''}, ${order.postal_code || ''}<br>
-                        Placed: ${new Date(order.created_at).toLocaleDateString()}
-                    `;
-                            ul.appendChild(li);
-                        });
-                        orderHistoryDiv.appendChild(ul);
-                    }
-                    document.querySelector('.account-details').appendChild(orderHistoryDiv);
+                } catch (error) {
+                    console.error('Error fetching orders:', error);
                 }
-            } catch (error) {
-                console.error('Error fetching orders:', error);
-            }
 
-            // Display cart history from localStorage
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
-            const cartHistoryDiv = document.createElement('div');
-            cartHistoryDiv.innerHTML = '<h3>Cart History</h3>';
-            if (cart.length === 0) {
-                cartHistoryDiv.innerHTML += '<p>No items in cart history.</p>';
-            } else {
-                const ul = document.createElement('ul');
-                cart.forEach(item => {
-                    const li = document.createElement('li');
-                    li.textContent = `${item.name || 'Unknown Item'} - Quantity: ${item.quantity || 1}`;
-                    ul.appendChild(li);
-                });
-                cartHistoryDiv.appendChild(ul);
+                // Display cart history from localStorage
+                const cart = JSON.parse(localStorage.getItem('cart')) || [];
+                const cartHistoryDiv = document.createElement('div');
+                cartHistoryDiv.innerHTML = '<h3>Cart History</h3>';
+                if (cart.length === 0) {
+                    cartHistoryDiv.innerHTML += '<p>No items in cart history.</p>';
+                } else {
+                    const ul = document.createElement('ul');
+                    cart.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = `${item.name || 'Unknown Item'} - Quantity: ${item.quantity || 1}`;
+                        ul.appendChild(li);
+                    });
+                    cartHistoryDiv.appendChild(ul);
+                }
+                document.querySelector('.account-details').appendChild(cartHistoryDiv);
             }
-            document.querySelector('.account-details').appendChild(cartHistoryDiv);
 
             // Handle profile update
             const profileForm = document.querySelector('form:not(.change-password form)');
