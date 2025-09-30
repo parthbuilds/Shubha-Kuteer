@@ -16,6 +16,22 @@
 /**** Redirect filter type product-sidebar ****/
 
 
+//safe parse JSON 
+
+function safeJsonParse(jsonString, fallback = []) {
+    // Check if the input is a string that might need parsing
+    if (typeof jsonString !== 'string' || !jsonString) {
+        return fallback;
+    }
+    try {
+        return JSON.parse(jsonString);
+    } catch (e) {
+        // Log the error but return the fallback to prevent the application from crashing.
+        console.warn('JSON parsing failed:', e.message, 'for product data:', jsonString);
+        return fallback;
+    }
+}
+
 let selectedQuantity = 1;
 
 // List scroll you'll love this to
@@ -54,44 +70,44 @@ let typePage = classes[1];
 
 
 function mapApiProductToFrontend(product) {
-  return {
-    id: String(product.id),
-    category: product.category,
-    type: product.type,
-    name: product.name,
-    new: !!product.is_new,
-    sale: !!product.on_sale,
-    rate: Number(product.rate),
-    price: Number(product.price),
-    originPrice: Number(product.origin_price),
-    brand: product.brand,
-    sold: product.sold,
-    quantity: product.quantity,
-    quantityPurchase: product.quantityPurchase || 1, // default to 1
-    sizes: Array.isArray(product.sizes)
-      ? product.sizes
-      : product.sizes
-      ? JSON.parse(product.sizes)
-      : [],
-    variation: Array.isArray(product.variation)
-      ? product.variation
-      : product.variations
-      ? JSON.parse(product.variations)
-      : [],
-    thumbImage: Array.isArray(product.thumbImage)
-      ? product.thumbImage
-      : product.thumb_image
-      ? [product.thumb_image]
-      : [],
-    images: Array.isArray(product.images)
-      ? product.images
-      : product.gallery
-      ? JSON.parse(product.gallery)
-      : [],
-    description: product.description,
-    action: product.action,
-    slug: product.slug,
-  };
+    return {
+        id: String(product.id),
+        category: product.category,
+        type: product.type,
+        name: product.name,
+        new: !!product.is_new,
+        sale: !!product.on_sale,
+        rate: Number(product.rate),
+        price: Number(product.price),
+        originPrice: Number(product.origin_price),
+        brand: product.brand,
+        sold: product.sold,
+        quantity: product.quantity,
+        quantityPurchase: product.quantityPurchase || 1, // default to 1
+        sizes: Array.isArray(product.sizes)
+            ? product.sizes
+            : product.sizes
+                ? JSON.parse(product.sizes)
+                : [],
+        variation: Array.isArray(product.variation)
+            ? product.variation
+            : product.variations
+                ? JSON.parse(product.variations)
+                : [],
+        thumbImage: Array.isArray(product.thumbImage)
+            ? product.thumbImage
+            : product.thumb_image
+                ? [product.thumb_image]
+                : [],
+        images: Array.isArray(product.images)
+            ? product.images
+            : product.gallery
+                ? JSON.parse(product.gallery)
+                : [],
+        description: product.description,
+        action: product.action,
+        slug: product.slug,
+    };
 }
 
 
@@ -542,7 +558,7 @@ function updateSizes(sizes) {
         sizes.forEach(item => {
             const sizeItem = document.createElement('div');
             sizeItem.classList.add('size-item', 'w-12', 'h-12', 'flex', 'items-center', 'justify-center', 'text-button', 'rounded-full', 'bg-white', 'border', 'border-line', 'cursor-pointer');
-            
+
             // Special handling for 'freesize'
             if (item.toLowerCase() === 'freesize') { // Use toLowerCase for robust comparison
                 sizeItem.classList.remove('w-12', 'h-12');
@@ -580,15 +596,15 @@ const mockProductData = {
     id: 1,
     name: "Quilt",
     price: 29.99,
-    
+
     parsedVariations: {
         colors: [
-            { color: "Red", hex: "#E53E3E" },  
-            { color: "Blue", hex: "#3182CE" },   
+            { color: "Red", hex: "#E53E3E" },
+            { color: "Blue", hex: "#3182CE" },
             { color: "Black", hex: "#000000" },
         ]
     },
-    parsedSizes: ["S", "M", "L", "XL", "XXL", "Freesize"] 
+    parsedSizes: ["S", "M", "L", "XL", "XXL", "Freesize"]
 };
 
 // Call the update functions when the DOM is ready or after fetching data
@@ -682,4 +698,146 @@ function updateCategories(category, gender) {
         //     listCategoryElement.appendChild(genderLink);
         // }
     }
+}
+
+// Renders the "You'll Love This Too" slider with related products.
+
+function renderRelatedProductsSlider(allProducts, currentProduct) {
+    const swiperWrapper = document.querySelector('.swiper-product-scroll .swiper-wrapper');
+    if (!swiperWrapper || !currentProduct || !allProducts || allProducts.length === 0) {
+        // Hide the section if no products or wrapper is found
+        const relatedSection = document.querySelector('.list-product.hide-product-sold');
+        if (relatedSection) relatedSection.style.display = 'none';
+        return;
+    }
+
+    // 1. Filter for related products (same category/type, excluding the current product)
+    const relatedProducts = allProducts.filter(product =>
+        product.id !== currentProduct.id &&
+        (product.category === currentProduct.category || product.type === currentProduct.type)
+    );
+
+    // If less than 4 related products, use products from a similar type, or just the whole list (excluding current)
+    const finalProducts = relatedProducts.length > 0
+        ? relatedProducts.slice(0, 8) // Limit to 8 products
+        : allProducts.filter(product => product.id !== currentProduct.id).slice(0, 8);
+    
+    // Clear existing dummy slides
+    swiperWrapper.innerHTML = ''; 
+
+    // 2. Generate and inject the HTML for each related product
+    finalProducts.forEach(product => {
+        const productHTML = generateProductSlideHTML(product);
+        swiperWrapper.insertAdjacentHTML('beforeend', productHTML);
+    });
+
+    // 3. Initialize Swiper (re-initialize or update)
+    // NOTE: Swiper needs to be re-initialized or updated after dynamically adding slides.
+    if (window.swiperCollection && typeof window.swiperCollection.destroy === 'function') {
+        window.swiperCollection.destroy(true, true);
+    }
+    window.swiperCollection = new Swiper(".swiper-product-scroll", {
+        // Re-use your existing Swiper configuration
+        scrollbar: { el: ".swiper-scrollbar", hide: true },
+        loop: false, // Keep loop off if you don't have many slides
+        slidesPerView: 2,
+        spaceBetween: 16,
+        breakpoints: {
+            640: { slidesPerView: 2, spaceBetween: 20 },
+            1280: { slidesPerView: 3, spaceBetween: 20 },
+        },
+    });
+
+    // Add event listeners to the new 'Add to Cart' buttons, etc. (Not implemented here, assumed elsewhere)
+}
+
+/**
+ * Generates the HTML string for a single product slider item.
+ * @param {Object} product - The product data object.
+ * @returns {string} The HTML string for the swiper slide.
+ */
+function generateProductSlideHTML(product) {
+    // Calculate sale percentage if applicable
+    const salePercentage = product.origin_price > product.price 
+        ? Math.round(((product.origin_price - product.price) / product.origin_price) * 100)
+        : null;
+
+    // Determine sold/available quantity for the progress bar
+    const totalQuantity = product.quantity;
+    const soldQuantity = product.sold;
+    const availableQuantity = totalQuantity - soldQuantity;
+    const progressSoldWidth = totalQuantity > 0 ? (soldQuantity / totalQuantity) * 100 : 0;
+    
+    // Determine product tag (New/Sale)
+    let tagHTML = '';
+    if (product.is_new) {
+        tagHTML = `<div class="product-tag text-button-uppercase bg-green px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">New</div>`;
+    } else if (salePercentage) {
+        tagHTML = `<div class="product-tag text-button-uppercase bg-red px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">Sale</div>`;
+    }
+
+    // Get the first image for the main/hover image
+    const mainImage = product.main_image || product.thumb_image;
+    const hoverImage = product.gallery && product.gallery.length > 1 ? product.gallery[1] : mainImage;
+
+    return `
+        <div class="swiper-slide">
+            <div class="product-item grid-type" data-item="${product.id}">
+                <a href="product-detail.html?id=${product.id}" class="product-main cursor-pointer block">
+                    <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
+                        ${tagHTML}
+                        <div class="list-action-right absolute top-3 right-3 max-lg:hidden">
+                            <div class="add-wishlist-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative">
+                                <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">Add To Wishlist</div>
+                                <i class="ph ph-heart text-lg"></i>
+                            </div>
+                            <div class="compare-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative mt-2">
+                                <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">Compare Product</div>
+                                <i class="ph ph-arrow-counter-clockwise text-lg compare-icon"></i>
+                                <i class="ph ph-check-circle text-lg checked-icon"></i>
+                            </div>
+                        </div>
+                        <div class="product-img w-full h-full aspect-[3/4]">
+                            <img class="w-full h-full object-cover duration-700 main-img" src="${mainImage}" alt="${product.name}" />
+                            <img class="w-full h-full object-cover duration-700 hover-img absolute top-0 left-0" src="${hoverImage}" alt="${product.name}" />
+                        </div>
+                        <div class="list-action grid grid-cols-2 gap-3 px-5 absolute w-full bottom-5 max-lg:hidden">
+                            <div class="quick-view-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white" data-product-id="${product.id}">Quick View</div>
+                            <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white" data-product-id="${product.id}">Add To Cart</div>
+                        </div>
+                    </div>
+                    <div class="product-infor mt-4 lg:mb-7">
+                        <div class="product-sold sm:pb-4 pb-2">
+                            <div class="progress bg-line h-1.5 w-full rounded-full overflow-hidden relative">
+                                <div class="progress-sold bg-red absolute left-0 top-0 h-full" style="width: ${progressSoldWidth}%"></div>
+                            </div>
+                            <div class="flex items-center justify-between gap-3 gap-y-1 flex-wrap mt-2">
+                                <div class="text-button-uppercase">
+                                    <span class="text-secondary2 max-sm:text-xs">Sold: </span>
+                                    <span class="max-sm:text-xs">${soldQuantity}</span>
+                                </div>
+                                <div class="text-button-uppercase">
+                                    <span class="text-secondary2 max-sm:text-xs">Available: </span>
+                                    <span class="max-sm:text-xs">${availableQuantity}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="product-name text-title duration-300">${product.name}</div>
+                        
+                        <div class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
+                            <div class="product-price text-title">₹${product.price.toFixed(2)}</div>
+                            ${product.origin_price > product.price ? `
+                                <div class="product-origin-price caption1 text-secondary2">
+                                    <del>₹${product.origin_price.toFixed(2)}</del>
+                                </div>
+                                <div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">
+                                    -${salePercentage}%
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    `;
 }
