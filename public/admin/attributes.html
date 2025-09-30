@@ -453,7 +453,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text" id="adminName">Admin</a>
+                                                                <a href="/admin/product-list.html" class="body-text"
+                                                                    id="adminName">Admin</a>
                                                             </div>
                                                         </div>
                                                     </li>
@@ -750,8 +751,8 @@
                                                     <img src="/admin/images/avatar/user-1.png" alt="">
                                                 </span>
                                                 <span class="flex flex-column">
-                                                <span id="admin-name" class="body-title mb-2">Loading...</span>
-                                                <span id="admin-role" class="text-tiny">Admin</span>
+                                                    <span id="admin-name" class="body-title mb-2">Loading...</span>
+                                                    <span id="admin-role" class="text-tiny">Admin</span>
                                                 </span>
                                             </span>
                                         </button>
@@ -886,231 +887,208 @@
                                                 <div class="body-title">Action</div>
                                             </li>
                                         </ul>
-    
+
                                         <ul id="attributeList" class="flex flex-column">
                                             <!-- JS will populate here -->
                                         </ul>
                                     </div>
                                     <div class="divider"></div>
                                     <div class="flex items-center justify-between flex-wrap gap10">
-                                        <div class="text-tiny">Showing 10 entries</div>
-                                        <ul class="wg-pagination">
-                                            <li>
-                                                <a href="#"><i class="icon-chevron-left"></i></a>
-                                            </li>
-                                            <li>
-                                                <a href="#">1</a>
-                                            </li>
-                                            <li class="active">
-                                                <a href="#">2</a>
-                                            </li>
-                                            <li>
-                                                <a href="#">3</a>
-                                            </li>
-                                            <li>
-                                                <a href="#"><i class="icon-chevron-right"></i></a>
-                                            </li>
-                                        </ul>
+                                        <div id="attribute-entries-info" class="text-tiny"></div>
+                                        <ul id="attribute-pagination" class="wg-pagination flex gap-2"></ul>
                                     </div>
+
+                                    <!-- /all-attribute -->
                                 </div>
-                                <!-- /all-attribute -->
+                                <!-- /main-content-wrap -->
                             </div>
                             <!-- /main-content-wrap -->
+                            <!-- bottom-page -->
+                            <div class="bottom-page">
+                                <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
+                                <i class="icon-heart"></i>
+                                <div class="body-text">by <a href="https://aptmedia.in">APT Media</a> All rights
+                                    reserved.</div>
+                            </div>
+                            <!-- /bottom-page -->
                         </div>
-                        <!-- /main-content-wrap -->
-                        <!-- bottom-page -->
-                        <div class="bottom-page">
-                            <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
-                            <i class="icon-heart"></i>
-                            <div class="body-text">by <a
-                                    href="https://aptmedia.in">APT Media</a> All rights
-                                reserved.</div>
-                        </div>
-                        <!-- /bottom-page -->
+                        <!-- /main-content -->
                     </div>
-                    <!-- /main-content -->
+                    <!-- /section-content-right -->
                 </div>
-                <!-- /section-content-right -->
+                <!-- /layout-wrap -->
             </div>
-            <!-- /layout-wrap -->
+            <!-- /#page -->
         </div>
-        <!-- /#page -->
-    </div>
-    <!-- /#wrapper -->
+        <!-- /#wrapper -->
 
-    <!-- Javascript -->
-    <script>
-        document.addEventListener("DOMContentLoaded", async () => {
-            const attributeList = document.getElementById("attributeList");
+        <!-- Javascript -->
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const attributeList = document.getElementById("attribute-list");
+                const entriesInfo = document.getElementById("attribute-entries-info");
+                const pagination = document.getElementById("attribute-pagination");
             
-            async function loadAttributes() {
-                attributeList.innerHTML = `
-                    <li class="attribute-item gap14"><div class="body-text">Loading attributes...</div></li>
-                `;
-
-                try {
-                    const res = await fetch("/api/admin/attributes");
-                    if (!res.ok) throw new Error("Server error " + res.status);
-
-                    const attributes = await res.json();
+                let allAttributes = [];
+                let currentPage = 1;
+                let pageSize = 10; // fixed for now
+            
+                if (!attributeList) return;
+            
+                // --- Load attributes ---
+                async function loadAttributes() {
+                    try {
+                        const res = await fetch("/api/admin/attributes/public");
+                        if (!res.ok) throw new Error("Failed to load attributes");
+            
+                        allAttributes = await res.json();
+                        currentPage = 1;
+                        renderPage();
+                    } catch (err) {
+                        console.error("Error loading attributes:", err);
+                        attributeList.innerHTML = "<li>Failed to load attributes</li>";
+                    }
+                }
+            
+                function renderPage() {
                     attributeList.innerHTML = "";
-
-                    if (!attributes.length) {
-                        attributeList.innerHTML = `
-                            <li class="attribute-item gap14"><div class="body-text">No attributes found</div></li>
-                        `;
+            
+                    if (!allAttributes.length) {
+                        attributeList.innerHTML = "<li>No attributes found</li>";
+                        entriesInfo.textContent = "Showing 0 entries";
+                        pagination.innerHTML = "";
                         return;
                     }
-
-                    attributes.forEach(attr => {
+            
+                    const total = allAttributes.length;
+                    const totalPages = Math.ceil(total / pageSize);
+                    if (currentPage > totalPages) currentPage = totalPages;
+            
+                    const start = (currentPage - 1) * pageSize;
+                    const end = Math.min(currentPage * pageSize, total);
+                    const pageItems = allAttributes.slice(start, end);
+            
+                    // Render
+                    pageItems.forEach(attr => {
                         const li = document.createElement("li");
-                        li.className = "attribute-item gap14";
+                        li.className = "product-item gap14";
                         li.dataset.id = attr.id;
-
-                        const created = attr.created_at ? new Date(attr.created_at).toLocaleDateString() : "-";
-                        
-                        // Parse and display attribute values in a readable format
-                        let valuesText = "No values";
-                        let valuesArray = [];
-                        
-                        if (attr.attribute_values) {
-                            try {
-                                valuesArray = JSON.parse(attr.attribute_values);
-                                
-                                // Handle different attribute value structures
-                                if (Array.isArray(valuesArray)) {
-                                    valuesText = valuesArray.map(v => {
-                                        // Handle color attributes with color name and code
-                                        if (v.color && v.colorCode) {
-                                            return `${v.color} (${v.colorCode})`;
-                                        }
-                                        // Handle size attributes
-                                        else if (v.size) {
-                                            return v.size;
-                                        }
-                                        // Handle generic value attributes
-                                        else if (v.value) {
-                                            return v.value;
-                                        }
-                                        // Handle plain string values
-                                        else if (typeof v === 'string') {
-                                            return v;
-                                        }
-                                        // Fallback to first property value
-                                        else if (typeof v === 'object') {
-                                            const firstValue = Object.values(v)[0];
-                                            return firstValue || '';
-                                        }
-                                        return '';
-                                    }).filter(Boolean).join(', ');
-                                }
-                            } catch (e) {
-                                console.error(`Failed to parse JSON for attribute ID ${attr.id}:`, e);
-                                valuesText = "Invalid JSON data";
-                            }
-                        }
-
                         li.innerHTML = `
                             <div class="flex items-center justify-between gap20 flex-grow">
                                 <div class="name">
-                                    <span class="body-title-2">${attr.category_name || 'Uncategorized'}</span>
+                                    <a href="#" class="body-title-2">${attr.name}</a>
                                 </div>
-                                <div class="body-text">
-                                    <strong>${attr.attribute_name}:</strong> ${valuesText}
-                                </div>
-                                <div class="body-text">${created}</div>
+                                <div class="body-text">${attr.values?.join(", ") || "-"}</div>
+                                <div class="body-text">${new Date(attr.created_at).toLocaleDateString()}</div>
                                 <div class="list-icon-function">
-                                    <div class="item eye" title="View" onclick="viewAttribute(${attr.id})">
-                                        <i class="icon-eye"></i>
-                                    </div>
-                                    <div class="item edit" title="Edit" onclick="editAttribute(${attr.id})">
-                                        <i class="icon-edit-3"></i>
-                                    </div>
-                                    <div class="item trash" title="Delete" onclick="deleteAttribute(${attr.id})">
-                                        <i class="icon-trash-2"></i>
-                                    </div>
+                                    <div class="item eye"><i class="icon-eye"></i></div>
+                                    <div class="item edit"><i class="icon-edit-3"></i></div>
+                                    <div class="item trash"><i class="icon-trash-2"></i></div>
                                 </div>
                             </div>
                         `;
                         attributeList.appendChild(li);
                     });
-
-                } catch (err) {
-                    console.error("⚠️ Error fetching attributes:", err);
-                    attributeList.innerHTML = `
-                        <li class="attribute-item gap14"><div class="body-text">Error loading attributes</div></li>
-                    `;
+            
+                    // Info
+                    entriesInfo.textContent = `Showing ${start + 1}–${end} of ${total} entries`;
+            
+                    // Pagination UI
+                    pagination.innerHTML = "";
+            
+                    const prevLi = document.createElement("li");
+                    prevLi.innerHTML = `<a href="#"><i class="icon-chevron-left"></i></a>`;
+                    if (currentPage === 1) prevLi.classList.add("disabled");
+                    prevLi.addEventListener("click", e => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                            currentPage--;
+                            renderPage();
+                        }
+                    });
+                    pagination.appendChild(prevLi);
+            
+                    for (let i = 1; i <= totalPages; i++) {
+                        const li = document.createElement("li");
+                        li.innerHTML = `<a href="#">${i}</a>`;
+                        if (i === currentPage) li.classList.add("active");
+                        li.addEventListener("click", e => {
+                            e.preventDefault();
+                            currentPage = i;
+                            renderPage();
+                        });
+                        pagination.appendChild(li);
+                    }
+            
+                    const nextLi = document.createElement("li");
+                    nextLi.innerHTML = `<a href="#"><i class="icon-chevron-right"></i></a>`;
+                    if (currentPage === totalPages) nextLi.classList.add("disabled");
+                    nextLi.addEventListener("click", e => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) {
+                            currentPage++;
+                            renderPage();
+                        }
+                    });
+                    pagination.appendChild(nextLi);
                 }
-            }
+            
+                // --- Delete attribute ---
+                attributeList.addEventListener("click", async (e) => {
+                    const trashBtn = e.target.closest(".trash");
+                    if (!trashBtn) return;
+            
+                    const li = trashBtn.closest("li");
+                    const id = li.dataset.id;
+            
+                    if (!confirm("Are you sure you want to delete this attribute?")) return;
+            
+                    try {
+                        const res = await fetch(`/api/admin/attributes/${id}`, { method: "DELETE" });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || "Failed to delete attribute");
+            
+                        alert("✅ " + data.message);
+                        allAttributes = allAttributes.filter(a => a.id !== parseInt(id));
+                        renderPage();
+                    } catch (err) {
+                        console.error("Failed to delete attribute:", err);
+                        alert("❌ " + err.message);
+                    }
+                });
+            
+                // --- Initial load ---
+                loadAttributes();
+            });
+            </script>
+            
 
-            // View attribute details
-            window.viewAttribute = function(id) {
-                // Find the attribute in the list and show detailed view
-                const attrElement = document.querySelector(`li[data-id="${id}"]`);
-                if (attrElement) {
-                    const attributeName = attrElement.querySelector('.body-title-2').textContent;
-                    const attributeValues = attrElement.querySelector('.body-text').textContent;
-                    
-                    alert(`Attribute Details:\n\nCategory: ${attributeName}\nValues: ${attributeValues}`);
-                }
-            };
-
-            // Edit attribute (placeholder)
-            window.editAttribute = function(id) {
-                alert(`Edit functionality for attribute ID ${id} - To be implemented`);
-            };
-
-            // Delete attribute
-            window.deleteAttribute = async function(id) {
-                if (!confirm("Are you sure you want to delete this attribute?")) return;
-
+        <script>
+            async function loadAdminData() {
                 try {
-                    const res = await fetch(`/api/admin/attributes/${id}`, { method: "DELETE" });
+                    const res = await fetch("/api/admin/users/me");
+                    if (!res.ok) throw new Error("Failed to fetch admin");
                     const data = await res.json();
 
-                    if (res.ok && data.success) {
-                        document.querySelector(`li[data-id="${id}"]`)?.remove();
-                        alert("✅ " + (data.message || "Deleted"));
-                    } else {
-                        alert("❌ " + (data.error || data.message || "Delete failed"));
-                    }
+                    // Insert into DOM
+                    document.getElementById("admin-name").textContent = data.admin.name;
+                    document.getElementById("admin-role").textContent = data.admin.role;
                 } catch (err) {
-                    console.error("Delete failed:", err);
-                    alert("⚠️ Failed to delete attribute");
+                    console.error("Error loading admin:", err);
                 }
-            };
-
-            // Initial load
-            loadAttributes();
-        });
-    </script>
-
-    <script>
-        async function loadAdminData() {
-            try {
-                const res = await fetch("/api/admin/users/me");
-                if (!res.ok) throw new Error("Failed to fetch admin");
-                const data = await res.json();
-
-                // Insert into DOM
-                document.getElementById("admin-name").textContent = data.admin.name;
-                document.getElementById("admin-role").textContent = data.admin.role;
-            } catch (err) {
-                console.error("Error loading admin:", err);
             }
-        }
 
-        // Call without ID
-        loadAdminData();
-    </script>
+            // Call without ID
+            loadAdminData();
+        </script>
 
-<script src="/admin/js/jquery.min.js"></script>
-    <script src="/admin/js/bootstrap.min.js"></script>
-    <script src="/admin/js/bootstrap-select.min.js"></script>
-    <script src="/admin/js/zoom.js"></script>
-    <!-- <script src="/admin/js/switcher.js"></script> -->
-    <script src="/admin/js/theme-settings.js"></script>
-    <script src="/admin/js/main.js"></script>
+        <script src="/admin/js/jquery.min.js"></script>
+        <script src="/admin/js/bootstrap.min.js"></script>
+        <script src="/admin/js/bootstrap-select.min.js"></script>
+        <script src="/admin/js/zoom.js"></script>
+        <!-- <script src="/admin/js/switcher.js"></script> -->
+        <script src="/admin/js/theme-settings.js"></script>
+        <script src="/admin/js/main.js"></script>
 
 </body>
 
