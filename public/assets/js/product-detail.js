@@ -67,17 +67,13 @@ function mapApiProductToFrontend(product) {
     brand: product.brand,
     sold: product.sold,
     quantity: product.quantity,
-    quantityPurchase: product.quantityPurchase || 1, // default to 1
+    quantityPurchase: product.quantityPurchase || 1, 
     sizes: Array.isArray(product.sizes)
       ? product.sizes
-      : product.sizes
-      ? JSON.parse(product.sizes)
-      : [],
+      : safeJsonParse(product.sizes),
     variation: Array.isArray(product.variation)
       ? product.variation
-      : product.variations
-      ? JSON.parse(product.variations)
-      : [],
+      : safeJsonParse(product.variations), 
     thumbImage: Array.isArray(product.thumbImage)
       ? product.thumbImage
       : product.thumb_image
@@ -85,9 +81,7 @@ function mapApiProductToFrontend(product) {
       : [],
     images: Array.isArray(product.images)
       ? product.images
-      : product.gallery
-      ? JSON.parse(product.gallery)
-      : [],
+      : safeJsonParse(product.gallery), 
     description: product.description,
     action: product.action,
     slug: product.slug,
