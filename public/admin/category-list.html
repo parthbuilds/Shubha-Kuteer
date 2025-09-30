@@ -691,8 +691,8 @@
                                                     <img src="/admin/images/avatar/user-1.png" alt="">
                                                 </span>
                                                 <span class="flex flex-column">
-                                                <span id="admin-name" class="body-title mb-2">Loading...</span>
-                                                <span id="admin-role" class="text-tiny">Admin</span>
+                                                    <span id="admin-name" class="body-title mb-2">Loading...</span>
+                                                    <span id="admin-role" class="text-tiny">Admin</span>
                                                 </span>
                                             </span>
                                         </button>
@@ -838,152 +838,203 @@
 
                                     <div class="divider"></div>
                                     <div class="flex items-center justify-between flex-wrap gap10">
-                                        <div class="text-tiny">Showing 10 entries</div>
-                                        <ul class="wg-pagination">
-                                            <li>
-                                                <a href="#"><i class="icon-chevron-left"></i></a>
-                                            </li>
-                                            <li>
-                                                <a href="#">1</a>
-                                            </li>
-                                            <li class="active">
-                                                <a href="#">2</a>
-                                            </li>
-                                            <li>
-                                                <a href="#">3</a>
-                                            </li>
-                                            <li>
-                                                <a href="#"><i class="icon-chevron-right"></i></a>
-                                            </li>
-                                        </ul>
+                                        <div id="category-entries-info" class="text-tiny"></div>
+                                        <ul id="category-pagination" class="wg-pagination flex gap-2"></ul>
                                     </div>
+                                    <!-- /all-category -->
                                 </div>
-                                <!-- /all-category -->
+                                <!-- /main-content-wrap -->
                             </div>
                             <!-- /main-content-wrap -->
+                            <!-- bottom-page -->
+                            <div class="bottom-page">
+                                <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
+                                <i class="icon-heart"></i>
+                                <div class="body-text">by <a href="https://aptmedia.in">APT Media</a> All rights
+                                    reserved.</div>
+                            </div>
+                            <!-- /bottom-page -->
                         </div>
-                        <!-- /main-content-wrap -->
-                        <!-- bottom-page -->
-                        <div class="bottom-page">
-                            <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
-                            <i class="icon-heart"></i>
-                            <div class="body-text">by <a
-                                    href="https://aptmedia.in">APT Media</a> All rights
-                                reserved.</div>
-                        </div>
-                        <!-- /bottom-page -->
+                        <!-- /main-content -->
                     </div>
-                    <!-- /main-content -->
+                    <!-- /section-content-right -->
                 </div>
-                <!-- /section-content-right -->
+                <!-- /layout-wrap -->
             </div>
-            <!-- /layout-wrap -->
+            <!-- /#page -->
         </div>
-        <!-- /#page -->
-    </div>
-    <!-- /#wrapper -->
+        <!-- /#wrapper -->
 
-    <!-- Javascript -->
-    <ul id="category-list"></ul>
+        <!-- Javascript -->
+        <ul id="category-list"></ul>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const categoryList = document.getElementById("category-list");
-            if (!categoryList) return;
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const categoryList = document.getElementById("category-list");
+                const entriesInfo = document.getElementById("category-entries-info");
+                const pagination = document.getElementById("category-pagination");
 
-            // --- Load all categories ---
-            async function loadCategories() {
-                try {
-                    const res = await fetch("/api/admin/categories/public");
-                    if (!res.ok) throw new Error("Failed to load categories");
+                let allCategories = [];
+                let currentPage = 1;
+                let pageSize = 10; // fixed for now (can add selector if needed)
 
-                    const categories = await res.json();
+                if (!categoryList) return;
+
+                // --- Load all categories ---
+                async function loadCategories() {
+                    try {
+                        const res = await fetch("/api/admin/categories/public");
+                        if (!res.ok) throw new Error("Failed to load categories");
+
+                        allCategories = await res.json();
+                        currentPage = 1;
+                        renderPage();
+                    } catch (err) {
+                        console.error("Error loading categories:", err);
+                        categoryList.innerHTML = "<li>Failed to load categories</li>";
+                    }
+                }
+
+                function renderPage() {
                     categoryList.innerHTML = "";
 
-                    categories.forEach(cat => {
+                    if (!allCategories.length) {
+                        categoryList.innerHTML = "<li>No categories found</li>";
+                        entriesInfo.textContent = "Showing 0 entries";
+                        pagination.innerHTML = "";
+                        return;
+                    }
+
+                    const total = allCategories.length;
+                    const totalPages = Math.ceil(total / pageSize);
+                    if (currentPage > totalPages) currentPage = totalPages;
+
+                    const start = (currentPage - 1) * pageSize;
+                    const end = Math.min(currentPage * pageSize, total);
+                    const pageItems = allCategories.slice(start, end);
+
+                    // Render
+                    pageItems.forEach(cat => {
                         const li = document.createElement("li");
                         li.className = "product-item gap14";
-                        li.dataset.id = cat.id; // store category id in DOM element
+                        li.dataset.id = cat.id;
                         li.innerHTML = `
-                    <div class="flex items-center justify-between gap20 flex-grow">
-                        <div class="name">
-                            <a href="/admin/product-list.html" class="body-title-2">${cat.name}</a>
-                        </div>
-                        <div class="body-text">${cat.quantity || 0}</div>
-                        <div class="body-text">${cat.sale || 0}</div>
-                        <div class="body-text">${new Date(cat.created_at).toLocaleDateString()}</div>
-                        <div class="list-icon-function">
-                            <div class="item eye"><i class="icon-eye"></i></div>
-                            <div class="item edit"><i class="icon-edit-3"></i></div>
-                            <div class="item trash"><i class="icon-trash-2"></i></div>
-                        </div>
-                    </div>
-                `;
+                            <div class="flex items-center justify-between gap20 flex-grow">
+                                <div class="name">
+                                    <a href="/admin/product-list.html" class="body-title-2">${cat.name}</a>
+                                </div>
+                                <div class="body-text">${cat.quantity || 0}</div>
+                                <div class="body-text">${cat.sale || 0}</div>
+                                <div class="body-text">${new Date(cat.created_at).toLocaleDateString()}</div>
+                                <div class="list-icon-function">
+                                    <div class="item eye"><i class="icon-eye"></i></div>
+                                    <div class="item edit"><i class="icon-edit-3"></i></div>
+                                    <div class="item trash"><i class="icon-trash-2"></i></div>
+                                </div>
+                            </div>
+                        `;
                         categoryList.appendChild(li);
                     });
+
+                    // Info
+                    entriesInfo.textContent = `Showing ${start + 1}–${end} of ${total} entries`;
+
+                    // Pagination UI
+                    pagination.innerHTML = "";
+
+                    const prevLi = document.createElement("li");
+                    prevLi.innerHTML = `<a href="#"><i class="icon-chevron-left"></i></a>`;
+                    if (currentPage === 1) prevLi.classList.add("disabled");
+                    prevLi.addEventListener("click", e => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                            currentPage--;
+                            renderPage();
+                        }
+                    });
+                    pagination.appendChild(prevLi);
+
+                    for (let i = 1; i <= totalPages; i++) {
+                        const li = document.createElement("li");
+                        li.innerHTML = `<a href="#">${i}</a>`;
+                        if (i === currentPage) li.classList.add("active");
+                        li.addEventListener("click", e => {
+                            e.preventDefault();
+                            currentPage = i;
+                            renderPage();
+                        });
+                        pagination.appendChild(li);
+                    }
+
+                    const nextLi = document.createElement("li");
+                    nextLi.innerHTML = `<a href="#"><i class="icon-chevron-right"></i></a>`;
+                    if (currentPage === totalPages) nextLi.classList.add("disabled");
+                    nextLi.addEventListener("click", e => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) {
+                            currentPage++;
+                            renderPage();
+                        }
+                    });
+                    pagination.appendChild(nextLi);
+                }
+
+                // --- Delete category ---
+                categoryList.addEventListener("click", async (e) => {
+                    const trashBtn = e.target.closest(".trash");
+                    if (!trashBtn) return;
+
+                    const li = trashBtn.closest("li");
+                    const id = li.dataset.id;
+
+                    if (!confirm("Are you sure you want to delete this category?")) return;
+
+                    try {
+                        const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || "Failed to delete category");
+
+                        alert("✅ " + data.message);
+                        allCategories = allCategories.filter(c => c.id !== parseInt(id));
+                        renderPage();
+                    } catch (err) {
+                        console.error("Failed to delete category:", err);
+                        alert("❌ " + err.message);
+                    }
+                });
+
+                // --- Initial load ---
+                loadCategories();
+            });
+        </script>
+
+        <!-- <script src="/admin/js/function/showCategories.js"></script> -->
+        <script>
+            async function loadAdminData() {
+                try {
+                    const res = await fetch("/api/admin/users/me");
+                    if (!res.ok) throw new Error("Failed to fetch admin");
+                    const data = await res.json();
+
+                    // Insert into DOM
+                    document.getElementById("admin-name").textContent = data.admin.name;
+                    document.getElementById("admin-role").textContent = data.admin.role;
                 } catch (err) {
-                    console.error("Error loading categories:", err);
-                    categoryList.innerHTML = "<li>Failed to load categories</li>";
+                    console.error("Error loading admin:", err);
                 }
             }
 
-            // --- Delete category ---
-            categoryList.addEventListener("click", async (e) => {
-                const trashBtn = e.target.closest(".trash");
-                if (!trashBtn) return;
+            // Call without ID
+            loadAdminData();
+        </script>
 
-                const li = trashBtn.closest("li");
-                const id = li.dataset.id;
-
-                if (!confirm("Are you sure you want to delete this category?")) return;
-
-                try {
-                    const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.message || "Failed to delete category");
-
-                    alert("✅ " + data.message);
-                    li.remove();
-                } catch (err) {
-                    console.error("Failed to delete category:", err);
-                    alert("❌ " + err.message);
-                }
-            });
-
-            // --- Initial load ---
-            loadCategories();
-        });
-    </script>
-
-
-
-    <!-- <script src="/admin/js/function/showCategories.js"></script> -->
-    <script>
-async function loadAdminData() {
-    try {
-        const res = await fetch("/api/admin/users/me");
-        if (!res.ok) throw new Error("Failed to fetch admin");
-        const data = await res.json();
-
-        // Insert into DOM
-        document.getElementById("admin-name").textContent = data.admin.name;
-        document.getElementById("admin-role").textContent = data.admin.role;
-    } catch (err) {
-        console.error("Error loading admin:", err);
-    }
-}
-
-// Call without ID
-loadAdminData();
-</script>
-
-<script src="/admin/js/jquery.min.js"></script>
-    <script src="/admin/js/bootstrap.min.js"></script>
-    <script src="/admin/js/bootstrap-select.min.js"></script>
-    <script src="/admin/js/zoom.js"></script>
-    <!-- <script src="/admin/js/switcher.js"></script> -->
-    <script src="/admin/js/theme-settings.js"></script>
-    <script src="/admin/js/main.js"></script>
+        <script src="/admin/js/jquery.min.js"></script>
+        <script src="/admin/js/bootstrap.min.js"></script>
+        <script src="/admin/js/bootstrap-select.min.js"></script>
+        <script src="/admin/js/zoom.js"></script>
+        <!-- <script src="/admin/js/switcher.js"></script> -->
+        <script src="/admin/js/theme-settings.js"></script>
+        <script src="/admin/js/main.js"></script>
 
 </body>
 
