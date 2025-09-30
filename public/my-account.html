@@ -3005,16 +3005,15 @@
             </div>
         </div>
     </div>
-    <script>// Frontend: Add this script to my-account.html to fetch and display data
-
+    <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            const token = localStorage.getItem('userToken'); // Assume token stored after login
+            const token = localStorage.getItem('userToken');
             if (!token) {
-                window.location.href = '/login.html'; // Redirect if not logged in
+                alert('Please log in to access your account.');
+                window.location.href = '/login.html';
                 return;
             }
         
-            // Fetch user profile
             try {
                 const response = await fetch('/api/user/profile', {
                     method: 'GET',
@@ -3023,34 +3022,31 @@
                         'Content-Type': 'application/json'
                     }
                 });
-        
+                const data = await response.json();
                 if (!response.ok) {
-                    if (response.status === 401) {
-                        localStorage.removeItem('userToken');
-                        window.location.href = '/login.html';
-                    }
-                    throw new Error('Failed to fetch profile');
+                    throw new Error(data.message || 'Failed to fetch profile');
                 }
         
-                const { user } = await response.json();
-        
-                // Populate fields
+                const { user } = data;
+                // Populate fields in the account details form
                 document.querySelector('input[placeholder="First Name *"]').value = user.first_name || '';
                 document.querySelector('input[placeholder="Last Name *"]').value = user.last_name || '';
                 document.querySelector('input[placeholder="Phone Number *"]').value = user.phone_number || '';
                 document.querySelector('input[placeholder="Email Address *"]').value = user.email || '';
-                document.querySelector('select').value = user.gender || ''; // Gender select
-                document.querySelector('input[placeholder="Day of Birth *"]').value = user.dob || ''; // Assuming date input
-        
+                const genderSelect = document.querySelector('select'); // Assuming gender is a <select>
+                if (genderSelect) {
+                    genderSelect.value = user.gender || '';
+                }
+                document.querySelector('input[placeholder="Day of Birth *"]').value = user.dob || '';
             } catch (error) {
                 console.error('Error fetching profile:', error);
-                alert('Session expired. Please login again.');
+                alert('Session expired or error fetching profile. Please log in again.');
                 localStorage.removeItem('userToken');
                 window.location.href = '/login.html';
             }
         
-            // Handle profile update form submit
-            const profileForm = document.querySelector('.account-details form'); // Adjust selector if needed
+            // Handle profile update
+            const profileForm = document.querySelector('form:not(.change-password form)'); // Adjust selector if needed
             if (profileForm) {
                 profileForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
@@ -3073,14 +3069,12 @@
                             },
                             body: JSON.stringify(data)
                         });
-        
                         const result = await response.json();
                         if (!response.ok) {
                             throw new Error(result.message || 'Update failed');
                         }
                         alert(result.message);
-                        // Reload profile
-                        location.reload();
+                        window.location.reload();
                     } catch (error) {
                         console.error('Update error:', error);
                         alert(error.message);
@@ -3088,8 +3082,8 @@
                 });
             }
         
-            // Handle change password
-            const passwordForm = document.querySelector('.change-password form'); // Adjust selector
+            // Handle password change
+            const passwordForm = document.querySelector('.change-password form');
             if (passwordForm) {
                 passwordForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
@@ -3109,7 +3103,6 @@
                             },
                             body: JSON.stringify(data)
                         });
-        
                         const result = await response.json();
                         if (!response.ok) {
                             throw new Error(result.message || 'Password change failed');
@@ -3122,7 +3115,8 @@
                     }
                 });
             }
-        });</script>
+        });
+        </script>
     <script src="./assets/js/login.js"></script>
     <script src="./assets/js/phosphor-icons.js"></script>
     <script src="./assets/js/swiper-bundle.min.js"></script>
