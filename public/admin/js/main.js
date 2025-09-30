@@ -299,3 +299,88 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 });
+
+
+//pagination 
+
+function setupPagination(data, pageSize = 10) {
+  const container = document.getElementById("data-container");
+  const pagination = document.getElementById("pagination");
+  const info = document.getElementById("entries-info");
+
+  let currentPage = 1;
+  const totalEntries = data.length;
+  const totalPages = Math.ceil(totalEntries / pageSize);
+
+  function renderData() {
+    container.innerHTML = "";
+
+    const start = (currentPage - 1) * pageSize;
+    const end = Math.min(currentPage * pageSize, totalEntries);
+    const items = data.slice(start, end);
+
+    items.forEach((item) => {
+      const div = document.createElement("div");
+      div.textContent = item;
+      container.appendChild(div);
+    });
+
+    info.textContent = `Showing ${start + 1}–${end} of ${totalEntries} entries`;
+  }
+
+  function renderPagination() {
+    pagination.innerHTML = "";
+
+    // Prev button
+    const prevLi = document.createElement("li");
+    prevLi.innerHTML = `<a href="#"><i class="icon-chevron-left"></i></a>`;
+    prevLi.classList.add("prev");
+    if (currentPage === 1) prevLi.classList.add("disabled");
+    prevLi.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (currentPage > 1) {
+        currentPage--;
+        update();
+      }
+    });
+    pagination.appendChild(prevLi);
+
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+      const li = document.createElement("li");
+      li.innerHTML = `<a href="#">${i}</a>`;
+      if (i === currentPage) li.classList.add("active");
+      li.addEventListener("click", (e) => {
+        e.preventDefault();
+        currentPage = i;
+        update();
+      });
+      pagination.appendChild(li);
+    }
+
+    // Next button
+    const nextLi = document.createElement("li");
+    nextLi.innerHTML = `<a href="#"><i class="icon-chevron-right"></i></a>`;
+    nextLi.classList.add("next");
+    if (currentPage === totalPages) nextLi.classList.add("disabled");
+    nextLi.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (currentPage < totalPages) {
+        currentPage++;
+        update();
+      }
+    });
+    pagination.appendChild(nextLi);
+  }
+
+  function update() {
+    renderData();
+    renderPagination();
+  }
+
+  update(); // initial render
+}
+
+// Example usage:
+const sampleData = Array.from({ length: 87 }, (_, i) => `Entry ${i + 1}`);
+setupPagination(sampleData, 10);

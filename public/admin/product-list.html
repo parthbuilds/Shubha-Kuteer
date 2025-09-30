@@ -442,7 +442,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text" id="adminName">Admin</a>
+                                                                <a href="/admin/product-list.html" class="body-text"
+                                                                    id="adminName">Admin</a>
                                                             </div>
                                                         </div>
                                                     </li>
@@ -739,8 +740,8 @@
                                                     <img src="/admin/images/avatar/user-1.png" alt="">
                                                 </span>
                                                 <span class="flex flex-column">
-                                                <span id="admin-name" class="body-title mb-2">Loading...</span>
-                                                <span id="admin-role" class="text-tiny">Admin</span>
+                                                    <span id="admin-name" class="body-title mb-2">Loading...</span>
+                                                    <span id="admin-role" class="text-tiny">Admin</span>
                                                 </span>
                                             </span>
                                         </button>
@@ -897,25 +898,10 @@
                                         </ul>
                                     </div>
                                     <div class="divider"></div>
+                                    <div id="data-container" class="mb-4"></div>
                                     <div class="flex items-center justify-between flex-wrap gap10">
-                                        <div class="text-tiny">Showing 10 entries</div>
-                                        <ul class="wg-pagination">
-                                            <li>
-                                                <a href="#"><i class="icon-chevron-left"></i></a>
-                                            </li>
-                                            <li>
-                                                <a href="#">1</a>
-                                            </li>
-                                            <li class="active">
-                                                <a href="#">2</a>
-                                            </li>
-                                            <li>
-                                                <a href="#">3</a>
-                                            </li>
-                                            <li>
-                                                <a href="#"><i class="icon-chevron-right"></i></a>
-                                            </li>
-                                        </ul>
+                                        <div id="entries-info" class="text-tiny"></div>
+                                        <ul id="pagination" class="wg-pagination flex gap-2"></ul>
                                     </div>
                                 </div>
                                 <!-- /product-list -->
@@ -927,8 +913,7 @@
                         <div class="bottom-page">
                             <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
                             <i class="icon-heart"></i>
-                            <div class="body-text">by <a
-                                    href="https://aptmedia.in">APT Media</a> All rights
+                            <div class="body-text">by <a href="https://aptmedia.in">APT Media</a> All rights
                                 reserved.</div>
                         </div>
                         <!-- /bottom-page -->
@@ -1034,25 +1019,25 @@
     </script>
 
     <script>
-async function loadAdminData() {
-    try {
-        const res = await fetch("/api/admin/users/me");
-        if (!res.ok) throw new Error("Failed to fetch admin");
-        const data = await res.json();
+        async function loadAdminData() {
+            try {
+                const res = await fetch("/api/admin/users/me");
+                if (!res.ok) throw new Error("Failed to fetch admin");
+                const data = await res.json();
 
-        // Insert into DOM
-        document.getElementById("admin-name").textContent = data.admin.name;
-        document.getElementById("admin-role").textContent = data.admin.role;
-    } catch (err) {
-        console.error("Error loading admin:", err);
-    }
-}
+                // Insert into DOM
+                document.getElementById("admin-name").textContent = data.admin.name;
+                document.getElementById("admin-role").textContent = data.admin.role;
+            } catch (err) {
+                console.error("Error loading admin:", err);
+            }
+        }
 
-// Call without ID
-loadAdminData();
-</script>
+        // Call without ID
+        loadAdminData();
+    </script>
 
-<script src="/admin/js/jquery.min.js"></script>
+    <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>
     <script src="/admin/js/zoom.js"></script>
