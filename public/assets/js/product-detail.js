@@ -751,11 +751,6 @@ function renderRelatedProductsSlider(allProducts, currentProduct) {
     // Add event listeners to the new 'Add to Cart' buttons, etc. (Not implemented here, assumed elsewhere)
 }
 
-/**
- * Generates the HTML string for a single product slider item.
- * @param {Object} product - The product data object.
- * @returns {string} The HTML string for the swiper slide.
- */
 function generateProductSlideHTML(product) {
     // Calculate sale percentage if applicable
     const salePercentage = product.origin_price > product.price 
@@ -841,3 +836,5 @@ function generateProductSlideHTML(product) {
         </div>
     `;
 }
+
+renderRelatedProductsSlider(allProducts, productData);
