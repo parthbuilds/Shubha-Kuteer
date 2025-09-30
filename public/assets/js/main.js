@@ -3714,67 +3714,130 @@ if (paymentCheckbox) {
 //     }
 // }
 
-// Ensure the DOM is fully loaded before running the script.
+// // Ensure the DOM is fully loaded before running the script.
+// document.addEventListener("DOMContentLoaded", () => {
+//   // Select all elements that are part of the FAQs section.
+//   const menuTab = document.querySelector(".menu-tab");
+//   const listQuestion = document.querySelector(".list-question");
+//   const tabItems = document.querySelectorAll(".tab-item");
+//   const tabQuestions = document.querySelectorAll(".tab-question");
+//   const questionItems = document.querySelectorAll(".question-item");
+
+//   // Only proceed with the FAQs logic if the required elements are found on the page.
+//   if (
+//     menuTab &&
+//     listQuestion &&
+//     tabItems.length > 0 &&
+//     tabQuestions.length > 0
+//   ) {
+//     // Loop through each tab item.
+//     tabItems.forEach((tabItem) => {
+//       // Loop through each set of tab questions.
+//       tabQuestions.forEach((tabQuestion) => {
+//         // Find the currently active menu tab.
+//         const activeMenuTab = menuTab.querySelector(".active");
+
+//         // If an active tab is found and its data attribute matches the current tab question, activate the tab question.
+//         if (
+//           activeMenuTab &&
+//           activeMenuTab.getAttribute("data-item") ===
+//             tabQuestion.getAttribute("data-item")
+//         ) {
+//           tabQuestion.classList.add("active");
+//         }
+
+//         // Add a click event listener to each tab item.
+//         tabItem.addEventListener("click", () => {
+//           // If the tab item's data attribute matches the tab question's, handle the UI change.
+//           if (
+//             tabItem.getAttribute("data-item") ===
+//             tabQuestion.getAttribute("data-item")
+//           ) {
+//             // Find the currently active question list and remove its active class.
+//             const currentActiveList = listQuestion.querySelector(".active");
+//             if (currentActiveList) {
+//               currentActiveList.classList.remove("active");
+//             }
+//             // Add the 'active' class to the new tab question.
+//             tabQuestion.classList.add("active");
+//           }
+//         });
+//       });
+//     });
+//   }
+
+//   // Only proceed with the question items logic if they are found on the page.
+//   if (questionItems && questionItems.length > 0) {
+//     // Loop through each question item.
+//     questionItems.forEach((item, index) => {
+//       // Add a click event listener to toggle the 'open' class.
+//       item.addEventListener("click", () => {
+//         item.classList.toggle("open");
+//         removeOpen(index);
+//       });
+//     });
+//   }
+// });
+
+
+function handleProductFiltering(filterType) {
+  console.log(`Filtering products for type: ${filterType}`);
+  // Place your database fetching and product rendering logic here.
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  // Select all elements that are part of the FAQs section.
-  const menuTab = document.querySelector(".menu-tab");
-  const listQuestion = document.querySelector(".list-question");
-  const tabItems = document.querySelectorAll(".tab-item");
-  const tabQuestions = document.querySelectorAll(".tab-question");
-  const questionItems = document.querySelectorAll(".question-item");
+const menuTab = document.querySelector(".filter-type.menu-tab");
+const listQuestions = document.querySelectorAll(".list-question");
+const questionItems = document.querySelectorAll(".question-item");
 
-  // Only proceed with the FAQs logic if the required elements are found on the page.
-  if (
-    menuTab &&
-    listQuestion &&
-    tabItems.length > 0 &&
-    tabQuestions.length > 0
-  ) {
-    // Loop through each tab item.
+// Tab Filter Logic
+if (menuTab) {
+    const tabItems = menuTab.querySelectorAll(".item.tab-item");
+
     tabItems.forEach((tabItem) => {
-      // Loop through each set of tab questions.
-      tabQuestions.forEach((tabQuestion) => {
-        // Find the currently active menu tab.
-        const activeMenuTab = menuTab.querySelector(".active");
+      tabItem.addEventListener("click", () => {
+        const filterValue = tabItem.getAttribute("data-item"); 
 
-        // If an active tab is found and its data attribute matches the current tab question, activate the tab question.
-        if (
-          activeMenuTab &&
-          activeMenuTab.getAttribute("data-item") ===
-            tabQuestion.getAttribute("data-item")
-        ) {
-          tabQuestion.classList.add("active");
-        }
+        // 1. Update active state on filter tabs
+        tabItems.forEach(item => item.classList.remove("active"));
+        tabItem.classList.add("active");
 
-        // Add a click event listener to each tab item.
-        tabItem.addEventListener("click", () => {
-          // If the tab item's data attribute matches the tab question's, handle the UI change.
-          if (
-            tabItem.getAttribute("data-item") ===
-            tabQuestion.getAttribute("data-item")
-          ) {
-            // Find the currently active question list and remove its active class.
-            const currentActiveList = listQuestion.querySelector(".active");
-            if (currentActiveList) {
-              currentActiveList.classList.remove("active");
-            }
-            // Add the 'active' class to the new tab question.
-            tabQuestion.classList.add("active");
-          }
+        // 2. Update active content area (if applicable)
+        listQuestions.forEach(listQuestion => {
+            const tabQuestions = listQuestion.querySelectorAll(".tab-question");
+            tabQuestions.forEach(tabQuestion => {
+                const currentActiveList = tabQuestion.parentElement.querySelector(".active");
+                if (currentActiveList) {
+                    currentActiveList.classList.remove("active");
+                }
+                
+                if (filterValue === tabQuestion.getAttribute("data-item")) {
+                    tabQuestion.classList.add("active");
+                }
+            });
         });
-      });
-    });
-  }
 
-  // Only proceed with the question items logic if they are found on the page.
-  if (questionItems && questionItems.length > 0) {
-    // Loop through each question item.
-    questionItems.forEach((item, index) => {
-      // Add a click event listener to toggle the 'open' class.
-      item.addEventListener("click", () => {
-        item.classList.toggle("open");
-        removeOpen(index);
+        // 3. Trigger product filtering
+        handleProductFiltering(filterValue); 
       });
     });
-  }
+}
+
+// FAQ/Question Item Logic
+if (questionItems && questionItems.length > 0) {
+  const removeOpen = (index) => {
+    questionItems.forEach((item, i) => {
+      if (i !== index) {
+        item.classList.remove("open");
+      }
+    });
+  };
+  
+  questionItems.forEach((item, index) => {
+    item.addEventListener("click", () => {
+      item.classList.toggle("open");
+      removeOpen(index);
+    });
+  });
+}
 });
