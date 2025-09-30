@@ -662,7 +662,9 @@
                                         <a href="register.html" class="text-black pl-1 hover:underline">Register</a>
                                     </div>
 
-                                    <div class="pt-3"><a href="my-account.html" class="button-main bg-white text-black border border-black w-full text-center">Dashboard</a></div>
+                                    <div class="pt-3"><a href="my-account.html"
+                                            class="button-main bg-white text-black border border-black w-full text-center">Dashboard</a>
+                                    </div>
 
                                     <div class="bottom mt-4 pt-4 border-t border-line"></div>
                                     <a href="#!" class="body1 hover:underline">Support</a>
@@ -3012,7 +3014,29 @@
                 window.location.href = '/login.html';
                 return;
             }
-        
+
+            // Check if user is logged in
+            try {
+                const authResponse = await fetch('/api/auth/check', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const authData = await authResponse.json();
+                if (!authResponse.ok) {
+                    throw new Error(authData.message || 'Session invalid');
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+                alert('Session expired. Please log in again.');
+                localStorage.removeItem('userToken');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Fetch and display profile data
             try {
                 const response = await fetch('/api/user/profile', {
                     method: 'GET',
@@ -3025,27 +3049,73 @@
                 if (!response.ok) {
                     throw new Error(data.message || 'Failed to fetch profile');
                 }
-        
+
                 const { user } = data;
-                // Populate fields in the account details form
+                // Populate crucial fields
                 document.querySelector('input[placeholder="First Name *"]').value = user.first_name || '';
                 document.querySelector('input[placeholder="Last Name *"]').value = user.last_name || '';
                 document.querySelector('input[placeholder="Phone Number *"]').value = user.phone_number || '';
                 document.querySelector('input[placeholder="Email Address *"]').value = user.email || '';
-                const genderSelect = document.querySelector('select'); // Assuming gender is a <select>
-                if (genderSelect) {
-                    genderSelect.value = user.gender || '';
-                }
                 document.querySelector('input[placeholder="Day of Birth *"]').value = user.dob || '';
             } catch (error) {
                 console.error('Error fetching profile:', error);
-                alert('Session expired or error fetching profile. Please log in again.');
-                localStorage.removeItem('userToken');
-                window.location.href = '/login.html';
+                alert('Error fetching profile. Please try again.');
             }
-        
+
+            // Fetch and display order history
+            try {
+                const ordersResponse = await fetch('/api/orders', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const ordersData = await ordersResponse.json();
+                if (ordersResponse.ok && ordersData.orders) {
+                    const orderHistoryDiv = document.createElement('div');
+                    orderHistoryDiv.innerHTML = '<h3>Order History</h3>';
+                    if (ordersData.orders.length === 0) {
+                        orderHistoryDiv.innerHTML += '<p>No orders found.</p>';
+                    } else {
+                        const ul = document.createElement('ul');
+                        ordersData.orders.forEach(order => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `
+                                Order #${order.id} - ${order.amount} INR, Status: ${order.status}<br>
+                                Address: ${order.apartment || ''}, ${order.city || ''}, ${order.postal_code || ''}<br>
+                                Placed: ${new Date(order.created_at).toLocaleDateString()}
+                            `;
+                            ul.appendChild(li);
+                        });
+                        orderHistoryDiv.appendChild(ul);
+                    }
+                    // Append to account details section (adjust selector as needed)
+                    document.querySelector('.account-details').appendChild(orderHistoryDiv);
+                }
+            } catch (error) {
+                console.error('Error fetching orders:', error);
+            }
+
+            // Display cart history (assuming stored in localStorage)
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const cartHistoryDiv = document.createElement('div');
+            cartHistoryDiv.innerHTML = '<h3>Cart History</h3>';
+            if (cart.length === 0) {
+                cartHistoryDiv.innerHTML += '<p>No items in cart history.</p>';
+            } else {
+                const ul = document.createElement('ul');
+                cart.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = `${item.name || 'Unknown Item'} - Quantity: ${item.quantity || 1}`;
+                    ul.appendChild(li);
+                });
+                cartHistoryDiv.appendChild(ul);
+            }
+            document.querySelector('.account-details').appendChild(cartHistoryDiv);
+
             // Handle profile update
-            const profileForm = document.querySelector('form:not(.change-password form)'); // Adjust selector if needed
+            const profileForm = document.querySelector('form:not(.change-password form)');
             if (profileForm) {
                 profileForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
@@ -3055,10 +3125,9 @@
                         last_name: formData.get('last_name'),
                         phone_number: formData.get('phone_number'),
                         email: formData.get('email'),
-                        gender: formData.get('gender'),
                         dob: formData.get('dob')
                     };
-        
+
                     try {
                         const response = await fetch('/api/user/profile', {
                             method: 'PUT',
@@ -3080,7 +3149,7 @@
                     }
                 });
             }
-        
+
             // Handle password change
             const passwordForm = document.querySelector('.change-password form');
             if (passwordForm) {
@@ -3092,7 +3161,7 @@
                         new_password: formData.get('new_password'),
                         confirm_new_password: formData.get('confirm_new_password')
                     };
-        
+
                     try {
                         const response = await fetch('/api/user/password', {
                             method: 'PUT',
@@ -3115,7 +3184,7 @@
                 });
             }
         });
-        </script>
+    </script>
     <script src="./assets/js/login.js"></script>
     <script src="./assets/js/phosphor-icons.js"></script>
     <script src="./assets/js/swiper-bundle.min.js"></script>

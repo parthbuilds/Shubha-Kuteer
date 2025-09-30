@@ -240,9 +240,9 @@ export default async function handler(req, res) {
                         const {
                             name, category, type, price, origin_price, quantity, sold, rate,
                             brand, description, sizes, variations, gallery, main_image,
-                            is_new, on_sale, slug ,action
+                            is_new, on_sale, slug, action
                         } = req.body;
-        
+
                         // Validate required fields
                         if (!name || !category || !price) {
                             return res.status(400).json({
@@ -250,7 +250,7 @@ export default async function handler(req, res) {
                                 error: 'Missing required fields: name, category, price'
                             });
                         }
-        
+
                         // --- Parsing logic (adjusted for schema types and frontend output) ---
                         let parsedVariations = {}; // Store as an object for key-value pairs
                         if (variations) {
@@ -266,7 +266,7 @@ export default async function handler(req, res) {
                                 // Even if parsing fails, we'll proceed with an empty object for variations
                             }
                         }
-        
+
                         let parsedSizes = [];
                         if (sizes) {
                             try {
@@ -279,7 +279,7 @@ export default async function handler(req, res) {
                                 parsedSizes = [];
                             }
                         }
-        
+
                         let parsedGallery = [];
                         if (gallery) {
                             try {
@@ -293,13 +293,13 @@ export default async function handler(req, res) {
                             }
                         }
                         // --- End of parsing logic ---
-        
+
                         // Generate slug if not provided
                         const productSlug = slug && slug.trim() !== '' ? slug : name.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
-        
+
                         // Determine thumb_image (first image from gallery, then main_image, else null)
                         const finalThumbImage = parsedGallery.length > 0 ? parsedGallery[0] : (main_image || null);
-        
+
                         // Prepare the SQL query and values
                         const sql = `
                             INSERT INTO products 
@@ -329,7 +329,7 @@ export default async function handler(req, res) {
                             JSON.stringify(parsedVariations), // Store variations as JSON string
                             action || 'add to cart' // Use provided action or default
                         ];
-        
+
                         // Log the data before insertion for debugging
                         console.log('Product data to insert:', {
                             name, slug: productSlug, price: values[2], origin_price: values[3],
@@ -339,10 +339,10 @@ export default async function handler(req, res) {
                             main_image: values[13], thumb_image: values[14], gallery: values[15],
                             sizes: values[16], variations: values[17], action: values[18]
                         });
-        
+
                         // Execute the insert query
                         const [result] = await pool.default.query(sql, values);
-        
+
                         return res.status(201).json({
                             success: true,
                             message: 'Product added successfully!',
@@ -356,7 +356,7 @@ export default async function handler(req, res) {
                                 price: parseFloat(price)
                             }
                         });
-        
+
                     } catch (error) {
                         console.error('Product creation error:', error);
                         return res.status(500).json({
@@ -446,27 +446,27 @@ export default async function handler(req, res) {
                 // POST new attribute
                 if (pathname === '/api/admin/attributes' && req.method === 'POST') {
                     const { category_id, attribute_name, attribute_values } = req.body;
-            
+
                     // Validate that all required fields are present
                     if (!category_id || !attribute_name || !attribute_values) {
                         return res.status(400).json({
                             error: "Missing required fields: category_id, attribute_name, and attribute_values",
                         });
                     }
-            
+
                     // Validate that attribute_values is a non-empty array
                     if (!Array.isArray(attribute_values) || attribute_values.length === 0) {
                         return res.status(400).json({
                             error: "attribute_values must be a non-empty array of objects.",
                         });
                     }
-            
+
                     const [result] = await pool.default.query(
                         `INSERT INTO attributes (category_id, attribute_name, attribute_values) 
                         VALUES (?, ?, ?)`,
                         [category_id, attribute_name, JSON.stringify(attribute_values)]
                     );
-            
+
                     return res.status(201).json({
                         success: true,
                         id: result.insertId,
@@ -487,7 +487,7 @@ export default async function handler(req, res) {
                 return res.status(500).json({ message: "Attribute operation failed", error: error.message });
             }
         }
-        
+
 
 
         // Admin Users routes (for managing admins)
@@ -653,9 +653,9 @@ export default async function handler(req, res) {
 
                 // POST /api/orders/create-order
                 if (pathname === '/api/orders/create-order' && req.method === 'POST') {
-                    const { 
-                        first_name, last_name, email, phone_number, 
-                        city, apartment, postal_code, note, amount, products 
+                    const {
+                        first_name, last_name, email, phone_number,
+                        city, apartment, postal_code, note, amount, products
                     } = req.body;
 
                     if (!amount || !first_name || !email) {
@@ -768,7 +768,7 @@ export default async function handler(req, res) {
                 // GET /api/orders/:id - Get specific order details
                 if (pathname.startsWith('/api/orders/') && req.method === 'GET') {
                     const orderId = pathname.split('/')[3];
-                    
+
                     try {
                         const [orders] = await pool.default.query(`
                             SELECT 
@@ -806,7 +806,7 @@ export default async function handler(req, res) {
                 // DELETE /api/orders/:id - Delete order
                 if (pathname.startsWith('/api/orders/') && req.method === 'DELETE') {
                     const orderId = pathname.split('/')[3];
-                    
+
                     try {
                         const [result] = await pool.default.query(`
                             DELETE FROM orders WHERE id = ?
@@ -850,7 +850,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // User Profile Routes (moved here inside the try block)
+        // User Profile Routes
         if (pathname.startsWith('/api/user')) {
             const jwt = await import("jsonwebtoken");
             const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
@@ -878,15 +878,25 @@ export default async function handler(req, res) {
             if (pathname === '/api/user/profile' && req.method === 'GET') {
                 try {
                     const [rows] = await pool.default.query(
-                        "SELECT id, first_name, last_name, email, phone_number, gender, dob FROM users WHERE id = ?",
+                        "SELECT id, name, email FROM users WHERE id = ?",
                         [userId]
                     );
                     if (rows.length === 0) {
                         return res.status(404).json({ message: "User not found ❌" });
                     }
+                    const user = rows[0];
+                    // Split name for first_name/last_name
+                    const [firstName, lastName] = user.name ? user.name.split(' ') : ['', ''];
                     return res.status(200).json({
                         message: "User data fetched successfully ✅",
-                        user: rows[0]
+                        user: {
+                            id: user.id,
+                            first_name: firstName,
+                            last_name: lastName || '',
+                            email: user.email,
+                            phone_number: '', // Not in table
+                            dob: '' // Not in table
+                        }
                     });
                 } catch (error) {
                     console.error("Fetch user error:", error);
@@ -896,14 +906,15 @@ export default async function handler(req, res) {
 
             // PUT /api/user/profile - Update profile
             if (pathname === '/api/user/profile' && req.method === 'PUT') {
-                const { first_name, last_name, phone_number, email, gender, dob } = req.body;
-                if (!first_name || !email) {
-                    return res.status(400).json({ message: "First name and email are required ❌" });
+                const { first_name, last_name, phone_number, email, dob } = req.body;
+                const fullName = `${first_name || ''} ${last_name || ''}`.trim();
+                if (!fullName || !email) {
+                    return res.status(400).json({ message: "Name and email are required ❌" });
                 }
                 try {
                     const [result] = await pool.default.query(
-                        "UPDATE users SET first_name = ?, last_name = ?, email = ?, phone_number = ?, gender = ?, dob = ? WHERE id = ?",
-                        [first_name, last_name || '', email, phone_number || '', gender || '', dob || null, userId]
+                        "UPDATE users SET name = ?, email = ? WHERE id = ?",
+                        [fullName, email, userId]
                     );
                     if (result.affectedRows === 0) {
                         return res.status(404).json({ message: "User not found ❌" });
@@ -946,6 +957,30 @@ export default async function handler(req, res) {
             }
 
             return res.status(404).json({ message: "User endpoint not found" });
+        }
+
+        // Add /api/auth/check endpoint before the default response
+        if (pathname === '/api/auth/check' && req.method === 'GET') {
+            const jwt = await import("jsonwebtoken");
+            const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+
+            const authHeader = req.headers.authorization;
+            const token = authHeader && authHeader.split(' ')[1];
+
+            if (!token) {
+                return res.status(401).json({ message: "Unauthorized: No token provided ❌" });
+            }
+
+            try {
+                const decoded = jwt.default.verify(token, JWT_SECRET);
+                return res.status(200).json({
+                    message: "Authorized ✅",
+                    user: { id: decoded.id, email: decoded.email }
+                });
+            } catch (error) {
+                console.error("Auth check error:", error);
+                return res.status(401).json({ message: "Unauthorized: Invalid token ❌" });
+            }
         }
 
         // Default response
