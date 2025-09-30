@@ -384,7 +384,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Dog Food
+                                                                <a href="/admin/product-list.html" class="body-text">Dog
+                                                                    Food
                                                                     Rachael Ray Nutrish®</a>
                                                             </div>
                                                         </div>
@@ -398,7 +399,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Natural
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Natural
                                                                     Dog Food Healthy Dog Food</a>
                                                             </div>
                                                         </div>
@@ -412,7 +414,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Freshpet
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Freshpet
                                                                     Healthy Dog Food and Cat</a>
                                                             </div>
                                                         </div>
@@ -435,7 +438,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Sojos
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Sojos
                                                                     Crunchy Natural Grain Free...</a>
                                                             </div>
                                                         </div>
@@ -449,7 +453,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Kristin
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Kristin
                                                                     Watson</a>
                                                             </div>
                                                         </div>
@@ -463,7 +468,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Mega
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Mega
                                                                     Pumpkin Bone</a>
                                                             </div>
                                                         </div>
@@ -477,7 +483,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text">Mega
+                                                                <a href="/admin/product-list.html"
+                                                                    class="body-text">Mega
                                                                     Pumpkin Bone</a>
                                                             </div>
                                                         </div>
@@ -745,8 +752,8 @@
                                                     <img src="/admin/images/avatar/user-1.png" alt="">
                                                 </span>
                                                 <span class="flex flex-column">
-                                                <span id="admin-name" class="body-title mb-2">Loading...</span>
-                                                <span id="admin-role" class="text-tiny">Admin</span>
+                                                    <span id="admin-name" class="body-title mb-2">Loading...</span>
+                                                    <span id="admin-role" class="text-tiny">Admin</span>
                                                 </span>
                                             </span>
                                         </button>
@@ -949,8 +956,7 @@
                         <div class="bottom-page">
                             <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
                             <i class="icon-heart"></i>
-                            <div class="body-text">by <a
-                                    href="https://aptmedia.in">APT Media</a> All rights
+                            <div class="body-text">by <a href="https://aptmedia.in">APT Media</a> All rights
                                 reserved.</div>
                         </div>
                         <!-- /bottom-page -->
@@ -968,132 +974,175 @@
     <!-- Javascript -->
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
-            const orderList = document.querySelector(".table-all-category .flex-column");
-            orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">Loading orders...</div></li>`;
+            const productList = document.getElementById("productList");
+            const entriesInfo = document.getElementById("entries-info");
+            const pagination = document.getElementById("pagination");
 
-            try {
-                // Check admin authentication first
-                const authRes = await fetch("/api/admin/auth/check");
-                if (!authRes.ok) {
-                    window.location.href = "/admin/login.html";
-                    return;
+            let allProducts = [];
+            let currentPage = 1;
+            let pageSize = 10; // default entries per page
+
+            function renderMessage(msg) {
+                productList.innerHTML = `<li class="product-item gap14"><div class="body-text">${msg}</div></li>`;
+            }
+
+            renderMessage("Loading products...");
+
+            async function fetchProducts() {
+                try {
+                    const res = await fetch("/api/admin/products", { credentials: "include" });
+                    if (!res.ok) throw new Error("Server error " + res.status);
+                    allProducts = await res.json();
+
+                    if (!allProducts.length) {
+                        renderMessage("No products found");
+                        return;
+                    }
+
+                    renderPage();
+                } catch (err) {
+                    console.error("Error fetching products:", err);
+                    renderMessage("Error loading products");
                 }
+            }
 
-                const res = await fetch("/api/orders");
-                if (!res.ok) throw new Error("Server error " + res.status);
-                const response = await res.json();
+            function renderPage() {
+                productList.innerHTML = "";
 
-                // Handle new API response format
-                const orders = response.success ? response.orders : response;
-                
-                orderList.innerHTML = ""; // clear loading
+                const total = allProducts.length;
+                const totalPages = Math.ceil(total / pageSize);
+                if (currentPage > totalPages) currentPage = totalPages;
 
-                if (!orders || orders.length === 0) {
-                    orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">No orders found</div></li>`;
-                    return;
-                }
+                const start = (currentPage - 1) * pageSize;
+                const end = Math.min(currentPage * pageSize, total);
+                const pageItems = allProducts.slice(start, end);
 
-                orders.forEach(order => {
+                pageItems.forEach(p => {
                     const li = document.createElement("li");
                     li.className = "product-item gap14";
-                    li.dataset.id = order.id;
+                    li.dataset.id = p.id;
 
-                    // Calculate total items count from products
-                    const totalItems = order.products ? order.products.reduce((sum, product) => sum + product.quantity, 0) : 0;
-                    
-                    // Get product names for display
-                    const productNames = order.products && order.products.length > 0 
-                        ? order.products.map(p => p.name).join(', ') 
-                        : 'No products';
+                    let sizes = "-";
+                    if (p.sizes) {
+                        try {
+                            const parsedSizes = JSON.parse(p.sizes);
+                            if (Array.isArray(parsedSizes) && parsedSizes.length) sizes = parsedSizes.join(", ");
+                        } catch (e) { console.warn("Failed to parse sizes:", e); }
+                    }
 
                     li.innerHTML = `
-            <div class="image no-bg">
-                <img src="/admin/images/products/default-order.png" alt="Order">
-            </div>
-            <div class="flex items-center justify-between gap20 flex-grow">
-                <div class="name">
-                    <a href="#!" class="body-title-2">${order.first_name} ${order.last_name}</a>
-                    <div class="text-tiny mt-1" style="color: #666; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productNames}">
-                        ${productNames}
-                    </div>
-                </div>
-                <div class="body-text">#${order.razorpay_order_id || order.id}</div>
-                <div class="body-text">₹${order.amount}</div>
-                <div class="body-text">${totalItems}</div>
-                <div class="body-text">Razorpay</div>
-                <div>
-                    <div class="block-available ${order.status === 'completed' ? 'success' : 'pending'}">
-                        ${order.status}
-                    </div>
-                </div>
-                <div>
-                    <div class="block-tracking">${order.status}</div>
-                </div>
-                <div class="list-icon-function">
-                    <div class="item eye" data-id="${order.id}"><i class="icon-eye"></i></div>
-                    <div class="item edit"><i class="icon-edit-3"></i></div>
-                    <div class="item trash" data-id="${order.id}"><i class="icon-trash-2"></i></div>
-                </div>
-            </div>
-        `;
+                        <div class="image no-bg">
+                            <img src="${p.main_image || '/images/products/default.png'}" alt="${p.name}">
+                        </div>
+                        <div class="flex items-center justify-between gap20 flex-grow">
+                            <div class="name">
+                                <a href="product-detail.html?id=${p.id}" class="body-title-2">${p.name}</a>
+                            </div>
+                            <div class="body-text">#${p.id}</div>
+                            <div class="body-text">₹${p.price}</div>
+                            <div class="body-text">${p.category || '-'}</div>
+                            <div class="body-text">${sizes}</div>
+                            <div><div class="block-available">${p.quantity > 0 ? 'In stock' : 'Out of stock'}</div></div>
+                            <div class="body-text">${new Date(p.created_at).toLocaleDateString()}</div>
+                            <div class="list-icon-function">
+                                <a href="product-detail.html?id=${p.id}" class="item eye"><i class="icon-eye"></i></a>
+                                <a href="edit-product.html?id=${p.id}" class="item edit"><i class="icon-edit-3"></i></a>
+                                <div class="item trash" data-id="${p.id}"><i class="icon-trash-2"></i></div>
+                            </div>
+                        </div>
+                    `;
 
-                    // 👁️ View order (redirect to order detail page)
-                    li.querySelector(".eye").addEventListener("click", () => {
-                        window.location.href = `/admin/oder-detail.html?id=${order.id}`;
-                    });
-
-                    // 🗑️ Delete handler
-                    li.querySelector(".trash").addEventListener("click", () => deleteOrder(order.id));
-
-                    orderList.appendChild(li);
+                    li.querySelector(".item.trash").addEventListener("click", () => deleteProduct(p.id));
+                    productList.appendChild(li);
                 });
 
-            } catch (err) {
-                console.error("⚠️ Error fetching orders:", err);
-                orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">Error loading orders</div></li>`;
-            }
-        });
+                // Update entries info
+                entriesInfo.textContent = `Showing ${start + 1}–${end} of ${total} entries`;
 
-        // delete function (optional)
-        async function deleteOrder(id) {
-            if (!confirm("Are you sure you want to delete this order?")) return;
-            try {
-                const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("✅ " + data.message);
-                    document.querySelector(`li[data-id="${id}"]`).remove();
-                } else {
-                    alert("❌ Error: " + data.message);
+                // Build pagination
+                pagination.innerHTML = "";
+
+                const prevLi = document.createElement("li");
+                prevLi.innerHTML = `<a href="#"><i class="icon-chevron-left"></i></a>`;
+                if (currentPage === 1) prevLi.classList.add("disabled");
+                prevLi.addEventListener("click", e => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderPage();
+                    }
+                });
+                pagination.appendChild(prevLi);
+
+                for (let i = 1; i <= totalPages; i++) {
+                    const li = document.createElement("li");
+                    li.innerHTML = `<a href="#">${i}</a>`;
+                    if (i === currentPage) li.classList.add("active");
+                    li.addEventListener("click", e => {
+                        e.preventDefault();
+                        currentPage = i;
+                        renderPage();
+                    });
+                    pagination.appendChild(li);
                 }
-            } catch (err) {
-                console.error("Delete failed:", err);
-                alert("⚠️ Failed to delete order");
+
+                const nextLi = document.createElement("li");
+                nextLi.innerHTML = `<a href="#"><i class="icon-chevron-right"></i></a>`;
+                if (currentPage === totalPages) nextLi.classList.add("disabled");
+                nextLi.addEventListener("click", e => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderPage();
+                    }
+                });
+                pagination.appendChild(nextLi);
             }
-        }
+
+            async function deleteProduct(id) {
+                if (!confirm("Are you sure you want to delete this product?")) return;
+                try {
+                    const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE", credentials: "include" });
+                    const data = await res.json();
+                    if (res.ok) {
+                        alert("✅ " + data.message);
+                        allProducts = allProducts.filter(p => p.id !== id);
+                        renderPage();
+                    } else {
+                        alert("❌ Error: " + data.message);
+                    }
+                } catch (err) {
+                    console.error("Delete failed:", err);
+                    alert("⚠️ Failed to delete product");
+                }
+            }
+
+            fetchProducts();
+        });
     </script>
 
 
+
     <script>
-async function loadAdminData() {
-    try {
-        const res = await fetch("/api/admin/users/me");
-        if (!res.ok) throw new Error("Failed to fetch admin");
-        const data = await res.json();
+        async function loadAdminData() {
+            try {
+                const res = await fetch("/api/admin/users/me");
+                if (!res.ok) throw new Error("Failed to fetch admin");
+                const data = await res.json();
 
-        // Insert into DOM
-        document.getElementById("admin-name").textContent = data.admin.name;
-        document.getElementById("admin-role").textContent = data.admin.role;
-    } catch (err) {
-        console.error("Error loading admin:", err);
-    }
-}
+                // Insert into DOM
+                document.getElementById("admin-name").textContent = data.admin.name;
+                document.getElementById("admin-role").textContent = data.admin.role;
+            } catch (err) {
+                console.error("Error loading admin:", err);
+            }
+        }
 
-// Call without ID
-loadAdminData();
-</script>
+        // Call without ID
+        loadAdminData();
+    </script>
 
-<script src="/admin/js/jquery.min.js"></script>
+    <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>
     <script src="/admin/js/zoom.js"></script>
