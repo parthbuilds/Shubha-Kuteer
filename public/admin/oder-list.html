@@ -927,110 +927,93 @@
                                     </div>
                                     <div class="divider"></div>
                                     <div class="flex items-center justify-between flex-wrap gap10">
-                                        <div class="text-tiny">Showing 10 entries</div>
-                                        <ul class="wg-pagination">
-                                            <li>
-                                                <a href="#"><i class="icon-chevron-left"></i></a>
-                                            </li>
-                                            <li>
-                                                <a href="#">1</a>
-                                            </li>
-                                            <li class="active">
-                                                <a href="#">2</a>
-                                            </li>
-                                            <li>
-                                                <a href="#">3</a>
-                                            </li>
-                                            <li>
-                                                <a href="#"><i class="icon-chevron-right"></i></a>
-                                            </li>
-                                        </ul>
+                                        <div id="attribute-entries-info" class="text-tiny"></div>
+                                        <ul id="attribute-pagination" class="wg-pagination flex gap-2"></ul>
                                     </div>
+                                    <!-- /order-list -->
                                 </div>
-                                <!-- /order-list -->
+                                <!-- /main-content-wrap -->
                             </div>
                             <!-- /main-content-wrap -->
+                            <!-- bottom-page -->
+                            <div class="bottom-page">
+                                <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
+                                <i class="icon-heart"></i>
+                                <div class="body-text">by <a href="https://aptmedia.in">APT Media</a> All rights
+                                    reserved.</div>
+                            </div>
+                            <!-- /bottom-page -->
                         </div>
-                        <!-- /main-content-wrap -->
-                        <!-- bottom-page -->
-                        <div class="bottom-page">
-                            <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
-                            <i class="icon-heart"></i>
-                            <div class="body-text">by <a href="https://aptmedia.in">APT Media</a> All rights
-                                reserved.</div>
-                        </div>
-                        <!-- /bottom-page -->
+                        <!-- /main-content -->
                     </div>
-                    <!-- /main-content -->
+                    <!-- /section-content-right -->
                 </div>
-                <!-- /section-content-right -->
+                <!-- /layout-wrap -->
             </div>
-            <!-- /layout-wrap -->
+            <!-- /#page -->
         </div>
-        <!-- /#page -->
-    </div>
-    <!-- /#wrapper -->
+        <!-- /#wrapper -->
 
-    <!-- Javascript -->
-    <script>
-        document.addEventListener("DOMContentLoaded", async () => {
-            const productList = document.getElementById("productList");
-            const entriesInfo = document.getElementById("entries-info");
-            const pagination = document.getElementById("pagination");
+        <!-- Javascript -->
+        <script>
+            document.addEventListener("DOMContentLoaded", async () => {
+                const productList = document.getElementById("productList");
+                const entriesInfo = document.getElementById("entries-info");
+                const pagination = document.getElementById("pagination");
 
-            let allProducts = [];
-            let currentPage = 1;
-            let pageSize = 10; // default entries per page
+                let allProducts = [];
+                let currentPage = 1;
+                let pageSize = 10; // default entries per page
 
-            function renderMessage(msg) {
-                productList.innerHTML = `<li class="product-item gap14"><div class="body-text">${msg}</div></li>`;
-            }
-
-            renderMessage("Loading products...");
-
-            async function fetchProducts() {
-                try {
-                    const res = await fetch("/api/admin/products", { credentials: "include" });
-                    if (!res.ok) throw new Error("Server error " + res.status);
-                    allProducts = await res.json();
-
-                    if (!allProducts.length) {
-                        renderMessage("No products found");
-                        return;
-                    }
-
-                    renderPage();
-                } catch (err) {
-                    console.error("Error fetching products:", err);
-                    renderMessage("Error loading products");
+                function renderMessage(msg) {
+                    productList.innerHTML = `<li class="product-item gap14"><div class="body-text">${msg}</div></li>`;
                 }
-            }
 
-            function renderPage() {
-                productList.innerHTML = "";
+                renderMessage("Loading products...");
 
-                const total = allProducts.length;
-                const totalPages = Math.ceil(total / pageSize);
-                if (currentPage > totalPages) currentPage = totalPages;
+                async function fetchProducts() {
+                    try {
+                        const res = await fetch("/api/admin/products", { credentials: "include" });
+                        if (!res.ok) throw new Error("Server error " + res.status);
+                        allProducts = await res.json();
 
-                const start = (currentPage - 1) * pageSize;
-                const end = Math.min(currentPage * pageSize, total);
-                const pageItems = allProducts.slice(start, end);
+                        if (!allProducts.length) {
+                            renderMessage("No products found");
+                            return;
+                        }
 
-                pageItems.forEach(p => {
-                    const li = document.createElement("li");
-                    li.className = "product-item gap14";
-                    li.dataset.id = p.id;
-
-                    let sizes = "-";
-                    if (p.sizes) {
-                        try {
-                            const parsedSizes = JSON.parse(p.sizes);
-                            if (Array.isArray(parsedSizes) && parsedSizes.length) sizes = parsedSizes.join(", ");
-                        } catch (e) { console.warn("Failed to parse sizes:", e); }
+                        renderPage();
+                    } catch (err) {
+                        console.error("Error fetching products:", err);
+                        renderMessage("Error loading products");
                     }
+                }
 
-                    li.innerHTML = `
+                function renderPage() {
+                    productList.innerHTML = "";
+
+                    const total = allProducts.length;
+                    const totalPages = Math.ceil(total / pageSize);
+                    if (currentPage > totalPages) currentPage = totalPages;
+
+                    const start = (currentPage - 1) * pageSize;
+                    const end = Math.min(currentPage * pageSize, total);
+                    const pageItems = allProducts.slice(start, end);
+
+                    pageItems.forEach(p => {
+                        const li = document.createElement("li");
+                        li.className = "product-item gap14";
+                        li.dataset.id = p.id;
+
+                        let sizes = "-";
+                        if (p.sizes) {
+                            try {
+                                const parsedSizes = JSON.parse(p.sizes);
+                                if (Array.isArray(parsedSizes) && parsedSizes.length) sizes = parsedSizes.join(", ");
+                            } catch (e) { console.warn("Failed to parse sizes:", e); }
+                        }
+
+                        li.innerHTML = `
                         <div class="image no-bg">
                             <img src="${p.main_image || '/images/products/default.png'}" alt="${p.name}">
                         </div>
@@ -1052,103 +1035,103 @@
                         </div>
                     `;
 
-                    li.querySelector(".item.trash").addEventListener("click", () => deleteProduct(p.id));
-                    productList.appendChild(li);
-                });
-
-                // Update entries info
-                entriesInfo.textContent = `Showing ${start + 1}–${end} of ${total} entries`;
-
-                // Build pagination
-                pagination.innerHTML = "";
-
-                const prevLi = document.createElement("li");
-                prevLi.innerHTML = `<a href="#"><i class="icon-chevron-left"></i></a>`;
-                if (currentPage === 1) prevLi.classList.add("disabled");
-                prevLi.addEventListener("click", e => {
-                    e.preventDefault();
-                    if (currentPage > 1) {
-                        currentPage--;
-                        renderPage();
-                    }
-                });
-                pagination.appendChild(prevLi);
-
-                for (let i = 1; i <= totalPages; i++) {
-                    const li = document.createElement("li");
-                    li.innerHTML = `<a href="#">${i}</a>`;
-                    if (i === currentPage) li.classList.add("active");
-                    li.addEventListener("click", e => {
-                        e.preventDefault();
-                        currentPage = i;
-                        renderPage();
+                        li.querySelector(".item.trash").addEventListener("click", () => deleteProduct(p.id));
+                        productList.appendChild(li);
                     });
-                    pagination.appendChild(li);
+
+                    // Update entries info
+                    entriesInfo.textContent = `Showing ${start + 1}–${end} of ${total} entries`;
+
+                    // Build pagination
+                    pagination.innerHTML = "";
+
+                    const prevLi = document.createElement("li");
+                    prevLi.innerHTML = `<a href="#"><i class="icon-chevron-left"></i></a>`;
+                    if (currentPage === 1) prevLi.classList.add("disabled");
+                    prevLi.addEventListener("click", e => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                            currentPage--;
+                            renderPage();
+                        }
+                    });
+                    pagination.appendChild(prevLi);
+
+                    for (let i = 1; i <= totalPages; i++) {
+                        const li = document.createElement("li");
+                        li.innerHTML = `<a href="#">${i}</a>`;
+                        if (i === currentPage) li.classList.add("active");
+                        li.addEventListener("click", e => {
+                            e.preventDefault();
+                            currentPage = i;
+                            renderPage();
+                        });
+                        pagination.appendChild(li);
+                    }
+
+                    const nextLi = document.createElement("li");
+                    nextLi.innerHTML = `<a href="#"><i class="icon-chevron-right"></i></a>`;
+                    if (currentPage === totalPages) nextLi.classList.add("disabled");
+                    nextLi.addEventListener("click", e => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) {
+                            currentPage++;
+                            renderPage();
+                        }
+                    });
+                    pagination.appendChild(nextLi);
                 }
 
-                const nextLi = document.createElement("li");
-                nextLi.innerHTML = `<a href="#"><i class="icon-chevron-right"></i></a>`;
-                if (currentPage === totalPages) nextLi.classList.add("disabled");
-                nextLi.addEventListener("click", e => {
-                    e.preventDefault();
-                    if (currentPage < totalPages) {
-                        currentPage++;
-                        renderPage();
+                async function deleteProduct(id) {
+                    if (!confirm("Are you sure you want to delete this product?")) return;
+                    try {
+                        const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE", credentials: "include" });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert("✅ " + data.message);
+                            allProducts = allProducts.filter(p => p.id !== id);
+                            renderPage();
+                        } else {
+                            alert("❌ Error: " + data.message);
+                        }
+                    } catch (err) {
+                        console.error("Delete failed:", err);
+                        alert("⚠️ Failed to delete product");
                     }
-                });
-                pagination.appendChild(nextLi);
-            }
+                }
 
-            async function deleteProduct(id) {
-                if (!confirm("Are you sure you want to delete this product?")) return;
+                fetchProducts();
+            });
+        </script>
+
+
+
+        <script>
+            async function loadAdminData() {
                 try {
-                    const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE", credentials: "include" });
+                    const res = await fetch("/api/admin/users/me");
+                    if (!res.ok) throw new Error("Failed to fetch admin");
                     const data = await res.json();
-                    if (res.ok) {
-                        alert("✅ " + data.message);
-                        allProducts = allProducts.filter(p => p.id !== id);
-                        renderPage();
-                    } else {
-                        alert("❌ Error: " + data.message);
-                    }
+
+                    // Insert into DOM
+                    document.getElementById("admin-name").textContent = data.admin.name;
+                    document.getElementById("admin-role").textContent = data.admin.role;
                 } catch (err) {
-                    console.error("Delete failed:", err);
-                    alert("⚠️ Failed to delete product");
+                    console.error("Error loading admin:", err);
                 }
             }
 
-            fetchProducts();
-        });
-    </script>
+            // Call without ID
+            loadAdminData();
+        </script>
 
-
-
-    <script>
-        async function loadAdminData() {
-            try {
-                const res = await fetch("/api/admin/users/me");
-                if (!res.ok) throw new Error("Failed to fetch admin");
-                const data = await res.json();
-
-                // Insert into DOM
-                document.getElementById("admin-name").textContent = data.admin.name;
-                document.getElementById("admin-role").textContent = data.admin.role;
-            } catch (err) {
-                console.error("Error loading admin:", err);
-            }
-        }
-
-        // Call without ID
-        loadAdminData();
-    </script>
-
-    <script src="/admin/js/jquery.min.js"></script>
-    <script src="/admin/js/bootstrap.min.js"></script>
-    <script src="/admin/js/bootstrap-select.min.js"></script>
-    <script src="/admin/js/zoom.js"></script>
-    <!-- <script src="/admin/js/switcher.js"></script> -->
-    <script src="/admin/js/theme-settings.js"></script>
-    <script src="/admin/js/main.js"></script>
+        <script src="/admin/js/jquery.min.js"></script>
+        <script src="/admin/js/bootstrap.min.js"></script>
+        <script src="/admin/js/bootstrap-select.min.js"></script>
+        <script src="/admin/js/zoom.js"></script>
+        <!-- <script src="/admin/js/switcher.js"></script> -->
+        <script src="/admin/js/theme-settings.js"></script>
+        <script src="/admin/js/main.js"></script>
 
 </body>
 
