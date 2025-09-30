@@ -932,71 +932,137 @@
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
             const productList = document.getElementById("productList");
-
+            const entriesInfo = document.getElementById("entries-info");
+            const pagination = document.getElementById("pagination");
+            const pageSizeSelect = document.querySelector(".wg-filter select");
+            const searchInput = document.querySelector(".form-search input");
+    
+            let allProducts = [];
+            let filteredProducts = [];
+            let currentPage = 1;
+            let pageSize = parseInt(pageSizeSelect.value, 10);
+    
             function renderMessage(msg) {
                 productList.innerHTML = `<li class="product-item gap14"><div class="body-text">${msg}</div></li>`;
             }
-
-            renderMessage("Loading products...");
-
+    
             async function fetchProducts() {
                 try {
+                    renderMessage("Loading products...");
                     const res = await fetch("/api/admin/products", { credentials: "include" });
                     if (!res.ok) throw new Error("Server error " + res.status);
-                    const products = await res.json();
-
-                    productList.innerHTML = "";
-
-                    if (!products.length) {
-                        renderMessage("No products found");
-                        return;
-                    }
-
-                    products.forEach(p => {
-                        const li = document.createElement("li");
-                        li.className = "product-item gap14";
-                        li.dataset.id = p.id;
-
-                        let sizes = "-";
-                        if (p.sizes) {
-                            try {
-                                const parsedSizes = JSON.parse(p.sizes);
-                                if (Array.isArray(parsedSizes) && parsedSizes.length) sizes = parsedSizes.join(", ");
-                            } catch (e) { console.warn("Failed to parse sizes:", e); }
-                        }
-
-                        li.innerHTML = `
-                    <div class="image no-bg">
-                        <img src="${p.main_image || '/images/products/default.png'}" alt="${p.name}">
-                    </div>
-                    <div class="flex items-center justify-between gap20 flex-grow">
-                        <div class="name">
-                            <a href="product-detail.html?id=${p.id}" class="body-title-2">${p.name}</a>
-                        </div>
-                        <div class="body-text">#${p.id}</div>
-                        <div class="body-text">₹${p.price}</div>
-                        <div class="body-text">${p.category || '-'}</div>
-                        <div class="body-text">${sizes}</div>
-                        <div><div class="block-available">${p.quantity > 0 ? 'In stock' : 'Out of stock'}</div></div>
-                        <div class="body-text">${new Date(p.created_at).toLocaleDateString()}</div>
-                        <div class="list-icon-function">
-                            <a href="product-detail.html?id=${p.id}" class="item eye"><i class="icon-eye"></i></a>
-                            <a href="edit-product.html?id=${p.id}" class="item edit"><i class="icon-edit-3"></i></a>
-                            <div class="item trash" data-id="${p.id}"><i class="icon-trash-2"></i></div>
-                        </div>
-                    </div>
-                `;
-
-                        // Attach delete handler
-                        li.querySelector(".item.trash").addEventListener("click", () => deleteProduct(p.id));
-                        productList.appendChild(li);
-                    });
+                    allProducts = await res.json();
+                    filteredProducts = [...allProducts];
+                    currentPage = 1;
+                    renderPage();
                 } catch (err) {
                     console.error("Error fetching products:", err);
                     renderMessage("Error loading products");
                 }
             }
-
+    
+            function renderPage() {
+                productList.innerHTML = "";
+    
+                if (!filteredProducts.length) {
+                    renderMessage("No products found");
+                    entriesInfo.textContent = "Showing 0 entries";
+                    pagination.innerHTML = "";
+                    return;
+                }
+    
+                const totalEntries = filteredProducts.length;
+                const totalPages = Math.ceil(totalEntries / pageSize);
+                if (currentPage > totalPages) currentPage = totalPages;
+    
+                const start = (currentPage - 1) * pageSize;
+                const end = Math.min(currentPage * pageSize, totalEntries);
+                const pageItems = filteredProducts.slice(start, end);
+    
+                // Render products
+                pageItems.forEach(p => {
+                    const li = document.createElement("li");
+                    li.className = "product-item gap14";
+                    li.dataset.id = p.id;
+    
+                    let sizes = "-";
+                    if (p.sizes) {
+                        try {
+                            const parsedSizes = JSON.parse(p.sizes);
+                            if (Array.isArray(parsedSizes) && parsedSizes.length) sizes = parsedSizes.join(", ");
+                        } catch (e) { console.warn("Failed to parse sizes:", e); }
+                    }
+    
+                    li.innerHTML = `
+                        <div class="image no-bg">
+                            <img src="${p.main_image || '/images/products/default.png'}" alt="${p.name}">
+                        </div>
+                        <div class="flex items-center justify-between gap20 flex-grow">
+                            <div class="name">
+                                <a href="product-detail.html?id=${p.id}" class="body-title-2">${p.name}</a>
+                            </div>
+                            <div class="body-text">#${p.id}</div>
+                            <div class="body-text">₹${p.price}</div>
+                            <div class="body-text">${p.category || '-'}</div>
+                            <div class="body-text">${sizes}</div>
+                            <div><div class="block-available">${p.quantity > 0 ? 'In stock' : 'Out of stock'}</div></div>
+                            <div class="body-text">${new Date(p.created_at).toLocaleDateString()}</div>
+                            <div class="list-icon-function">
+                                <a href="product-detail.html?id=${p.id}" class="item eye"><i class="icon-eye"></i></a>
+                                <a href="edit-product.html?id=${p.id}" class="item edit"><i class="icon-edit-3"></i></a>
+                                <div class="item trash" data-id="${p.id}"><i class="icon-trash-2"></i></div>
+                            </div>
+                        </div>
+                    `;
+    
+                    // Delete handler
+                    li.querySelector(".item.trash").addEventListener("click", () => deleteProduct(p.id));
+                    productList.appendChild(li);
+                });
+    
+                // Info
+                entriesInfo.textContent = `Showing ${start + 1}–${end} of ${totalEntries} entries`;
+    
+                // Pagination
+                pagination.innerHTML = "";
+    
+                const prevLi = document.createElement("li");
+                prevLi.innerHTML = `<a href="#"><i class="icon-chevron-left"></i></a>`;
+                if (currentPage === 1) prevLi.classList.add("disabled");
+                prevLi.addEventListener("click", e => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderPage();
+                    }
+                });
+                pagination.appendChild(prevLi);
+    
+                for (let i = 1; i <= totalPages; i++) {
+                    const li = document.createElement("li");
+                    li.innerHTML = `<a href="#">${i}</a>`;
+                    if (i === currentPage) li.classList.add("active");
+                    li.addEventListener("click", e => {
+                        e.preventDefault();
+                        currentPage = i;
+                        renderPage();
+                    });
+                    pagination.appendChild(li);
+                }
+    
+                const nextLi = document.createElement("li");
+                nextLi.innerHTML = `<a href="#"><i class="icon-chevron-right"></i></a>`;
+                if (currentPage === totalPages) nextLi.classList.add("disabled");
+                nextLi.addEventListener("click", e => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderPage();
+                    }
+                });
+                pagination.appendChild(nextLi);
+            }
+    
             async function deleteProduct(id) {
                 if (!confirm("Are you sure you want to delete this product?")) return;
                 try {
@@ -1004,7 +1070,9 @@
                     const data = await res.json();
                     if (res.ok) {
                         alert("✅ " + data.message);
-                        document.querySelector(`#productList li[data-id="${id}"]`)?.remove();
+                        allProducts = allProducts.filter(p => p.id !== id);
+                        filteredProducts = filteredProducts.filter(p => p.id !== id);
+                        renderPage();
                     } else {
                         alert("❌ Error: " + data.message);
                     }
@@ -1013,10 +1081,28 @@
                     alert("⚠️ Failed to delete product");
                 }
             }
-
+    
+            // Search filter
+            searchInput.addEventListener("input", () => {
+                const q = searchInput.value.toLowerCase();
+                filteredProducts = allProducts.filter(p =>
+                    p.name.toLowerCase().includes(q) || p.id.toString().includes(q)
+                );
+                currentPage = 1;
+                renderPage();
+            });
+    
+            // Page size change
+            pageSizeSelect.addEventListener("change", () => {
+                pageSize = parseInt(pageSizeSelect.value, 10);
+                currentPage = 1;
+                renderPage();
+            });
+    
             fetchProducts();
         });
     </script>
+    
 
     <script>
         async function loadAdminData() {
