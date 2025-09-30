@@ -961,25 +961,24 @@ export default async function handler(req, res) {
 
         // Add /api/auth/check endpoint before the default response
         if (pathname === '/api/auth/check' && req.method === 'GET') {
-            const jwt = await import("jsonwebtoken");
-            const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
-
-            const authHeader = req.headers.authorization;
-            const token = authHeader && authHeader.split(' ')[1];
-
-            if (!token) {
-                return res.status(401).json({ message: "Unauthorized: No token provided ❌" });
-            }
-
             try {
-                const decoded = jwt.default.verify(token, JWT_SECRET);
-                return res.status(200).json({
-                    message: "Authorized ✅",
-                    user: { id: decoded.id, email: decoded.email }
-                });
+                const { checkAuth } = await import("../backend/controllers/authController.js");
+                const mockReq = {
+                    headers: req.headers,
+                    method: req.method,
+                    url: req.url
+                };
+                const mockRes = {
+                    status: (code) => ({
+                        json: (data) => res.status(code).json(data)
+                    }),
+                    json: (data) => res.status(200).json(data)
+                };
+                await checkAuth(mockReq, mockRes);
+                return;
             } catch (error) {
                 console.error("Auth check error:", error);
-                return res.status(401).json({ message: "Unauthorized: Invalid token ❌" });
+                return res.status(500).json({ message: "Auth check failed ❌", error: error.message });
             }
         }
 
