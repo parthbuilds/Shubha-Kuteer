@@ -56,7 +56,6 @@
 //     }
 // };
 
-
 import bcrypt from "bcrypt";
 import pool from "../utils/db.js";
 import jwt from "jsonwebtoken";
@@ -65,7 +64,7 @@ const BCRYPT_SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
 export const registerUser = async (req, res) => {
-    const { name, email, password, phone_number, dob } = req.body;
+    const { name, email, password } = req.body;
     if (!name || !email || !password) {
         return res.status(400).json({ message: "Name, email, and password are required ❌" });
     }
@@ -96,7 +95,7 @@ export const loginUser = async (req, res) => {
     }
     try {
         const [rows] = await pool.query(
-            "SELECT id, name, email FROM users WHERE email = ?",
+            "SELECT id, name, email, password_hash FROM users WHERE email = ?",
             [email]
         );
         if (rows.length === 0) {
