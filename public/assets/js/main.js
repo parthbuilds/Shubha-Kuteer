@@ -3778,3 +3778,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+
+// Function to navigate to shop page with category filter
+function navigateToCategory(categoryName) {
+  // Convert category name to URL-safe format (lowercase, replace spaces with hyphens)
+  const categorySlug = categoryName.toLowerCase().replace(/\s+/g, '-');
+  
+  // Redirect to shop page with type parameter
+  window.location.href = `shop.html?type=${encodeURIComponent(categorySlug)}`;
+}
+
+// Add click handlers to all collection items on index page
+document.addEventListener('DOMContentLoaded', function() {
+  const collectionItems = document.querySelectorAll('.collection-item');
+  
+  collectionItems.forEach(item => {
+      item.addEventListener('click', function(e) {
+          e.preventDefault(); // Prevent default anchor behavior
+          
+          // Get the category name from the collection-name div
+          const categoryNameElement = this.querySelector('.collection-name');
+          if (categoryNameElement) {
+              const categoryName = categoryNameElement.textContent.trim();
+              navigateToCategory(categoryName);
+          }
+      });
+  });
+});
