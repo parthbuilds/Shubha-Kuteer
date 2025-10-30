@@ -2294,47 +2294,106 @@
         </div>
         <script>
             document.addEventListener("DOMContentLoaded", () => {
-                loadCategories();
+                const urlParams = new URLSearchParams(window.location.search);
+                const categoryFromUrl = urlParams.get("category");
+        
+                if (categoryFromUrl) {
+                    // Update the category filter heading in the sidebar
+                    const categoryListContainer = document.getElementById("category-list");
+                    if (categoryListContainer) {
+                        categoryListContainer.innerHTML = `
+                            <div class="item tab-item flex items-center justify-between cursor-pointer active" data-item="${categoryFromUrl}">
+                                <div class="type-name text-secondary has-line-before hover:text-black capitalize">
+                                    ${categoryFromUrl.replace(/_/g, ' ')} 
+                                </div>
+                            </div>
+                        `;
+                    }
+                    fetchAndDisplayProducts(categoryFromUrl);
+                } else {
+                    // If no category is specified in the URL, you might want to load all products or a default set.
+                    // For now, let's assume if no category is in the URL, we load all products.
+                    fetchAndDisplayProducts(); 
+                }
             });
-
-            async function loadCategories() {
+        
+            async function fetchAndDisplayProducts(category = null) {
                 try {
-                    const response = await fetch("/api/admin/categories/public");
-
+                    let url = "/api/admin/products/public";
+                    if (category) {
+                        url += `?category=${category}`;
+                    }
+        
+                    const response = await fetch(url);
+        
                     if (!response.ok) {
                         throw new Error(`HTTP error! Status: ${response.status}`);
                     }
-
-                    const categories = await response.json();
-                    const container = document.querySelector(".list-type");
-
-                    if (!container) {
-                        console.warn("Category container not found on page.");
+        
+                    const products = await response.json();
+                    const productListContainer = document.querySelector(".list-product");
+        
+                    if (!productListContainer) {
+                        console.warn("Product list container not found on page.");
                         return;
                     }
-
-                    container.innerHTML = ""; // Clear existing categories
-
-                    categories.forEach((cat) => {
-                        const item = document.createElement("div");
-                        item.className = "item tab-item flex items-center justify-between cursor-pointer";
-                        item.dataset.item = cat.data_item || ""; // use DB field safely
-
-                        item.innerHTML = `
-          <div class="type-name text-secondary has-line-before hover:text-black capitalize">
-            ${cat.name}
-          </div>
-          <div class="text-secondary2 number">${cat.count ?? 0}</div>
-        `;
-
-                        container.appendChild(item);
+        
+                    productListContainer.innerHTML = ""; // Clear existing products
+        
+                    if (products.length === 0) {
+                        productListContainer.innerHTML = `<p class="col-span-full text-center text-secondary">No products found in this category.</p>`;
+                        return;
+                    }
+        
+                    products.forEach((product) => {
+                        const productItem = document.createElement("div");
+                        productItem.className = "product-item grid-type";
+                        productItem.dataset.item = product.id; // Assuming product has an ID
+        
+                        // Construct product card HTML (simplified for brevity, adapt from your existing product card structure)
+                        // Make sure to populate with actual product data from 'product' object
+                        productItem.innerHTML = `
+                            <div class="product-main cursor-pointer block">
+                                <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
+                                    <div class="product-tag text-button-uppercase bg-green px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">
+                                        ${product.new ? 'New' : ''}
+                                    </div>
+                                    <div class="product-img w-full h-full aspect-[3/4]">
+                                        <img class="w-full h-full object-cover duration-700" src="${product.imageUrl || './assets/images/product/1000x1000.png'}" alt="${product.name}" />
+                                        <img class="w-full h-full object-cover duration-700" src="${product.hoverImageUrl || product.imageUrl || './assets/images/product/1000x1000.png'}" alt="${product.name}" />
+                                    </div>
+                                    <div class="list-action grid grid-cols-2 gap-3 px-5 absolute w-full bottom-5 max-lg:hidden">
+                                        <div class="quick-view-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white">
+                                            Quick View
+                                        </div>
+                                        <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white">
+                                            Add To Cart
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="product-infor mt-4 lg:mb-7">
+                                    <div class="product-name text-title duration-300">
+                                        <a href="shop.html?id=${product.id}">${product.name}</a>
+                                    </div>
+                                    <div class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
+                                        <div class="product-price text-title">₹${product.price.toFixed(2)}</div>
+                                        ${product.oldPrice ? `<div class="product-origin-price caption1 text-secondary2"><del>₹${product.oldPrice.toFixed(2)}</del></div>` : ''}
+                                        ${product.discountPercentage ? `<div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">-${product.discountPercentage}%</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        productListContainer.appendChild(productItem);
                     });
                 } catch (error) {
-                    console.error("Error loading categories:", error);
+                    console.error("Error loading products:", error);
+                    const productListContainer = document.querySelector(".list-product");
+                    if (productListContainer) {
+                        productListContainer.innerHTML = `<p class="col-span-full text-center text-red-500">Failed to load products. Please try again later.</p>`;
+                    }
                 }
             }
         </script>
-
 
         <script src="./assets/js/login.js"></script>
         <script src="./assets/js/phosphor-icons.js"></script>
