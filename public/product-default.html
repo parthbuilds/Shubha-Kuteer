@@ -3090,84 +3090,6 @@
                 </div>
             </div>
         </div>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-              (async function renderRelatedSafe() {
-                try {
-                  const listEl = document.querySelector('.modal-cart-block .left .list');
-                  if (!listEl) return;
-            
-                  const url = new URL(window.location.href);
-                  const currentId = url.searchParams.get('id');
-                  if (!currentId) { listEl.innerHTML = ''; return; }
-            
-                  // Helper: robust image pick
-                  const pickImage = (p) => {
-                    if (p.main_image) return p.main_image;
-                    if (p.thumb_image) return p.thumb_image;
-                    if (Array.isArray(p.images) && p.images.length) return p.images[0];
-                    try {
-                      const g = typeof p.gallery === 'string' ? JSON.parse(p.gallery) : (p.gallery || []);
-                      if (Array.isArray(g) && g.length) return g[0];
-                    } catch (_) {}
-                    return './assets/images/placeholder.png';
-                  };
-            
-                  const tpl = (p) => {
-                    const price = p.price != null ? '₹' + Number(p.price).toFixed(2) : '';
-                    const origin = p.origin_price != null ? '₹' + Number(p.origin_price).toFixed(2) : '';
-                    const img = pickImage(p);
-                    const showOrigin = origin && Number(p.origin_price) > Number(p.price || 0);
-            
-                    return (
-                      '<div class="product-item item py-5 flex items-center justify-between gap-3 border-b border-line" data-item="' + p.id + '">' +
-                        '<div class="infor flex items-center gap-5">' +
-                          '<div class="bg-img">' +
-                            '<img src="' + img + '" alt="img" class="w-[100px] aspect-square flex-shrink-0 rounded-lg" />' +
-                          '</div>' +
-                          '<div class="">' +
-                            '<div class="name text-button line-clamp-1">' + (p.name || '') + '</div>' +
-                            '<div class="flex items-center gap-2 mt-2">' +
-                              '<div class="product-price text-title">' + price + '</div>' +
-                              (showOrigin ? (
-                                '<div class="product-origin-price text-title text-secondary2"><del>' + origin + '</del></div>'
-                              ) : '') +
-                            '</div>' +
-                          '</div>' +
-                        '</div>' +
-                        '<a href="product-default.html?id=' + encodeURIComponent(p.id) + '" ' +
-                           'class="quick-view-btn button-main py-3 px-5 bg-button hover:bg-green text-white rounded-full whitespace-nowrap">QUICK VIEW</a>' +
-                      '</div>'
-                    );
-                  };
-            
-                  // IMPORTANT: use absolute path to avoid relative path issues
-                  const res = await fetch('/api/admin/products');
-                  if (!res.ok) throw new Error('HTTP ' + res.status);
-                  const all = await res.json();
-            
-                  const current = all.find(function (p) { return String(p.id) === String(currentId); });
-                  if (!current || !current.category) { listEl.innerHTML = ''; return; }
-            
-                  var currentCat = String(current.category).toLowerCase();
-                  const related = all.filter(function (p) {
-                    return String(p.id) !== String(current.id) &&
-                           String(p.category || '').toLowerCase() === currentCat;
-                  }).slice(0, 4);
-            
-                  if (!related.length) { listEl.innerHTML = ''; return; }
-            
-                  listEl.innerHTML = related.map(tpl).join('');
-                } catch (e) {
-                  console.error('Related render error:', e);
-                  var listEl = document.querySelector('.modal-cart-block .left .list');
-                  if (listEl) listEl.innerHTML = '';
-                  // Swallow to avoid breaking other scripts
-                }
-              })();
-            });
-            </script>
         <script src="./assets/js/login.js"></script>
         <script src="./assets/js/phosphor-icons.js"></script>
         <script src="./assets/js/swiper-bundle.min.js"></script>
@@ -3175,6 +3097,189 @@
         <script src="./assets/js/magnific-popup.min.js"></script>
         <script src="./assets/js/product-detail.js"></script>
         <script src="./assets/js/main.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                (async function renderRelatedProducts() {
+                    try {
+                        // Target the specific container for related products on the product detail page
+                        const relatedProductsContainer = document.querySelector('.list-collection .swiper-wrapper');
+                        if (!relatedProductsContainer) {
+                            console.warn('Related products container not found.');
+                            return;
+                        }
+            
+                        const url = new URL(window.location.href);
+                        const currentProductId = url.searchParams.get('id');
+                        if (!currentProductId) {
+                            relatedProductsContainer.innerHTML = '<p>Product ID not found in URL.</p>';
+                            return;
+                        }
+            
+                        // Helper: robust image pick
+                        const pickImage = (p) => {
+                            if (p.main_image) return p.main_image;
+                            if (p.thumb_image) return p.thumb_image;
+                            if (Array.isArray(p.images) && p.images.length) return p.images[0];
+                            try {
+                                const g = typeof p.gallery === 'string' ? JSON.parse(p.gallery) : (p.gallery || []);
+                                if (Array.isArray(g) && g.length) return g[0];
+                            } catch (_) {}
+                            return './assets/images/placeholder.png'; // Fallback placeholder image
+                        };
+            
+                        // Template function for a single product item
+                        const productTpl = (p) => {
+                            const price = p.price != null ? '₹' + Number(p.price).toFixed(2) : '';
+                            const origin = p.origin_price != null ? '₹' + Number(p.origin_price).toFixed(2) : '';
+                            const img1 = pickImage(p);
+                            // Assuming a second image might be available for hover effect, if not, use the first one again
+                            const img2 = (Array.isArray(p.images) && p.images.length > 1) ? p.images[1] : img1;
+            
+                            const showOrigin = origin && Number(p.origin_price) > Number(p.price || 0);
+                            const salePercentage = showOrigin ? Math.round(((p.origin_price - p.price) / p.origin_price) * 100) : null;
+                            const saleTag = salePercentage ? `<div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">-${salePercentage}%</div>` : '';
+            
+                            return `
+                                <div class="swiper-slide">
+                                    <div class="product-item grid-type" data-item="${p.id}">
+                                        <div class="product-main cursor-pointer block">
+                                            <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
+                                                ${p.isNew ? '<div class="product-tag text-button-uppercase bg-green px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">New</div>' : ''}
+                                                <div class="list-action-right absolute top-3 right-3 max-lg:hidden">
+                                                    <div class="add-wishlist-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative">
+                                                        <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">Add To Wishlist</div>
+                                                        <i class="ph ph-heart text-lg"></i>
+                                                    </div>
+                                                    <div class="compare-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative mt-2">
+                                                        <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">Compare Product</div>
+                                                        <i class="ph ph-arrow-counter-clockwise text-lg compare-icon"></i>
+                                                        <i class="ph ph-check-circle text-lg checked-icon"></i>
+                                                    </div>
+                                                </div>
+                                                <div class="product-img w-full h-full aspect-[3/4]">
+                                                    <img class="w-full h-full object-cover duration-700" src="${img1}" alt="${p.name || 'product image'}" />
+                                                    <img class="w-full h-full object-cover duration-700" src="${img2}" alt="${p.name || 'product image hover'}" />
+                                                </div>
+                                                <div class="list-action grid grid-cols-2 gap-3 px-5 absolute w-full bottom-5 max-lg:hidden">
+                                                    <a href="product-default.html?id=${encodeURIComponent(p.id)}" class="quick-view-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white">Quick View</a>
+                                                    <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white">Add To Cart</div>
+                                                </div>
+                                            </div>
+                                            <div class="product-infor mt-4 lg:mb-7">
+                                                <div class="product-sold sm:pb-4 pb-2">
+                                                    <div class="progress bg-line h-1.5 w-full rounded-full overflow-hidden relative">
+                                                        <div class="progress-sold bg-red absolute left-0 top-0 h-full" style="width: ${p.soldProgress || 0}%;"></div>
+                                                    </div>
+                                                    <div class="flex items-center justify-between gap-3 gap-y-1 flex-wrap mt-2">
+                                                        <div class="text-button-uppercase">
+                                                            <span class="text-secondary2 max-sm:text-xs">Sold: </span>
+                                                            <span class="max-sm:text-xs">${p.sold || 0}</span>
+                                                        </div>
+                                                        <div class="text-button-uppercase">
+                                                            <span class="text-secondary2 max-sm:text-xs">Available: </span>
+                                                            <span class="max-sm:text-xs">${p.available || 0}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="product-name text-title duration-300">${p.name || ''}</div>
+                                                <div class="list-color py-2 max-md:hidden flex items-center gap-3 flex-wrap duration-500">
+                                                    ${(p.colors || []).map(color => `
+                                                        <div class="color-item bg-${color.toLowerCase()} w-8 h-8 rounded-full duration-300 relative">
+                                                            <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${color}</div>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                                <div class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
+                                                    <div class="product-price text-title">${price}</div>
+                                                    ${showOrigin ? `<div class="product-origin-price caption1 text-secondary2"><del>${origin}</del></div>` : ''}
+                                                    ${saleTag}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        };
+            
+                        // IMPORTANT: use absolute path to avoid relative path issues
+                        const res = await fetch('/api/admin/products');
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        const allProducts = await res.json();
+            
+                        const currentProduct = allProducts.find(p => String(p.id) === String(currentProductId));
+            
+                        if (!currentProduct || !currentProduct.category) {
+                            relatedProductsContainer.innerHTML = '<p>Current product or its category not found.</p>';
+                            return;
+                        }
+            
+                        const currentCategory = String(currentProduct.category).toLowerCase();
+            
+                        // Filter for related products (same category, not the current product) and take 5
+                        const relatedProducts = allProducts.filter(p =>
+                            String(p.id) !== String(currentProduct.id) &&
+                            String(p.category || '').toLowerCase() === currentCategory
+                        ).slice(0, 5); // Limit to 5 products
+            
+                        if (relatedProducts.length === 0) {
+                            relatedProductsContainer.innerHTML = '<p>No related products found in this category.</p>';
+                            return;
+                        }
+            
+                        // Render the related products
+                        relatedProductsContainer.innerHTML = relatedProducts.map(productTpl).join('');
+            
+                        // Initialize Swiper after content is loaded (if Swiper is used)
+                        if (typeof Swiper !== 'undefined') {
+                            new Swiper('.swiper-product-scroll', {
+                                slidesPerView: 1,
+                                spaceBetween: 20,
+                                navigation: {
+                                    nextEl: '.swiper-button-next',
+                                    prevEl: '.swiper-button-prev',
+                                },
+                                pagination: {
+                                    el: '.swiper-pagination',
+                                    clickable: true,
+                                },
+                                scrollbar: {
+                                    el: '.swiper-scrollbar',
+                                    draggable: true,
+                                },
+                                breakpoints: {
+                                    640: {
+                                        slidesPerView: 2,
+                                        spaceBetween: 20,
+                                    },
+                                    768: {
+                                        slidesPerView: 3,
+                                        spaceBetween: 30,
+                                    },
+                                    1024: {
+                                        slidesPerView: 4,
+                                        spaceBetween: 30,
+                                    },
+                                    1280: {
+                                        slidesPerView: 5, // Display 5 products
+                                        spaceBetween: 30,
+                                    },
+                                },
+                            });
+                        } else {
+                            console.warn('Swiper library not found. Swiper functionality will not be initialized.');
+                        }
+            
+                    } catch (e) {
+                        console.error('Error rendering related products:', e);
+                        const relatedProductsContainer = document.querySelector('.list-collection .swiper-wrapper');
+                        if (relatedProductsContainer) {
+                            relatedProductsContainer.innerHTML = '<p>Failed to load related products.</p>';
+                        }
+                        // Swallow to avoid breaking other scripts
+                    }
+                })();
+            });
+    </script>
 </body>
 
 </html>
