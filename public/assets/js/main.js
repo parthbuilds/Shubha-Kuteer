@@ -3778,3 +3778,40 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+
+//shop category features added
+
+function renderCategoryFilters(products) {
+  let categorySet = new Set(products.map(product => product.category));
+  let html = `<button data-category="" class="category-btn active">All</button>`;
+
+  categorySet.forEach(category => {
+    const catSlug = category.toLowerCase().replace(/\s+/g, "-");
+    html += `<button data-category="${catSlug}" class="category-btn">${category}</button>`;
+  });
+
+  document.getElementById("category-filter-list").innerHTML = html;
+
+  // Add click event listeners
+  document.querySelectorAll(".category-btn").forEach(btn => {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
+      this.classList.add("active");
+      const selectedCategory = this.getAttribute("data-category");
+      filterByCategory(selectedCategory, products);
+    });
+  });
+}
+
+// Function to filter by category
+function filterByCategory(categorySlug, products) {
+  let filtered;
+  if (!categorySlug) {
+    filtered = products;
+  } else {
+    filtered = products.filter(p => p.category && p.category.toLowerCase().replace(/\s+/g, "-") === categorySlug);
+  }
+  renderProducts(1, filtered);
+  renderPagination(filtered);
+}
