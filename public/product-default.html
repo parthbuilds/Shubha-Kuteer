@@ -3091,6 +3091,83 @@
             </div>
         </div>
 
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+              (async function renderRelatedSafe() {
+                try {
+                  const listEl = document.querySelector('.modal-cart-block .left .list');
+                  if (!listEl) return;
+            
+                  const url = new URL(window.location.href);
+                  const currentId = url.searchParams.get('id');
+                  if (!currentId) { listEl.innerHTML = ''; return; }
+            
+                  // Helper: robust image pick
+                  const pickImage = (p) => {
+                    if (p.main_image) return p.main_image;
+                    if (p.thumb_image) return p.thumb_image;
+                    if (Array.isArray(p.images) && p.images.length) return p.images[0];
+                    try {
+                      const g = typeof p.gallery === 'string' ? JSON.parse(p.gallery) : (p.gallery || []);
+                      if (Array.isArray(g) && g.length) return g[0];
+                    } catch (_) {}
+                    return './assets/images/placeholder.png';
+                  };
+            
+                  const tpl = (p) => {
+                    const price = p.price != null ? '₹' + Number(p.price).toFixed(2) : '';
+                    const origin = p.origin_price != null ? '₹' + Number(p.origin_price).toFixed(2) : '';
+                    const img = pickImage(p);
+                    const showOrigin = origin && Number(p.origin_price) > Number(p.price || 0);
+            
+                    return (
+                      '<div class="product-item item py-5 flex items-center justify-between gap-3 border-b border-line" data-item="' + p.id + '">' +
+                        '<div class="infor flex items-center gap-5">' +
+                          '<div class="bg-img">' +
+                            '<img src="' + img + '" alt="img" class="w-[100px] aspect-square flex-shrink-0 rounded-lg" />' +
+                          '</div>' +
+                          '<div class="">' +
+                            '<div class="name text-button line-clamp-1">' + (p.name || '') + '</div>' +
+                            '<div class="flex items-center gap-2 mt-2">' +
+                              '<div class="product-price text-title">' + price + '</div>' +
+                              (showOrigin ? (
+                                '<div class="product-origin-price text-title text-secondary2"><del>' + origin + '</del></div>'
+                              ) : '') +
+                            '</div>' +
+                          '</div>' +
+                        '</div>' +
+                        '<a href="product-default.html?id=' + encodeURIComponent(p.id) + '" ' +
+                           'class="quick-view-btn button-main py-3 px-5 bg-button hover:bg-green text-white rounded-full whitespace-nowrap">QUICK VIEW</a>' +
+                      '</div>'
+                    );
+                  };
+            
+                  // IMPORTANT: use absolute path to avoid relative path issues
+                  const res = await fetch('/api/admin/products');
+                  if (!res.ok) throw new Error('HTTP ' + res.status);
+                  const all = await res.json();
+            
+                  const current = all.find(function (p) { return String(p.id) === String(currentId); });
+                  if (!current || !current.category) { listEl.innerHTML = ''; return; }
+            
+                  var currentCat = String(current.category).toLowerCase();
+                  const related = all.filter(function (p) {
+                    return String(p.id) !== String(current.id) &&
+                           String(p.category || '').toLowerCase() === currentCat;
+                  }).slice(0, 4);
+            
+                  if (!related.length) { listEl.innerHTML = ''; return; }
+            
+                  listEl.innerHTML = related.map(tpl).join('');
+                } catch (e) {
+                  console.error('Related render error:', e);
+                  var listEl = document.querySelector('.modal-cart-block .left .list');
+                  if (listEl) listEl.innerHTML = '';
+                  // Swallow to avoid breaking other scripts
+                }
+              })();
+            });
+            </script>
         <script src="./assets/js/login.js"></script>
         <script src="./assets/js/phosphor-icons.js"></script>
         <script src="./assets/js/swiper-bundle.min.js"></script>
