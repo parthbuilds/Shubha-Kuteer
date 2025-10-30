@@ -1001,9 +1001,17 @@
                                     sale</label>
                             </div>
                         </div>
-                        <div class="filter-category" style="margin-bottom: 16px;">
-                            <span>Categories:</span>
-                            <div id="category-filter-list" style="display:inline-block;"></div>
+                        <!--categories filter added-->
+                        <div class="category-product right flex items-center gap-3" style="margin-right:24px;">
+                            <label for="select-category" class="caption1 capitalize text-secondary">Category</label>
+                            <div class="select-block relative">
+                                <select id="select-category" name="select-category"
+                                    class="caption1 py-2 pl-3 md:pr-20 pr-10 rounded-lg border border-line text-secondary">
+                                    <option value="">All Categories</option>
+                                    <!-- JS will inject dynamic <option>s for each category here -->
+                                </select>
+                                <i class="ph ph-caret-down absolute top-1/2 -translate-y-1/2 md:right-4 right-2"></i>
+                            </div>
                         </div>
                         <div class="sort-product right flex items-center gap-3">
                             <label for="select-filter" class="caption1 capitalize text-secondary">Sort by</label>

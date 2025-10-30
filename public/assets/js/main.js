@@ -3781,37 +3781,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 //shop category features added
+// 1. Build unique categories from productsData (after loading productsData)
+function populateCategoryDropdown(products) {
+  const select = document.getElementById("select-category");
+  if (!select) return;
+  // Avoid duplicate categories
+  const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
 
-function renderCategoryFilters(products) {
-  let categorySet = new Set(products.map(product => product.category));
-  let html = `<button data-category="" class="category-btn active">All</button>`;
+  // Remove old options except 'All Categories'
+  select.querySelectorAll("option:not([value=''])").forEach(opt => opt.remove());
 
-  categorySet.forEach(category => {
-    const catSlug = category.toLowerCase().replace(/\s+/g, "-");
-    html += `<button data-category="${catSlug}" class="category-btn">${category}</button>`;
-  });
-
-  document.getElementById("category-filter-list").innerHTML = html;
-
-  // Add click event listeners
-  document.querySelectorAll(".category-btn").forEach(btn => {
-    btn.addEventListener("click", function() {
-      document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
-      this.classList.add("active");
-      const selectedCategory = this.getAttribute("data-category");
-      filterByCategory(selectedCategory, products);
-    });
+  categories.forEach(cat => {
+      const option = document.createElement("option");
+      option.value = cat;
+      option.textContent = cat;
+      select.appendChild(option);
   });
 }
 
-// Function to filter by category
-function filterByCategory(categorySlug, products) {
-  let filtered;
-  if (!categorySlug) {
-    filtered = products;
-  } else {
-    filtered = products.filter(p => p.category && p.category.toLowerCase().replace(/\s+/g, "-") === categorySlug);
-  }
-  renderProducts(1, filtered);
-  renderPagination(filtered);
+// 2. Add filter logic for category dropdown
+function addCategoryDropdownListener(products) {
+  const select = document.getElementById("select-category");
+  if (!select) return;
+  select.addEventListener("change", function() {
+      const selectedCat = this.value;
+      let filtered;
+      if (selectedCat === "") {
+          filtered = products;
+      } else {
+          filtered = products.filter(p => p.category === selectedCat);
+      }
+      // You might want to reset pagination/other filters here as needed!
+      renderProducts(1, filtered);
+      renderPagination(filtered);
+  });
 }
+
+// 3. Call these functions after loading productsData
+// (This should happen after productsData is fetched and formatted!)
+populateCategoryDropdown(productsData);
+addCategoryDropdownListener(productsData);
