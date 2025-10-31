@@ -2435,12 +2435,28 @@
         </script> -->
 
         <script>
+            // Fixed category set (id, name, data_item)
+            const CATEGORIES = [
+              { id: 1, name: 'Bedsheets', data_item: 'bedsheets' },
+              { id: 2, name: 'Honeycomb Towels', data_item: 'towels' },
+              { id: 3, name: 'Dohar and Quilts', data_item: 'dohar_and_quilts' },
+              { id: 4, name: 'Table Range', data_item: 'table-runners' },
+              { id: 5, name: 'Bags and Kits', data_item: 'bags_and_kits' },
+              { id: 6, name: 'Cushions and Pillow Covers', data_item: 'pillow-covers' }
+            ];
+          
+            // Map product.category -> slug using exactly the above set
+            const NAME_TO_SLUG = CATEGORIES.reduce((acc, c) => {
+              acc[c.name.toLowerCase()] = c.data_item;
+              return acc;
+            }, {});
+          
             document.addEventListener('DOMContentLoaded', () => {
+              renderFixedCategoryList();
               showSkeletons();
-              loadAndRenderWithCategory();
+              filterFromUrlOrAll();
             });
           
-            // Show lightweight placeholders so the grid is blank first and then fills
             function showSkeletons(count = 9) {
               const list = document.querySelector('.list-product-block .list-product');
               if (!list) return;
@@ -2465,36 +2481,8 @@
               if (pag) pag.innerHTML = '';
             }
           
-            // Alias map to make category matching forgiving
-            const categoryAliases = {
-              'bedsheet sets': ['bedsheet', 'bedsheets', 'bed sheets', 'bedsheet set', 'bed sheet sets'],
-              'cushion sets': ['cushion', 'cushions', 'pillow cover', 'pillow covers', 'cushion set'],
-              'table mat sets': ['table mats', 'table mat', 'table-mat', 'placemats', 'placemat'],
-              'hand towels': ['towel', 'towels', 'hand towel', 'bath towel', 'bath towels'],
-              'table runners': ['table runner', 'runner', 'runners']
-            };
-          
-            function normalize(s) {
-              return (s || '').toString().toLowerCase().trim().replace(/\s+/g, ' ');
-            }
-          
-            function matchesCategory(productCategory, requested) {
-              const pc = normalize(productCategory);
-              const rq = normalize(requested);
-              if (!rq) return true;
-              if (pc === rq) return true;
-          
-              // direct slug-like compare
-              const pcSlug = pc.replace(/\s+/g, '-');
-              const rqSlug = rq.replace(/\s+/g, '-');
-              if (pcSlug === rqSlug) return true;
-          
-              // alias compare
-              for (const canonical in categoryAliases) {
-                const aliasList = [canonical, ...(categoryAliases[canonical] || [])].map(normalize);
-                if (aliasList.includes(rq) && aliasList.includes(pc)) return true;
-              }
-              return false;
+            function normalizeName(s) {
+              return (s || '').toString().trim().toLowerCase();
             }
           
             async function fetchAllTransformed() {
@@ -2507,28 +2495,27 @@
               return raw.map(transform);
             }
           
-            async function loadAndRenderWithCategory() {
+            // Strict match: product is included if NAME_TO_SLUG[product.category] === slug
+            function filterBySlug(products, slug) {
+              if (!slug) return products; // no slug => show all
+              return products.filter(p => NAME_TO_SLUG[normalizeName(p.category)] === slug);
+            }
+          
+            async function filterFromUrlOrAll() {
               try {
                 const url = new URL(window.location.href);
-                const cat = url.searchParams.get('cat') || ''; // empty => show all
+                const slug = (url.searchParams.get('cat') || '').trim();
+          
                 const products = await fetchAllTransformed();
+                let filtered = filterBySlug(products, slug);
           
-                let filtered = products;
-          
-                if (cat) {
-                  filtered = products.filter(p => matchesCategory(p.category, cat));
-                  // Fallback to all if no match
-                  if (filtered.length === 0) {
-                    console.warn('No products for category:', cat, '— showing all products instead.');
-                    filtered = products;
-                  }
-                }
+                // If invalid/empty slug yields no results, show all
+                if (!filtered.length) filtered = products;
           
                 if (typeof renderProducts === 'function') renderProducts(1, filtered);
                 if (typeof renderPagination === 'function') renderPagination(filtered);
               } catch (err) {
                 console.error('Shop render error:', err);
-                // In case of error, show empty state
                 const list = document.querySelector('.list-product-block .list-product');
                 if (list) {
                   list.innerHTML = `
@@ -2540,6 +2527,52 @@
                 const pag = document.querySelector('.list-pagination');
                 if (pag) pag.innerHTML = '';
               }
+            }
+          
+            function renderFixedCategoryList() {
+              const container = document.querySelector('.list-type');
+              if (!container) return;
+          
+              container.innerHTML = '';
+          
+              // All
+              const all = document.createElement('div');
+              all.className = 'item tab-item flex items-center justify-between cursor-pointer';
+              all.dataset.item = '';
+              all.innerHTML = `
+                <div class="type-name text-secondary has-line-before hover:text-black capitalize">All</div>
+                <div class="text-secondary2 number"></div>
+              `;
+              all.addEventListener('click', () => {
+                updateUrlCat('');
+                showSkeletons();
+                filterFromUrlOrAll();
+              });
+              container.appendChild(all);
+          
+              // Fixed categories
+              CATEGORIES.forEach(cat => {
+                const item = document.createElement('div');
+                item.className = 'item tab-item flex items-center justify-between cursor-pointer';
+                item.dataset.item = cat.data_item;
+                item.innerHTML = `
+                  <div class="type-name text-secondary has-line-before hover:text-black capitalize">${cat.name}</div>
+                  <div class="text-secondary2 number"></div>
+                `;
+                item.addEventListener('click', () => {
+                  updateUrlCat(cat.data_item);
+                  showSkeletons();
+                  filterFromUrlOrAll();
+                });
+                container.appendChild(item);
+              });
+            }
+          
+            function updateUrlCat(slug) {
+              const url = new URL(window.location.href);
+              if (slug) url.searchParams.set('cat', slug);
+              else url.searchParams.delete('cat');
+              history.replaceState({}, '', url.toString());
             }
           </script>
 
