@@ -2351,7 +2351,7 @@
                 }
             }
         </script>  -->
-        <script>
+        <!-- <script>
             document.addEventListener('DOMContentLoaded', () => {
               showSkeletons();
               loadAndRenderWithCategory();
@@ -2448,8 +2448,197 @@
                 if (pag) pag.innerHTML = '';
               }
             }
-          </script>
-          
+          </script> -->
+        
+          <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                showSkeletons();
+                // Call the new diagnostic function before loading and rendering
+                diagnoseAndRectifyCategories().then(() => {
+                    loadAndRenderWithCategory();
+                });
+            });
+        
+            // Show lightweight placeholders while loading
+            function showSkeletons(count = 9) {
+                const list = document.querySelector('.list-product-block .list-product');
+                if (!list) return;
+                list.innerHTML = '';
+                for (let i = 0; i < count; i++) {
+                    const sk = document.createElement('div');
+                    sk.className = 'product-item grid-type';
+                    sk.innerHTML = `
+                        <div class="product-main block">
+                          <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
+                            <div class="product-img w-full h-full aspect-[3/4] animate-pulse bg-surface"></div>
+                          </div>
+                          <div class="product-infor mt-4">
+                            <div class="w-2/3 h-4 bg-surface rounded mb-2 animate-pulse"></div>
+                            <div class="w-1/3 h-4 bg-surface rounded animate-pulse"></div>
+                          </div>
+                        </div>
+                      `;
+                    list.appendChild(sk);
+                }
+                const pag = document.querySelector('.list-pagination');
+                if (pag) pag.innerHTML = '';
+            }
+        
+            // Normalize for easy matching
+            function normalize(str) {
+                return (str || '').toString().toLowerCase().trim().replace(/\s+/g, '-');
+            }
+        
+            // Fetch all products
+            async function fetchAllTransformed() {
+                const res = await fetch('/api/admin/products');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const raw = await res.json();
+                const transform = typeof window.transformBackendProduct === 'function' ?
+                    window.transformBackendProduct :
+                    (x) => x;
+                // Assuming the raw product data is an array of objects
+                // and each object has a 'category' property corresponding to the 4th field
+                return raw.map(transform);
+            }
+        
+            /**
+             * Diagnoses and attempts to rectify category mismatches in collection links.
+             * Logs issues to console and optionally updates hrefs.
+             */
+            async function diagnoseAndRectifyCategories() {
+                console.log("--- Starting Category Diagnosis and Rectification ---");
+                let allProducts = [];
+                try {
+                    allProducts = await fetchAllTransformed();
+                } catch (error) {
+                    console.error("Diagnosis Error: Could not fetch products.", error);
+                    console.log("--- Category Diagnosis Aborted ---");
+                    return;
+                }
+        
+                const availableCategories = new Set();
+                allProducts.forEach(p => {
+                    if (p.category) { // Assuming 'category' is the property holding the slug
+                        availableCategories.add(normalize(p.category));
+                    }
+                });
+                console.log("Available product category slugs:", [...availableCategories]);
+        
+                const collectionLinks = document.querySelectorAll('.list-collection a.collection-item');
+                let issuesFound = false;
+        
+                collectionLinks.forEach(link => {
+                    const url = new URL(link.href);
+                    const requestedCat = url.searchParams.get('cat');
+                    const linkText = link.querySelector('.collection-name').textContent.trim();
+        
+                    if (!requestedCat) {
+                        console.warn(`Collection "${linkText}": No 'cat' parameter found in href.`);
+                        issuesFound = true;
+                        return;
+                    }
+        
+                    const normalizedRequestedCat = normalize(requestedCat);
+        
+                    if (!availableCategories.has(normalizedRequestedCat)) {
+                        issuesFound = true;
+                        console.warn(`Collection "${linkText}": Requested category "${normalizedRequestedCat}" (from href="${link.href}") does NOT exist in product data.`);
+        
+                        // Attempt to find a similar category for rectification
+                        let suggestedCategory = null;
+                        const normalizedLinkText = normalize(linkText);
+        
+                        // Strategy 1: Look for exact match of normalized link text in categories
+                        if (availableCategories.has(normalizedLinkText)) {
+                            suggestedCategory = normalizedLinkText;
+                        } else {
+                            // Strategy 2: Look for categories that contain parts of the link text
+                            for (const cat of availableCategories) {
+                                if (normalizedLinkText.includes(cat) || cat.includes(normalizedLinkText)) {
+                                    suggestedCategory = cat;
+                                    break; // Take the first reasonable suggestion
+                                }
+                            }
+                        }
+        
+                        if (suggestedCategory) {
+                            console.log(`  Suggestion: Found a similar category "${suggestedCategory}".`);
+                            // IMPORTANT: You might want to ask the user before applying this automatically
+                            // For now, I'll make it automatic, but you can uncomment the prompt for manual confirmation.
+                            // const confirmChange = confirm(`Change "${linkText}" link from "${normalizedRequestedCat}" to "${suggestedCategory}"?`);
+                            // if (confirmChange) {
+                            url.searchParams.set('cat', suggestedCategory);
+                            link.href = url.toString();
+                            console.log(`  Rectified: Link for "${linkText}" updated to "${link.href}"`);
+                            // } else {
+                            //     console.log(`  Rectification skipped for "${linkText}".`);
+                            // }
+                        } else {
+                            console.log(`  No clear rectification suggestion found for "${linkText}". Manual review needed.`);
+                        }
+                    } else {
+                        console.log(`Collection "${linkText}": Category "${normalizedRequestedCat}" matches product data. (OK)`);
+                    }
+                });
+        
+                if (!issuesFound) {
+                    console.log("All collection links match available product categories. No issues found.");
+                }
+                console.log("--- Category Diagnosis and Rectification Complete ---");
+            }
+        
+            // Main function: filter by URL category
+            async function loadAndRenderWithCategory() {
+                try {
+                    const url = new URL(window.location.href);
+                    const cat = url.searchParams.get('cat'); // e.g. ?cat=bedsheets
+        
+                    const products = await fetchAllTransformed();
+                    let filtered = products;
+        
+                    if (cat && cat.trim() !== '') {
+                        const normalizedCat = normalize(cat);
+                        filtered = products.filter(
+                            (p) => normalize(p.category) === normalizedCat
+                        );
+        
+                        // If no matching products, show nothing (don’t fallback to all)
+                        if (filtered.length === 0) {
+                            console.warn('No products found for category:', cat);
+                            const list = document.querySelector('.list-product-block .list-product');
+                            if (list) {
+                                list.innerHTML = `
+                                    <div class="text-center py-10 text-gray-500 text-lg">
+                                      No products found in this category.
+                                    </div>
+                                  `;
+                            }
+                            const pag = document.querySelector('.list-pagination');
+                            if (pag) pag.innerHTML = '';
+                            return;
+                        }
+                    }
+        
+                    // Render products or all if no category filter
+                    if (typeof renderProducts === 'function') renderProducts(1, filtered);
+                    if (typeof renderPagination === 'function') renderPagination(filtered);
+        
+                } catch (err) {
+                    console.error('Error loading products:', err);
+                    const list = document.querySelector('.list-product-block .list-product');
+                    if (list) {
+                        list.innerHTML = `
+                            <div class="text-center py-10 text-gray-500 text-lg">
+                              Failed to load products. Please try again later.
+                            </div>
+                          `;
+                    }
+                    const pag = document.querySelector('.list-pagination');
+                    if (pag) pag.innerHTML = '';
+                }
+            }
+        </script>
 
         <script src="./assets/js/login.js"></script>
         <script src="./assets/js/phosphor-icons.js"></script>
