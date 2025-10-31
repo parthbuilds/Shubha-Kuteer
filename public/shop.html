@@ -2292,7 +2292,7 @@
                 </div>
             </div>
         </div>
-        <script>
+        <!-- <script>
             document.addEventListener("DOMContentLoaded", () => {
                 loadCategories();
             });
@@ -2333,8 +2333,89 @@
                     console.error("Error loading categories:", error);
                 }
             }
-        </script>
+        </script> -->
 
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+              loadCategories().then(() => {
+                // Auto-filter if ?cat= is present
+                const u = new URL(window.location.href);
+                const cat = (u.searchParams.get("cat") || "").trim();
+                if (cat) filterByCategoryName(cat);
+              });
+            });
+          
+            async function fetchAllProductsTransformed() {
+              const res = await fetch("/api/admin/products");
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              const raw = await res.json();
+              const transform = typeof window.transformBackendProduct === "function"
+                ? window.transformBackendProduct
+                : (x) => x;
+              return raw.map(transform);
+            }
+          
+            async function filterByCategoryName(categoryName) {
+              try {
+                const products = await fetchAllProductsTransformed();
+                const normalized = (s) => (s || "").toLowerCase().trim();
+                const catNorm = normalized(categoryName);
+          
+                const filtered = catNorm
+                  ? products.filter(p => normalized(p.category) === catNorm)
+                  : products;
+          
+                if (typeof renderProducts === "function") renderProducts(1, filtered);
+                if (typeof renderPagination === "function") renderPagination(filtered);
+              } catch (err) {
+                console.error("Category filter error:", err);
+              }
+            }
+          
+            async function loadCategories() {
+              try {
+                const response = await fetch("/api/admin/categories/public");
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+          
+                const categories = await response.json();
+                const container = document.querySelector(".list-type");
+                if (!container) {
+                  console.warn("Category container not found on page.");
+                  return;
+                }
+          
+                container.innerHTML = "";
+          
+                // "All" option
+                const allItem = document.createElement("div");
+                allItem.className = "item tab-item flex items-center justify-between cursor-pointer";
+                allItem.dataset.item = "";
+                allItem.innerHTML = `
+                  <div class="type-name text-secondary has-line-before hover:text-black capitalize">All</div>
+                  <div class="text-secondary2 number"></div>
+                `;
+                allItem.addEventListener("click", () => filterByCategoryName(""));
+                container.appendChild(allItem);
+          
+                // Category items
+                categories.forEach((cat) => {
+                  const item = document.createElement("div");
+                  item.className = "item tab-item flex items-center justify-between cursor-pointer";
+                  item.dataset.item = cat.data_item || "";
+                  item.innerHTML = `
+                    <div class="type-name text-secondary has-line-before hover:text-black capitalize">
+                      ${cat.name}
+                    </div>
+                    <div class="text-secondary2 number">${cat.count ?? 0}</div>
+                  `;
+                  item.addEventListener("click", () => filterByCategoryName(cat.name));
+                  container.appendChild(item);
+                });
+              } catch (error) {
+                console.error("Error loading categories:", error);
+              }
+            }
+          </script>
 
         <script src="./assets/js/login.js"></script>
         <script src="./assets/js/phosphor-icons.js"></script>
