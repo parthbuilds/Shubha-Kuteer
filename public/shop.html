@@ -2309,7 +2309,7 @@
                 </div>
             </div>
         </div>
-        <script>
+        <!-- <script>
             document.addEventListener("DOMContentLoaded", () => {
                 loadCategories();
             });
@@ -2350,7 +2350,67 @@
                     console.error("Error loading categories:", error);
                 }
             }
-        </script> 
+        </script>  -->
+
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+              loadCategories();
+            });
+            
+            async function loadCategories() {
+              try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const selectedCat = urlParams.get("cat"); // read ?cat= from URL
+            
+                const response = await fetch("/api/admin/categories/public");
+            
+                if (!response.ok) {
+                  throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+            
+                const categories = await response.json();
+                const container = document.querySelector(".list-type");
+            
+                if (!container) {
+                  console.warn("Category container not found on page.");
+                  return;
+                }
+            
+                container.innerHTML = ""; // clear old content
+            
+                // Filter categories if 'cat' exists, else show all
+                const filteredCategories = selectedCat
+                  ? categories.filter(
+                      (cat) =>
+                        cat.data_item.toLowerCase() === selectedCat.toLowerCase()
+                    )
+                  : categories;
+            
+                if (filteredCategories.length === 0) {
+                  container.innerHTML = `<div class="text-center text-secondary">No products found in this category.</div>`;
+                  return;
+                }
+            
+                filteredCategories.forEach((cat) => {
+                  const item = document.createElement("div");
+                  item.className = "item tab-item flex items-center justify-between cursor-pointer";
+                  item.dataset.item = cat.data_item || "";
+            
+                  item.innerHTML = `
+                    <div class="type-name text-secondary has-line-before hover:text-black capitalize">
+                      ${cat.name}
+                    </div>
+                    <div class="text-secondary2 number">${cat.count ?? 0}</div>
+                  `;
+            
+                  container.appendChild(item);
+                });
+              } catch (error) {
+                console.error("Error loading categories:", error);
+              }
+            }
+            </script>
+            
 
         <script src="./assets/js/login.js"></script>
         <script src="./assets/js/phosphor-icons.js"></script>
