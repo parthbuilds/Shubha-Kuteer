@@ -2351,14 +2351,13 @@
                 }
             }
         </script>  -->
-
         <script>
             document.addEventListener('DOMContentLoaded', () => {
               showSkeletons();
               loadAndRenderWithCategory();
             });
           
-            // Show placeholders while products load
+            // Show lightweight placeholders while loading
             function showSkeletons(count = 9) {
               const list = document.querySelector('.list-product-block .list-product');
               if (!list) return;
@@ -2383,12 +2382,12 @@
               if (pag) pag.innerHTML = '';
             }
           
-            // Normalize strings for easy comparison
-            function normalize(s) {
-              return (s || '').toString().toLowerCase().trim().replace(/\s+/g, '-');
+            // Normalize for easy matching
+            function normalize(str) {
+              return (str || '').toString().toLowerCase().trim().replace(/\s+/g, '-');
             }
           
-            // Fetch all products from backend
+            // Fetch all products
             async function fetchAllTransformed() {
               const res = await fetch('/api/admin/products');
               if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -2399,34 +2398,49 @@
               return raw.map(transform);
             }
           
-            // Main loader that filters products by URL category
+            // Main function: filter by URL category
             async function loadAndRenderWithCategory() {
               try {
                 const url = new URL(window.location.href);
-                const cat = url.searchParams.get('cat') || ''; // e.g., ?cat=bedsheets
-                const products = await fetchAllTransformed();
+                const cat = url.searchParams.get('cat'); // e.g. ?cat=bedsheets
           
+                const products = await fetchAllTransformed();
                 let filtered = products;
           
-                if (cat) {
+                if (cat && cat.trim() !== '') {
                   const normalizedCat = normalize(cat);
-                  filtered = products.filter(p => normalize(p.category) === normalizedCat);
+                  filtered = products.filter(
+                    (p) => normalize(p.category) === normalizedCat
+                  );
           
+                  // If no matching products, show nothing (don’t fallback to all)
                   if (filtered.length === 0) {
-                    console.warn('No products found for category:', cat, '— showing all instead.');
-                    filtered = products;
+                    console.warn('No products found for category:', cat);
+                    const list = document.querySelector('.list-product-block .list-product');
+                    if (list) {
+                      list.innerHTML = `
+                        <div class="text-center py-10 text-gray-500 text-lg">
+                          No products found in this category.
+                        </div>
+                      `;
+                    }
+                    const pag = document.querySelector('.list-pagination');
+                    if (pag) pag.innerHTML = '';
+                    return;
                   }
                 }
           
+                // Render products or all if no category filter
                 if (typeof renderProducts === 'function') renderProducts(1, filtered);
                 if (typeof renderPagination === 'function') renderPagination(filtered);
+          
               } catch (err) {
-                console.error('Shop render error:', err);
+                console.error('Error loading products:', err);
                 const list = document.querySelector('.list-product-block .list-product');
                 if (list) {
                   list.innerHTML = `
-                    <div class="list-empty text-center py-10">
-                      <p class="text-gray-500 text-lg">Failed to load products. Please try again later.</p>
+                    <div class="text-center py-10 text-gray-500 text-lg">
+                      Failed to load products. Please try again later.
                     </div>
                   `;
                 }
