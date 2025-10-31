@@ -2449,7 +2449,7 @@
               }
             }
           </script> -->
-        
+
           <script>
             document.addEventListener('DOMContentLoaded', () => {
                 showSkeletons();
@@ -2489,17 +2489,61 @@
                 return (str || '').toString().toLowerCase().trim().replace(/\s+/g, '-');
             }
         
-            // Fetch all products
+            // --- Start of changes related to backend product transformation ---
+        
+            /**
+             * Define how raw product data from the API should be transformed into
+             * a standardized product object for client-side use.
+             *
+             * IMPORTANT: You MUST configure this function based on your actual API response.
+             *
+             * Example 1: If your API returns data as arrays (like your text data):
+             *   `rawProductArray[3]` is the 4th column, which is your intended category slug.
+             *   window.rawProductToStandardProduct = (rawArray) => ({
+             *       id: rawArray[0],
+             *       name: rawArray[1],
+             *       displayCategory: rawArray[2], // e.g., "Table Range"
+             *       categorySlug: rawArray[3],    // e.g., "table-runners", "table-mats"
+             *       // ... map other fields as needed
+             *   });
+             *
+             * Example 2: If your API returns JSON objects with specific property names:
+             *   window.rawProductToStandardProduct = (rawObject) => ({
+             *       id: rawObject.productId,
+             *       name: rawObject.productName,
+             *       displayCategory: rawObject.categoryName, // e.g., "Table Range"
+             *       categorySlug: rawObject.categoryIdentifier, // e.g., "table-runners"
+             *       // ... map other fields as needed
+             *   });
+             *
+             * If this function is not defined, the script will assume the API already
+             * returns objects with a 'categorySlug' (preferred) or 'category' property.
+             */
+            // Default transformation (assuming API returns objects with 'categorySlug' or 'category')
+            window.rawProductToStandardProduct = window.rawProductToStandardProduct || ((p) => p);
+        
             async function fetchAllTransformed() {
                 const res = await fetch('/api/admin/products');
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const raw = await res.json();
-                const transform = typeof window.transformBackendProduct === 'function' ?
-                    window.transformBackendProduct :
-                    (x) => x;
-                // Assuming the raw product data is an array of objects
-                // and each object has a 'category' property corresponding to the 4th field
-                return raw.map(transform);
+        
+                // Apply the transformation defined by the user (or default)
+                return raw.map(window.rawProductToStandardProduct);
+            }
+        
+            // --- End of changes related to backend product transformation ---
+        
+            /**
+             * Attempts to get the most appropriate category slug from a product object.
+             * Prioritizes 'categorySlug', then 'category', then 'displayCategory'.
+             * @param {Object} product - A transformed product object.
+             * @returns {string|null} The normalized category slug, or null if not found.
+             */
+            function getProductCategorySlug(product) {
+                if (product.categorySlug) return normalize(product.categorySlug);
+                if (product.category) return normalize(product.category);
+                if (product.displayCategory) return normalize(product.displayCategory);
+                return null;
             }
         
             /**
@@ -2512,78 +2556,105 @@
                 try {
                     allProducts = await fetchAllTransformed();
                 } catch (error) {
-                    console.error("Diagnosis Error: Could not fetch products.", error);
+                    console.error("Diagnosis Error: Could not fetch products. Please ensure /api/admin/products is reachable and returns valid JSON.", error);
                     console.log("--- Category Diagnosis Aborted ---");
                     return;
                 }
         
                 const availableCategories = new Set();
+                const availableDisplayCategories = new Set(); // For better suggestions
                 allProducts.forEach(p => {
-                    if (p.category) { // Assuming 'category' is the property holding the slug
-                        availableCategories.add(normalize(p.category));
+                    const slug = getProductCategorySlug(p);
+                    if (slug) {
+                        availableCategories.add(slug);
+                    }
+                    if (p.displayCategory) {
+                        availableDisplayCategories.add(normalize(p.displayCategory));
                     }
                 });
-                console.log("Available product category slugs:", [...availableCategories]);
+        
+                if (availableCategories.size === 0) {
+                    console.warn("No category slugs could be extracted from the product data. Please check your `rawProductToStandardProduct` function or API response structure.");
+                    console.log("--- Category Diagnosis Aborted ---");
+                    return;
+                }
+        
+                console.log("Available product category slugs for filtering:", [...availableCategories]);
+                if (availableDisplayCategories.size > 0) {
+                    console.log("Available product display category names (normalized):", [...availableDisplayCategories]);
+                }
+        
         
                 const collectionLinks = document.querySelectorAll('.list-collection a.collection-item');
                 let issuesFound = false;
         
-                collectionLinks.forEach(link => {
+                for (const link of collectionLinks) { // Using for...of for async/await possibilities if we add prompts
                     const url = new URL(link.href);
                     const requestedCat = url.searchParams.get('cat');
                     const linkText = link.querySelector('.collection-name').textContent.trim();
+                    const normalizedLinkText = normalize(linkText);
         
                     if (!requestedCat) {
                         console.warn(`Collection "${linkText}": No 'cat' parameter found in href.`);
                         issuesFound = true;
-                        return;
+                        continue;
                     }
         
                     const normalizedRequestedCat = normalize(requestedCat);
         
                     if (!availableCategories.has(normalizedRequestedCat)) {
                         issuesFound = true;
-                        console.warn(`Collection "${linkText}": Requested category "${normalizedRequestedCat}" (from href="${link.href}") does NOT exist in product data.`);
+                        console.warn(`Collection "${linkText}": Requested category slug "${normalizedRequestedCat}" (from href="${link.href}") does NOT exist in product data's identified category slugs.`);
         
-                        // Attempt to find a similar category for rectification
                         let suggestedCategory = null;
-                        const normalizedLinkText = normalize(linkText);
         
-                        // Strategy 1: Look for exact match of normalized link text in categories
+                        // Priority 1: Exact match of normalized link text with an available category slug
                         if (availableCategories.has(normalizedLinkText)) {
                             suggestedCategory = normalizedLinkText;
-                        } else {
-                            // Strategy 2: Look for categories that contain parts of the link text
+                            console.log(`  Suggestion 1: Link text matches product category slug "${suggestedCategory}".`);
+                        }
+                        // Priority 2: Exact match of normalized link text with an available *display* category (then try to find its slug)
+                        else if (availableDisplayCategories.has(normalizedLinkText)) {
+                            // Find a product that has this display category and get its slug
+                            const productWithDisplayCat = allProducts.find(p => normalize(p.displayCategory) === normalizedLinkText);
+                            if (productWithDisplayCat) {
+                                suggestedCategory = getProductCategorySlug(productWithDisplayCat);
+                                console.log(`  Suggestion 2: Link text matches a display category "${normalizedLinkText}", suggesting its slug "${suggestedCategory}".`);
+                            }
+                        }
+                        // Priority 3: Look for categories (slugs) that contain parts of the link text
+                        else {
                             for (const cat of availableCategories) {
                                 if (normalizedLinkText.includes(cat) || cat.includes(normalizedLinkText)) {
                                     suggestedCategory = cat;
-                                    break; // Take the first reasonable suggestion
+                                    console.log(`  Suggestion 3: Found a partial match "${suggestedCategory}" within product category slugs.`);
+                                    break;
                                 }
                             }
                         }
         
-                        if (suggestedCategory) {
-                            console.log(`  Suggestion: Found a similar category "${suggestedCategory}".`);
-                            // IMPORTANT: You might want to ask the user before applying this automatically
-                            // For now, I'll make it automatic, but you can uncomment the prompt for manual confirmation.
-                            // const confirmChange = confirm(`Change "${linkText}" link from "${normalizedRequestedCat}" to "${suggestedCategory}"?`);
+                        if (suggestedCategory && suggestedCategory !== normalizedRequestedCat) {
+                            // You can uncomment the prompt for manual confirmation if desired
+                            // const confirmChange = confirm(`Change "${linkText}" link from "${normalizedRequestedCat}" to "${suggestedCategory}"? (Check console for details)`);
                             // if (confirmChange) {
                             url.searchParams.set('cat', suggestedCategory);
                             link.href = url.toString();
                             console.log(`  Rectified: Link for "${linkText}" updated to "${link.href}"`);
                             // } else {
-                            //     console.log(`  Rectification skipped for "${linkText}".`);
+                            //     console.log(`  Rectification skipped for "${linkText}" by user.`);
                             // }
+                        } else if (suggestedCategory === normalizedRequestedCat) {
+                            console.log(`  No change needed as suggested category "${suggestedCategory}" is the same as the requested one.`);
                         } else {
                             console.log(`  No clear rectification suggestion found for "${linkText}". Manual review needed.`);
                         }
                     } else {
-                        console.log(`Collection "${linkText}": Category "${normalizedRequestedCat}" matches product data. (OK)`);
+                        console.log(`Collection "${linkText}": Category "${normalizedRequestedCat}" matches product data's identified category slugs. (OK)`);
                     }
-                });
+                }
         
                 if (!issuesFound) {
-                    console.log("All collection links match available product categories. No issues found.");
+                    console.log("All collection links appear to match available product category slugs. No issues found.");
                 }
                 console.log("--- Category Diagnosis and Rectification Complete ---");
             }
@@ -2600,7 +2671,7 @@
                     if (cat && cat.trim() !== '') {
                         const normalizedCat = normalize(cat);
                         filtered = products.filter(
-                            (p) => normalize(p.category) === normalizedCat
+                            (p) => getProductCategorySlug(p) === normalizedCat // Use the helper to get slug for filtering
                         );
         
                         // If no matching products, show nothing (don’t fallback to all)
