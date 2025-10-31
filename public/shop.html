@@ -2353,64 +2353,89 @@
         </script>  -->
 
         <script>
-            document.addEventListener("DOMContentLoaded", () => {
-              loadCategories();
+            document.addEventListener('DOMContentLoaded', () => {
+              showSkeletons();
+              loadAndRenderWithCategory();
             });
-            
-            async function loadCategories() {
-              try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const selectedCat = urlParams.get("cat"); // read ?cat= from URL
-            
-                const response = await fetch("/api/admin/categories/public");
-            
-                if (!response.ok) {
-                  throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-            
-                const categories = await response.json();
-                const container = document.querySelector(".list-type");
-            
-                if (!container) {
-                  console.warn("Category container not found on page.");
-                  return;
-                }
-            
-                container.innerHTML = ""; // clear old content
-            
-                // Filter categories if 'cat' exists, else show all
-                const filteredCategories = selectedCat
-                  ? categories.filter(
-                      (cat) =>
-                        cat.data_item.toLowerCase() === selectedCat.toLowerCase()
-                    )
-                  : categories;
-            
-                if (filteredCategories.length === 0) {
-                  container.innerHTML = `<div class="text-center text-secondary">No products found in this category.</div>`;
-                  return;
-                }
-            
-                filteredCategories.forEach((cat) => {
-                  const item = document.createElement("div");
-                  item.className = "item tab-item flex items-center justify-between cursor-pointer";
-                  item.dataset.item = cat.data_item || "";
-            
-                  item.innerHTML = `
-                    <div class="type-name text-secondary has-line-before hover:text-black capitalize">
-                      ${cat.name}
+          
+            // Show placeholders while products load
+            function showSkeletons(count = 9) {
+              const list = document.querySelector('.list-product-block .list-product');
+              if (!list) return;
+              list.innerHTML = '';
+              for (let i = 0; i < count; i++) {
+                const sk = document.createElement('div');
+                sk.className = 'product-item grid-type';
+                sk.innerHTML = `
+                  <div class="product-main block">
+                    <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
+                      <div class="product-img w-full h-full aspect-[3/4] animate-pulse bg-surface"></div>
                     </div>
-                    <div class="text-secondary2 number">${cat.count ?? 0}</div>
+                    <div class="product-infor mt-4">
+                      <div class="w-2/3 h-4 bg-surface rounded mb-2 animate-pulse"></div>
+                      <div class="w-1/3 h-4 bg-surface rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                `;
+                list.appendChild(sk);
+              }
+              const pag = document.querySelector('.list-pagination');
+              if (pag) pag.innerHTML = '';
+            }
+          
+            // Normalize strings for easy comparison
+            function normalize(s) {
+              return (s || '').toString().toLowerCase().trim().replace(/\s+/g, '-');
+            }
+          
+            // Fetch all products from backend
+            async function fetchAllTransformed() {
+              const res = await fetch('/api/admin/products');
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              const raw = await res.json();
+              const transform = typeof window.transformBackendProduct === 'function'
+                ? window.transformBackendProduct
+                : (x) => x;
+              return raw.map(transform);
+            }
+          
+            // Main loader that filters products by URL category
+            async function loadAndRenderWithCategory() {
+              try {
+                const url = new URL(window.location.href);
+                const cat = url.searchParams.get('cat') || ''; // e.g., ?cat=bedsheets
+                const products = await fetchAllTransformed();
+          
+                let filtered = products;
+          
+                if (cat) {
+                  const normalizedCat = normalize(cat);
+                  filtered = products.filter(p => normalize(p.category) === normalizedCat);
+          
+                  if (filtered.length === 0) {
+                    console.warn('No products found for category:', cat, '— showing all instead.');
+                    filtered = products;
+                  }
+                }
+          
+                if (typeof renderProducts === 'function') renderProducts(1, filtered);
+                if (typeof renderPagination === 'function') renderPagination(filtered);
+              } catch (err) {
+                console.error('Shop render error:', err);
+                const list = document.querySelector('.list-product-block .list-product');
+                if (list) {
+                  list.innerHTML = `
+                    <div class="list-empty text-center py-10">
+                      <p class="text-gray-500 text-lg">Failed to load products. Please try again later.</p>
+                    </div>
                   `;
-            
-                  container.appendChild(item);
-                });
-              } catch (error) {
-                console.error("Error loading categories:", error);
+                }
+                const pag = document.querySelector('.list-pagination');
+                if (pag) pag.innerHTML = '';
               }
             }
-            </script>
-            
+          </script>
+          
 
         <script src="./assets/js/login.js"></script>
         <script src="./assets/js/phosphor-icons.js"></script>
