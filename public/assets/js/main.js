@@ -2226,95 +2226,39 @@ fetch("api/admin/products")
             .querySelector(".menu-tab .active")
             .getAttribute("data-item");
           const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
-
+    
+          // Function to render products based on category
+          const renderProductsByCategory = (category, targetList) => {
+            targetList
+              .querySelectorAll(".product-item")
+              .forEach((prd) => prd.remove());
+    
+            products
+              .filter((product) => product.type === category)
+              .slice(0, 2)
+              .forEach((product) => {
+                const productElement = createProductItem(product);
+                targetList.appendChild(productElement);
+              });
+          };
+    
           // ✅ Handle initial active tab
-          if (menuItemActive === "best sellers") {
-            products
-              .sort((a, b) => b.sold - a.sold)
-              .slice(0, 2)
-              .forEach((product) => {
-                const productElement = createProductItem(product);
-                list.appendChild(productElement);
-              });
-          } else if (menuItemActive === "on sale") {
-            products
-              .filter((product) => product.sale === true)
-              .slice(0, 2)
-              .forEach((product) => {
-                const productElement = createProductItem(product);
-                list.appendChild(productElement);
-              });
-          } else if (menuItemActive === "new arrivals") {
-            products
-              .filter((product) => product.new === true)
-              .slice(0, 2)
-              .forEach((product) => {
-                const productElement = createProductItem(product);
-                list.appendChild(productElement);
-              });
-          } else {
-            products
-              .filter((product) => product.type === menuItemActive)
-              .slice(0, 2)
-              .forEach((product) => {
-                const productElement = createProductItem(product);
-                list.appendChild(productElement);
-              });
-          }
-
+          renderProductsByCategory(menuItemActive, list);
+    
           // ✅ Tab click handler
           menuItems.forEach((item) => {
             item.addEventListener("click", () => {
-              list
-                .querySelectorAll(".product-item")
-                .forEach((prd) => prd.remove());
-
               const tab = item.getAttribute("data-item");
-
-              if (tab === "best sellers") {
-                products
-                  .sort((a, b) => b.sold - a.sold)
-                  .slice(0, 2)
-                  .forEach((product) => {
-                    const productElement = createProductItem(product);
-                    list.appendChild(productElement);
-                  });
-              } else if (tab === "on sale") {
-                products
-                  .filter((product) => product.sale === true)
-                  .slice(0, 2)
-                  .forEach((product) => {
-                    const productElement = createProductItem(product);
-                    list.appendChild(productElement);
-                  });
-              } else if (tab === "new arrivals") {
-                products
-                  .filter((product) => product.new === true)
-                  .slice(0, 2)
-                  .forEach((product) => {
-                    const productElement = createProductItem(product);
-                    list.appendChild(productElement);
-                  });
-              } else {
-                products
-                  .filter((product) => product.type === tab)
-                  .slice(0, 2)
-                  .forEach((product) => {
-                    const productElement = createProductItem(product);
-                    list.appendChild(productElement);
-                  });
-              }
-
+              renderProductsByCategory(tab, list);
               handleActiveImgWhenColorChange(products);
               addEventToProductItem(products);
             });
           });
         } else {
-          // No active tab -> fallback
-          products.slice(0, 2).forEach((product) => {
-            const productElement = createProductItem(product);
-            list.appendChild(productElement);
-          });
+          // No active tab -> fallback (you might want a default category here or leave it empty)
+          // For now, it will show no products if no active tab is found and no default logic is implemented.
+          // If you want to show, for example, "travel-kits" as a default, you would call:
+          // renderProductsByCategory("travel-kits", list);
         }
       });
     }
