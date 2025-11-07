@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 3. If no product, category, or type match, redirect to general shop with search query
         alert(`No close match found for "${query}". Redirecting to general shop page with search term.`);
-        window.location.href = `${SHOP_PAGE_BASE_URL}?search=${encodeURIComponent(query)}`;
+        window.location.href = `${SHOP_PAGE_BASE_URL}?cat=${encodeURIComponent(query)}`;
     };
 
     searchInput.addEventListener("keydown", (e) => {
