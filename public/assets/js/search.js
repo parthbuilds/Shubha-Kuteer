@@ -6,27 +6,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const API_URL = "https://www.shubhakuteer.in/api/admin/products"; 
     const SHOP_PAGE_BASE_URL = "/shop.html"; 
 
-    // Define your canonical category names and their corresponding URL slugs
-    // The key is the display name (for fuzzy matching), the value is the slug (for the URL)
-    const CATEGORY_SLUG_MAP = {
-        "Bedsheets": "bedsheets",
-        "Honeycomb Towels": "towels",
-        "Dohar and Quilts": "dohar",
-        "Table Range": "table-runners", // This maps to 'table-runners' from your list
-        "More": "curtains", // Assuming 'More' specifically means 'curtains' as per your list
-        "Gifting": "bedcovers", // You provided multiple slugs for Gifting; picking 'bedcovers' as primary
-                                // You might want to refine how Gifting is handled if it can map to multiple
-        "Apparels": "kaftans",
-        "Bags and Kits": "tote-bags", // Similar to Gifting, picking 'tote-bags'
-        "Cushions and Pillow Covers": "pillow-cover",
-        // Add more specific mappings if 'Table Range' needs to map to 'table-mats' sometimes, etc.
-        // For simplicity, I'm using the first mapping provided in your list for each display category.
-    };
+    // Define your canonical list of categories/search terms here (these are the display names)
+    // The URLs will be constructed using these names, properly URL-encoded.
+    const CANONICAL_CATEGORIES = [
+        "Bedsheets",
+        "Honeycomb Towels",
+        "Dohar and Quilts",
+        "Table Range",
+        "More",
+        "Gifting",
+        "Apparels",
+        "Bags and Kits",
+        "Cushions and Pillow Covers"
+    ];
 
     let products = [];
-    let fuzzysortSearchableItems = []; 
-    // Prepare a fuzzysort-ready version of your canonical category DISPLAY NAMES
-    let fuzzysortDisplayCategories = [];
+    let fuzzysortSearchableItems = []; // To store fuzzysort processed data
+    // Also prepare a fuzzysort-ready version of your canonical categories
+    let fuzzysortCanonicalCategories = [];
 
     fetch(API_URL)
         .then(res => {
@@ -44,10 +41,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     original: { ...p, slug: safeSlug }
                 };
             });
-            // Prepare the display names of categories from the map for fuzzy matching
-            fuzzysortDisplayCategories = Object.keys(CATEGORY_SLUG_MAP).map(displayName => ({
-                target: displayName.toLowerCase(), // This is what fuzzysort will search against
-                original: displayName            // This is the key to get the slug from CATEGORY_SLUG_MAP
+            // Prepare canonical categories for fuzzy matching
+            fuzzysortCanonicalCategories = CANONICAL_CATEGORIES.map(cat => ({
+                target: cat.toLowerCase(), // Search target for fuzzy matching
+                original: cat            // The exact, original string to use in the URL
             }));
 
             console.log("Products loaded and indexed for fuzzy search.");
@@ -127,27 +124,24 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // --- NEW: Prioritize matching against canonical category DISPLAY NAMES and using their SLUGS ---
-        const canonicalMatch = fuzzysort.go(q, fuzzysortDisplayCategories, {
+        // --- NEW/REVERTED: Prioritize matching against canonical categories (display names) ---
+        // This will find "Cushions and Pillow Covers" or "Apparels" based on fuzzy input.
+        const canonicalMatch = fuzzysort.go(q, fuzzysortCanonicalCategories, {
             key: 'target',
             limit: 1,
             threshold: -200 // A decent threshold for matching against canonical terms
         });
 
         if (canonicalMatch.length > 0) {
-            const matchedDisplayName = canonicalMatch[0].obj.original; // Get the exact display name (e.g., "Cushions and Pillow Covers")
-            const correspondingSlug = CATEGORY_SLUG_MAP[matchedDisplayName]; // Look up its slug (e.g., "pillow-cover")
-
-            if (correspondingSlug) {
-                // Redirect using the slug
-                window.location.href = `${SHOP_PAGE_BASE_URL}?cat=${encodeURIComponent(correspondingSlug)}`;
-                return; // Redirected to canonical category slug, stop here
-            }
+            const matchedCanonicalTerm = canonicalMatch[0].obj.original; // Get the exact, original display name
+            // Redirect using the exact display name, URL-encoded
+            window.location.href = `${SHOP_PAGE_BASE_URL}?cat=${encodeURIComponent(matchedCanonicalTerm)}`;
+            return; // Redirected to canonical category, stop here
         }
-        // --- END NEW SECTION ---
+        // --- END NEW/REVERTED SECTION ---
 
 
-        // 1. Try to find a direct product match (if no canonical category match by display name)
+        // 1. Try to find a direct product match (if no canonical category match)
         const productResults = fuzzysort.go(q, fuzzysortSearchableItems, {
             key: 'target',
             limit: 1,
@@ -182,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 3. If no product, canonical category by display name, or product category/type match, redirect to general shop with search query
+        // 3. If no product, canonical category, or product category/type match, redirect to general shop with search query
         alert(`No close match found for "${query}". Redirecting to general shop page with search term.`);
         window.location.href = `${SHOP_PAGE_BASE_URL}?cat=${encodeURIComponent(query)}`;
     };
