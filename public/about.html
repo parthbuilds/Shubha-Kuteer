@@ -73,12 +73,14 @@
                 </div>
                 <div class="form-search relative z-[1] max-md:hidden max-lg:hidden">
                     <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 cursor-pointer"></i>
-                    <input type="text" placeholder="What are you looking for?"
-                        class="h-10 rounded-lg border border-line caption2 w-full max-w-xs pl-9 pr-4" />
-                </div>
-                <div id="suggestionBox"
-                    class="absolute top-12 left-0 w-full bg-white border border-line rounded-lg shadow-lg hidden z-[100]">
-                </div>
+                    <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="What are you looking for?"
+                    class="h-10 rounded-lg border border-line caption2 w-full max-w-xs pl-9 pr-4"
+                    />
+                    <div id="suggestions" class="absolute top-11 left-0 w-full bg-white border border-gray-200 rounded-lg shadow-md hidden"></div>
+                </div>                  
                 <a href="index.html" class="flex items-center absolute left-1/2 -translate-x-1/2">
                     <img src="./assets/images/logo.svg" alt="Shubha Kuteer Logo"
                         class="w- h-20 md:w-24 md:h-24 object-cover" />
