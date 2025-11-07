@@ -3,8 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const suggestionsBox = document.getElementById("suggestions");
     const searchIcon = document.querySelector(".ph-magnifying-glass");
 
-    const API_URL = "https://www.thesufisoul.com/api/admin/products"; 
-    const SHOP_PAGE_BASE_URL = "/shop.html"; // Your general shop page URL
+    const API_URL = "https://shubhakuteer.in/api/admin/products"; 
+    const SHOP_PAGE_BASE_URL = "/shop.html"; 
 
     let products = [];
     let fuzzysortSearchableItems = []; // To store fuzzysort processed data
