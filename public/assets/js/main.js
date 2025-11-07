@@ -3780,3 +3780,167 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+//show two products
+// Function to generate a product card (renamed to avoid conflicts, preserving classes)
+function generateMarketplaceProductCardElement(product) {
+  const productElement = document.createElement("div");
+  productElement.classList.add("product-item", "grid-type");
+  productElement.setAttribute("data-item", product.id); // Assuming 'id' is a unique identifier
+
+  productElement.innerHTML = `
+      <div class="product-main cursor-pointer block">
+          <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
+              ${product.sale ? `<div class="product-tag text-button-uppercase text-white bg-red px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">Sale</div>` : ''}
+              <div class="list-action-right absolute top-3 right-3 max-lg:hidden">
+                  <div class="add-wishlist-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative">
+                      <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">Add To Wishlist</div>
+                      <i class="ph ph-heart text-lg"></i>
+                  </div>
+                  <div class="compare-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative mt-2">
+                      <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">Compare Product</div>
+                      <i class="ph ph-arrow-counter-clockwise text-lg compare-icon"></i>
+                      <i class="ph ph-check-circle text-lg checked-icon"></i>
+                  </div>
+              </div>
+              <div class="product-img w-full h-full aspect-[3/4]">
+                  <img class="w-full h-full object-cover duration-700" src="${product.image1 || product.image}" alt="${product.name}" />
+                  <img class="w-full h-full object-cover duration-700" src="${product.image2 || product.image}" alt="${product.name}" />
+              </div>
+              <div class="list-action grid grid-cols-2 gap-3 px-5 absolute w-full bottom-5 max-lg:hidden">
+                  <div class="quick-view-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white">Quick View</div>
+                  <div class="quick-shop-btn text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white">Quick Shop</div>
+                  <div class="quick-shop-block absolute left-5 right-5 bg-white p-5 rounded-[20px]">
+                      <div class="list-size flex items-center justify-center flex-wrap gap-2">
+                          ${product.sizes ? product.sizes.map(size => `<div class="size-item w-10 h-10 rounded-full flex items-center justify-center text-button bg-white border border-line">${size}</div>`).join('') : ''}
+                      </div>
+                      <div class="add-cart-btn button-main w-full text-center rounded-full py-3 mt-4">Add To cart</div>
+                  </div>
+              </div>
+          </div>
+          <div class="product-infor mt-4 lg:mb-7">
+              <div class="product-sold sm:pb-4 pb-2">
+                  <div class="progress bg-line h-1.5 w-full rounded-full overflow-hidden relative">
+                      <div class="progress-sold bg-red absolute left-0 top-0 h-full" style="width: ${product.soldPercentage || 0}%;"></div>
+                  </div>
+                  <div class="flex items-center justify-between gap-3 gap-y-1 flex-wrap mt-2">
+                      <div class="text-button-uppercase">
+                          <span class="text-secondary2 max-sm:text-xs">Sold: </span>
+                          <span class="max-sm:text-xs">${product.sold || 0}</span>
+                      </div>
+                      <div class="text-button-uppercase">
+                          <span class="text-secondary2 max-sm:text-xs">Available: </span>
+                          <span class="max-sm:text-xs">${product.available || 0}</span>
+                      </div>
+                  </div>
+              </div>
+              <div class="product-name text-title duration-300">${product.name}</div>
+              <div class="list-color list-color-image max-md:hidden flex items-center gap-3 flex-wrap duration-500">
+                  ${product.colors ? product.colors.map(color => `
+                      <div class="color-item w-12 h-12 rounded-xl duration-300 relative">
+                          <img src="${color.image}" alt="${color.name}" class="rounded-xl w-full h-full object-cover" />
+                          <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${color.name}</div>
+                      </div>
+                  `).join('') : ''}
+              </div>
+              <div class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
+                  <div class="product-price text-title">₹${product.price ? product.price.toFixed(2) : '0.00'}</div>
+                  ${product.originalPrice && product.price < product.originalPrice ? `<div class="product-origin-price caption1 text-secondary2"><del>₹${product.originalPrice.toFixed(2)}</del></div>` : ''}
+                  ${product.discount ? `<div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">-${product.discount}%</div>` : ''}
+              </div>
+          </div>
+      </div>
+  `;
+  return productElement;
+}
+
+// Placeholder for your product transformation function
+function transformBackendProduct(backendProduct) {
+// IMPORTANT: Adjust these property names to match your actual API response structure
+return {
+  id: backendProduct.id,
+  category: backendProduct.category.toLowerCase(), // Ensure category is lowercase for matching
+  type: backendProduct.type.toLowerCase(),       // Ensure type is lowercase for matching
+  name: backendProduct.name,
+  image1: backendProduct.images && backendProduct.images[0] ? backendProduct.images[0] : './assets/images/placeholder.png', // Assuming array of images
+  image2: backendProduct.images && backendProduct.images[1] ? backendProduct.images[1] : './assets/images/placeholder.png',
+  price: backendProduct.price,
+  originalPrice: backendProduct.original_price || backendProduct.price,
+  discount: backendProduct.discount_percentage,
+  sold: backendProduct.sold_count,
+  available: backendProduct.available_count,
+  sale: backendProduct.on_sale,
+  new: backendProduct.is_new_arrival,
+  colors: backendProduct.available_colors ? backendProduct.available_colors.map(c => ({ name: c.name, image: c.hex_code_image })) : [], // Assuming array of color objects
+  sizes: backendProduct.available_sizes || [] // Assuming array of size strings
+};
+}
+
+// Function to add event listeners to product items (Quick View, Add to Wishlist, etc.)
+function addEventToProductItem(products) {
+  // Implement your event handlers here. This function will be called whenever products are displayed.
+  // You might want to re-attach events to newly created product elements.
+  console.log("Adding event listeners to displayed products (first 2 for this section).");
+  // Example: quick view buttons
+  document.querySelectorAll('.quick-view-btn').forEach(button => {
+      button.onclick = (e) => {
+          e.preventDefault();
+          console.log('Quick View clicked!');
+          // Implement quick view modal logic here
+      };
+  });
+  // Add other event listeners as needed for .add-wishlist-btn, .compare-btn, .add-cart-btn etc.
+}
+
+// This function seems to handle image changes when a color is selected. Keep it if it's used elsewhere.
+function handleActiveImgWhenColorChange(products) {
+console.log("Handle active image when color changes (not directly used in this specific 2-product section).");
+// Implement logic for color-based image switching
+}
+
+
+// Main script execution
+document.addEventListener("DOMContentLoaded", () => {
+  // Query all marketplace sections that will display products based on their data-category
+  const marketplaceProductLists = document.querySelectorAll(".list-product.tab-features-block.style-marketplace");
+
+  if (marketplaceProductLists.length > 0) {
+      fetch("api/admin/products") // Your API endpoint
+          .then((response) => {
+              if (!response.ok) {
+                  throw new Error(`HTTP error! Status: ${response.status}`);
+              }
+              return response.json();
+          })
+          .then((backendProducts) => {
+              const products = backendProducts.map(transformBackendProduct);
+
+              marketplaceProductLists.forEach((listContainer) => {
+                  const categoryToDisplay = listContainer.getAttribute("data-category");
+
+                  if (categoryToDisplay) {
+                      const filteredAndSlicedProducts = products
+                          .filter((product) => product.category === categoryToDisplay)
+                          .slice(0, 2); // Show only 2 products
+
+                      // Clear existing content (if any placeholder HTML was there)
+                      listContainer.innerHTML = '';
+
+                      filteredAndSlicedProducts.forEach((product) => {
+                          const productElement = generateMarketplaceProductCardElement(product);
+                          listContainer.appendChild(productElement);
+                      });
+
+                      addEventToProductItem(filteredAndSlicedProducts); // Re-attach events for these 2 products
+                  } else {
+                      console.warn(`list-product container with class 'tab-features-block style-marketplace' is missing 'data-category' attribute. No products will be displayed in this section.`);
+                      // Optional: Display a message or fallback products if data-category is missing
+                  }
+              });
+
+              // The original code had sections for listFourProduct and listSixProduct.
+              // If you still need those, you'll need to adapt them separately.
+              // For this specific request, I've focused on the .list-product with data-category.
+          })
+          .catch((error) => console.error("Error loading products:", error));
+  }
+});
