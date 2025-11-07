@@ -2218,48 +2218,34 @@ fetch("api/admin/products")
       });
     }
 
-    if (listTwoProduct) {
+    if (listTwoProduct) { // Assuming 'listTwoProduct' is a NodeList of your product list containers
       listTwoProduct.forEach((list) => {
-        const parent = list.parentElement;
-        if (parent.querySelector(".menu-tab .active")) {
-          const menuItemActive = parent
-            .querySelector(".menu-tab .active")
-            .getAttribute("data-item");
-          const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
+        // Get the category directly from the 'data-item' attribute of the current list element
+        const category = list.getAttribute("data-item");
     
-          // Function to render products based on category
-          const renderProductsByCategory = (category, targetList) => {
-            targetList
-              .querySelectorAll(".product-item")
-              .forEach((prd) => prd.remove());
+        if (category) {
+          // Clear any existing products in this list (important if reloading or for initial clear)
+          list.querySelectorAll(".product-item").forEach((prd) => prd.remove());
     
-            products
-              .filter((product) => product.type === category)
-              .slice(0, 2)
-              .forEach((product) => {
-                const productElement = createProductItem(product);
-                targetList.appendChild(productElement);
-              });
-          };
-    
-          // ✅ Handle initial active tab
-          renderProductsByCategory(menuItemActive, list);
-    
-          // ✅ Tab click handler
-          menuItems.forEach((item) => {
-            item.addEventListener("click", () => {
-              const tab = item.getAttribute("data-item");
-              renderProductsByCategory(tab, list);
-              handleActiveImgWhenColorChange(products);
-              addEventToProductItem(products);
+          // Filter products by the category and display the first two
+          products
+            .filter((product) => product.type === category)
+            .slice(0, 2)
+            .forEach((product) => {
+              const productElement = createProductItem(product);
+              list.appendChild(productElement);
             });
-          });
         } else {
-          // No active tab -> fallback (you might want a default category here or leave it empty)
-          // For now, it will show no products if no active tab is found and no default logic is implemented.
-          // If you want to show, for example, "travel-kits" as a default, you would call:
-          // renderProductsByCategory("travel-kits", list);
+          console.warn(
+            `Product list element found without a 'data-item' attribute, skipping:`,
+            list
+          );
         }
+    
+        // You can keep these calls if they are necessary for newly injected product items
+        // and are defined functions in your scope.
+        // handleActiveImgWhenColorChange(products);
+        // addEventToProductItem(products);
       });
     }
 
