@@ -165,7 +165,7 @@
 // ✅ Fetch products from backend
 async function fetchProducts() {
   try {
-    const res = await fetch("https://www.shubhakuteer.in/api/products"); // Change if needed
+    const res = await fetch("/api/products");
     if (!res.ok) throw new Error("Failed to fetch");
     return await res.json();
   } catch (err) {
