@@ -2107,6 +2107,7 @@ const listEightProduct = document.querySelector(".list-product.eight-product");
 const listThreeProduct = document.querySelectorAll(
   ".list-product.three-product"
 );
+const listTwoProduct = document.querySelectorAll(".list-product.two-product");
 
 // Fetch products from JSON file (assuming products.json)
 fetch("api/admin/products")
