@@ -76,6 +76,9 @@
                     <input type="text" placeholder="What are you looking for?"
                         class="h-10 rounded-lg border border-line caption2 w-full max-w-xs pl-9 pr-4" />
                 </div>
+                <div id="suggestionBox"
+                    class="absolute top-12 left-0 w-full bg-white border border-line rounded-lg shadow-lg hidden z-[100]">
+                </div>
                 <a href="index.html" class="flex items-center absolute left-1/2 -translate-x-1/2">
                     <img src="./assets/images/logo.svg" alt="Shubha Kuteer Logo"
                         class="w- h-20 md:w-24 md:h-24 object-cover" />
@@ -633,8 +636,8 @@
                                                                     </div>
                                                                 </div>
                                                                 <div class="product-name text-title duration-300"><a
-                                                                    href="https://www.shubhakuteer.in/product-default.html?id=7">
-                                                                    Tote Bag 1</a></div>
+                                                                        href="https://www.shubhakuteer.in/product-default.html?id=7">
+                                                                        Tote Bag 1</a></div>
                                                                 <div
                                                                     class="list-color py-2 max-md:hidden flex items-center gap-3 flex-wrap duration-500">
                                                                     <div
@@ -711,8 +714,8 @@
         </div>
     </div>
 
-        <!-- Menu Mobile -->
-        <div id="menu-mobile" class="">
+    <!-- Menu Mobile -->
+    <div id="menu-mobile" class="">
         <div class="menu-container bg-white h-full">
             <div class="container h-full">
                 <div class="menu-main h-full overflow-hidden">
@@ -778,46 +781,46 @@
         </div>
     </div>
 
-        <!-- Menu bar -->
-        <div class="menu_bar fixed bg-white bottom-0 left-0 w-full h-[70px] sm:hidden z-[101]">
-            <div class="menu_bar-inner grid grid-cols-4 items-center h-full">
-                <a href="index.html" class="menu_bar-link flex flex-col items-center gap-1">
-                    <span class="ph-bold ph-house text-2xl block"></span>
-                    <span class="menu_bar-title caption2 font-semibold">Home</span>
-                </a>
-                <a href="new-collection.html" class="menu_bar-link flex flex-col items-center gap-1">
-                    <span class="ph-bold ph-list text-2xl block"></span>
-                    <span class="menu_bar-title caption2 font-semibold">Category</span>
-                </a>
-                <a href="shop.html" class="menu_bar-link flex flex-col items-center gap-1">
-                    <span class="ph-bold ph-magnifying-glass text-2xl block"></span>
-                    <span class="menu_bar-title caption2 font-semibold">Search</span>
-                </a>
-                <a href="cart.html" class="menu_bar-link flex flex-col items-center gap-1">
-                    <div class="cart-icon relative">
-                        <span class="ph-bold ph-handbag text-2xl block"></span>
-                        <span
-                            class="quantity cart-quantity absolute -right-1.5 -top-1.5 text-xs text-white bg-black w-4 h-4 flex items-center justify-center rounded-full">0</span>
-                    </div>
-                    <span class="menu_bar-title caption2 font-semibold">Cart</span>
-                </a>
-            </div>
+    <!-- Menu bar -->
+    <div class="menu_bar fixed bg-white bottom-0 left-0 w-full h-[70px] sm:hidden z-[101]">
+        <div class="menu_bar-inner grid grid-cols-4 items-center h-full">
+            <a href="index.html" class="menu_bar-link flex flex-col items-center gap-1">
+                <span class="ph-bold ph-house text-2xl block"></span>
+                <span class="menu_bar-title caption2 font-semibold">Home</span>
+            </a>
+            <a href="new-collection.html" class="menu_bar-link flex flex-col items-center gap-1">
+                <span class="ph-bold ph-list text-2xl block"></span>
+                <span class="menu_bar-title caption2 font-semibold">Category</span>
+            </a>
+            <a href="shop.html" class="menu_bar-link flex flex-col items-center gap-1">
+                <span class="ph-bold ph-magnifying-glass text-2xl block"></span>
+                <span class="menu_bar-title caption2 font-semibold">Search</span>
+            </a>
+            <a href="cart.html" class="menu_bar-link flex flex-col items-center gap-1">
+                <div class="cart-icon relative">
+                    <span class="ph-bold ph-handbag text-2xl block"></span>
+                    <span
+                        class="quantity cart-quantity absolute -right-1.5 -top-1.5 text-xs text-white bg-black w-4 h-4 flex items-center justify-center rounded-full">0</span>
+                </div>
+                <span class="menu_bar-title caption2 font-semibold">Cart</span>
+            </a>
         </div>
+    </div>
 
-        <div class="slider-block style-nine w-full px-4 xl:py-[100px] md:py-20 py-14">
-            <div class=" h-full w-full flex items-center justify-center">
-                <div class="text-content text-center">
-                    <!-- About Us Heading -->
-                    <div class="heading2 text-center">About Us</div>
-                    <!-- Breadcrumb Links -->
-                    <div class="link flex items-center justify-center gap-1 caption1 mt-3">
-                        <a href="index.html">Homepage</a>
-                        <i class="ph ph-caret-right text-sm text-secondary2"></i>
-                        <div class="text-secondary2 capitalize">About Us</div>
-                    </div>
+    <div class="slider-block style-nine w-full px-4 xl:py-[100px] md:py-20 py-14">
+        <div class=" h-full w-full flex items-center justify-center">
+            <div class="text-content text-center">
+                <!-- About Us Heading -->
+                <div class="heading2 text-center">About Us</div>
+                <!-- Breadcrumb Links -->
+                <div class="link flex items-center justify-center gap-1 caption1 mt-3">
+                    <a href="index.html">Homepage</a>
+                    <i class="ph ph-caret-right text-sm text-secondary2"></i>
+                    <div class="text-secondary2 capitalize">About Us</div>
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <div class="about">
@@ -2173,7 +2176,7 @@
     <script src="./assets/js/phosphor-icons.js"></script>
     <script src="./assets/js/swiper-bundle.min.js"></script>
     <script src="./assets/js/main.js"></script>
-    <script src="./assets/js/search.js" ></script>
+    <script src="./assets/js/search.js"></script>
 </body>
 
 </html>
