@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ✅ Fetches your product data (full HTTPS URLs) correctly
     // Replace with your actual API endpoint that returns an array of product objects
     // Each product object should ideally have a 'name' (for search) and 'url' (for redirection)
-    const API_URL = "https://www.shubhakuteer.in/api/products"; 
+    const API_URL = "https://www.shubhakuteer.in/api/admin/products"; 
 
     let products = [];
     let fuzzysortResults = []; // To store fuzzysort processed data
