@@ -1034,118 +1034,31 @@ if (document.querySelector(".swiper-collection-eight")) {
 }
 
 // list-product
-document.addEventListener("DOMContentLoaded", () => {
-  // --- IMPORTANT: Ensure 'products' array and 'createProductItem' function are accessible ---
-  // You mentioned "remove this array", but the 'products' array is essential for
-  // the filtering logic (`products.filter(...)`). If you want to load products
-  // differently (e.g., from an API call based on the tag), that's a much larger change.
-  // For now, I'm assuming the 'products' array still exists globally,
-  // but you just don't want to explicitly define it within this specific snippet.
-  // If 'products' is truly gone, then the filtering logic will break.
-
-  // Example placeholder for createProductItem function if it's not defined elsewhere.
-  // This function is still necessary to build the individual product HTML.
-  function createProductItem(product) {
-    const productDiv = document.createElement("div");
-    productDiv.classList.add("product-item");
-    productDiv.innerHTML = `
-      <a href="product-detail.html?id=${product.id}" class="product-item-main block">
-          <div class="product-img w-full h-[300px] overflow-hidden rounded-2xl">
-              <img src="${product.images[0]}" alt="${
-      product.name
-    }" class="w-full h-full object-cover" />
-          </div>
-          <div class="product-content flex flex-col items-center justify-center p-4">
-              <p class="product-type text-sm text-gray-500">${
-                product.type || "N/A"
-              }</p>
-              <h3 class="product-name text-lg font-semibold">${product.name}</h3>
-              <p class="product-price text-xl font-bold">₹${product.price.toFixed(
-                2
-              )}</p>
-          </div>
-      </a>
-    `;
-    return productDiv;
-  }
-  // --- END of IMPORTANT definitions ---
-
-
-  // 1. Get the category (tag name) from the designated HTML element
-  const categoryTagElement = document.querySelector(".product-category-tag"); // Use the new class
-  let categoryName = null;
-
-  if (categoryTagElement) {
-    categoryName = categoryTagElement.textContent.trim(); // Get the text content, e.g., "tote-bags"
-  } else {
-    console.warn("Could not find the element with class '.product-category-tag' to determine the category.");
-    // Optionally set a default category or just let it skip Swiper initialization
-    // categoryName = "default-category";
-  }
-
-
-  // 2. Proceed with Swiper initialization if a categoryName was found
-  //    and the 'products' array and 'createProductItem' function are available.
-  if (
-    document.querySelector(".swiper-list-product") &&
-    categoryName &&
-    typeof products !== 'undefined' && // Check if 'products' is defined globally
-    typeof createProductItem === 'function'
-  ) {
-    const swiperContainer = document.querySelector(".swiper-list-product");
-    const swiperWrapper = swiperContainer.querySelector(".swiper-wrapper");
-
-    if (swiperWrapper) {
-      swiperWrapper.innerHTML = ""; // Clear existing slides
-    }
-
-    // Filter products by the obtained categoryName
-    const productsToDisplay = products.filter(
-      (product) => product.type === categoryName
-    );
-
-    // Create a slide for each product and append to the swiper-wrapper
-    productsToDisplay.forEach((product) => {
-      const slide = document.createElement("div");
-      slide.classList.add("swiper-slide"); // Swiper requires this class
-      const productElement = createProductItem(product);
-      slide.appendChild(productElement);
-      if (swiperWrapper) {
-        swiperWrapper.appendChild(slide);
-      }
-    });
-
-    // Initialize Swiper ONLY after slides have been added
-    var swiperListProduct = new Swiper(".swiper-list-product", {
-      navigation: {
-        prevEl: ".swiper-button-prev2",
-        nextEl: ".swiper-button-next2",
+if (document.querySelector(".swiper-list-product")) {
+  var swiperListProduct = new Swiper(".swiper-list-product", {
+    navigation: {
+      prevEl: ".swiper-button-prev2",
+      nextEl: ".swiper-button-next2",
+    },
+    loop: true,
+    slidesPerView: 2,
+    spaceBetween: 16,
+    breakpoints: {
+      640: {
+        slidesPerView: 3,
+        spaceBetween: 16,
       },
-      loop: true,
-      slidesPerView: 2,
-      spaceBetween: 16,
-      breakpoints: {
-        640: {
-          slidesPerView: 3,
-          spaceBetween: 16,
-        },
-        768: {
-          slidesPerView: 3,
-          spaceBetween: 30,
-        },
-        1280: {
-          slidesPerView: 4,
-          spaceBetween: 30,
-        },
+      768: {
+        slidesPerView: 3,
+        spaceBetween: 30,
       },
-    });
-
-    // handleActiveImgWhenColorChange(products); // If still needed
-    // addEventToProductItem(products);
-  } else {
-    console.warn("Swiper or necessary components (category, products array, createProductItem) not found or available for initialization.");
-  }
-});
+      1280: {
+        slidesPerView: 4,
+        spaceBetween: 30,
+      },
+    },
+  });
+}
 
 // list-three-product
 if (document.querySelector(".swiper-list-three-product")) {
