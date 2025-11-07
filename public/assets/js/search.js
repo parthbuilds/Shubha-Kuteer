@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const suggestionsBox = document.getElementById("suggestions");
     const searchIcon = document.querySelector(".ph-magnifying-glass");
 
-    const API_URL = "https://shubhakuteer.in/api/admin/products"; 
+    const API_URL = "https://www.shubhakuteer.in/api/admin/products"; 
     const SHOP_PAGE_BASE_URL = "/shop.html"; 
 
     let products = [];
