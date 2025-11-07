@@ -2218,6 +2218,107 @@ fetch("api/admin/products")
       });
     }
 
+    if (listTwoProduct) {
+      listTwoProduct.forEach((list) => {
+        const parent = list.parentElement;
+        if (parent.querySelector(".menu-tab .active")) {
+          const menuItemActive = parent
+            .querySelector(".menu-tab .active")
+            .getAttribute("data-item");
+          const menuItems = parent.querySelectorAll(".menu-tab .tab-item");
+
+          // ✅ Handle initial active tab
+          if (menuItemActive === "best sellers") {
+            products
+              .sort((a, b) => b.sold - a.sold)
+              .slice(0, 2)
+              .forEach((product) => {
+                const productElement = createProductItem(product);
+                list.appendChild(productElement);
+              });
+          } else if (menuItemActive === "on sale") {
+            products
+              .filter((product) => product.sale === true)
+              .slice(0, 2)
+              .forEach((product) => {
+                const productElement = createProductItem(product);
+                list.appendChild(productElement);
+              });
+          } else if (menuItemActive === "new arrivals") {
+            products
+              .filter((product) => product.new === true)
+              .slice(0, 2)
+              .forEach((product) => {
+                const productElement = createProductItem(product);
+                list.appendChild(productElement);
+              });
+          } else {
+            products
+              .filter((product) => product.type === menuItemActive)
+              .slice(0, 2)
+              .forEach((product) => {
+                const productElement = createProductItem(product);
+                list.appendChild(productElement);
+              });
+          }
+
+          // ✅ Tab click handler
+          menuItems.forEach((item) => {
+            item.addEventListener("click", () => {
+              list
+                .querySelectorAll(".product-item")
+                .forEach((prd) => prd.remove());
+
+              const tab = item.getAttribute("data-item");
+
+              if (tab === "best sellers") {
+                products
+                  .sort((a, b) => b.sold - a.sold)
+                  .slice(0, 2)
+                  .forEach((product) => {
+                    const productElement = createProductItem(product);
+                    list.appendChild(productElement);
+                  });
+              } else if (tab === "on sale") {
+                products
+                  .filter((product) => product.sale === true)
+                  .slice(0, 2)
+                  .forEach((product) => {
+                    const productElement = createProductItem(product);
+                    list.appendChild(productElement);
+                  });
+              } else if (tab === "new arrivals") {
+                products
+                  .filter((product) => product.new === true)
+                  .slice(0, 2)
+                  .forEach((product) => {
+                    const productElement = createProductItem(product);
+                    list.appendChild(productElement);
+                  });
+              } else {
+                products
+                  .filter((product) => product.type === tab)
+                  .slice(0, 2)
+                  .forEach((product) => {
+                    const productElement = createProductItem(product);
+                    list.appendChild(productElement);
+                  });
+              }
+
+              handleActiveImgWhenColorChange(products);
+              addEventToProductItem(products);
+            });
+          });
+        } else {
+          // No active tab -> fallback
+          products.slice(0, 2).forEach((product) => {
+            const productElement = createProductItem(product);
+            list.appendChild(productElement);
+          });
+        }
+      });
+    }
+
     // Display the first 6 products
     if (listSixProduct) {
       const parent = listSixProduct.parentElement.parentElement.parentElement;
