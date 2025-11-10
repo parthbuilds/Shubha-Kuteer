@@ -52,17 +52,22 @@
 
 //function to modulate data
 function transformBackendProduct(backendProduct) {
-  // Attempt to parse gallery string into an array, default to empty array if parsing fails
   let galleryImages = [];
   try {
+    // Attempt to parse as JSON first
     galleryImages = JSON.parse(backendProduct.gallery);
   } catch (e) {
-    console.warn(
-      "Could not parse gallery string for product:",
-      backendProduct.id,
-      e
-    );
-    galleryImages = [];
+    // If parsing fails, check if it's a non-empty string and treat it as a single URL
+    if (typeof backendProduct.gallery === 'string' && backendProduct.gallery.startsWith('http')) {
+      galleryImages = [backendProduct.gallery];
+    } else {
+      console.warn(
+        "Could not parse gallery string for product:",
+        backendProduct.id,
+        e
+      );
+      galleryImages = [];
+    }
   }
 
   // Combine main_image and thumb_image into thumbImage array, ensuring no duplicates
