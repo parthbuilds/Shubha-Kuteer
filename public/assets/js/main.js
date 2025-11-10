@@ -50,152 +50,111 @@
 /**** Display wishlist, cart, compare item from localStorage ****/
 /**** faqs ****/
 
-//function to modulate data
+// Function to normalize backend product data
 function transformBackendProduct(backendProduct) {
+  // ---- 1. Handle Gallery Images ----
   let galleryImages = [];
-
   try {
-    // ✅ Only parse if it's a string
-    if (typeof backendProduct.gallery === "string") {
-      // If it's valid JSON string (e.g. '["url1", "url2"]')
-      if (backendProduct.gallery.trim().startsWith("[")) {
-        galleryImages = JSON.parse(backendProduct.gallery);
-      } 
-      // If it's a single URL string
-      else if (backendProduct.gallery.startsWith("http")) {
-        galleryImages = [backendProduct.gallery];
-      } 
-      // Otherwise empty
-      else {
-        galleryImages = [];
-      }
-    } 
-    // ✅ Already an array — just use it
-    else if (Array.isArray(backendProduct.gallery)) {
-      galleryImages = backendProduct.gallery;
-    } 
-    // Anything else → fallback
-    else {
-      galleryImages = [];
+    if (backendProduct.gallery) {
+      // Try parsing as JSON (if it's a JSON string)
+      galleryImages = JSON.parse(backendProduct.gallery);
+      if (!Array.isArray(galleryImages)) galleryImages = [];
     }
-
-  } catch (e) {
-    console.warn(
-      "Could not parse gallery string for product:",
-      backendProduct.id,
-      e
-    );
-    galleryImages = [];
+  } catch {
+    // If not JSON, but a single URL, wrap it in an array
+    if (typeof backendProduct.gallery === "string" && backendProduct.gallery.startsWith("http")) {
+      galleryImages = [backendProduct.gallery];
+    } else {
+      console.warn("Invalid gallery format for product:", backendProduct.id);
+    }
   }
 
-  return {
-    ...backendProduct,
-    gallery: galleryImages,
-  };
-}
-
-  // Combine main_image and thumb_image into thumbImage array, ensuring no duplicates
+  // ---- 2. Handle Thumbnail Images ----
   const thumbImages = [];
-  if (backendProduct.thumb_image) {
-    thumbImages.push(backendProduct.thumb_image);
-  }
-  if (
-    backendProduct.main_image &&
-    !thumbImages.includes(backendProduct.main_image)
-  ) {
+  if (backendProduct.thumb_image) thumbImages.push(backendProduct.thumb_image);
+  if (backendProduct.main_image && !thumbImages.includes(backendProduct.main_image)) {
     thumbImages.push(backendProduct.main_image);
   }
-  // If no specific thumb_image or main_image, use first from gallery if available
   if (thumbImages.length === 0 && galleryImages.length > 0) {
     thumbImages.push(galleryImages[0]);
   }
-  // Ensure at least one image if possible, using a placeholder if absolutely nothing is found
   if (thumbImages.length === 0) {
-    thumbImages.push("./assets/images/placeholder.png"); // Fallback placeholder
+    thumbImages.push("./assets/images/placeholder.png"); // fallback
   }
 
-  // Default values for sizes and variation, as they are not directly in the backend data
-  // You might need to extend your backend API or add logic here to fetch/infer these
-  const defaultSizes = ["S", "M", "L", "XL"];
-
-  // --- START OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
+  // ---- 3. Handle Variations (Color, etc.) ----
   let variations = [];
-
-  // Assuming backendProduct has an 'attributes' property which is an array
-  // and one of its elements is a 'color' attribute with values and hex codes.
-  if (backendProduct.attributes && Array.isArray(backendProduct.attributes)) {
-    const colorAttribute = backendProduct.attributes.find(
-      (attr) =>
-        attr.attribute_name && attr.attribute_name.toLowerCase() === "color"
+  if (Array.isArray(backendProduct.attributes)) {
+    const colorAttr = backendProduct.attributes.find(
+      (attr) => attr.attribute_name?.toLowerCase() === "color"
     );
 
-    if (colorAttribute && colorAttribute.attribute_values) {
+    if (colorAttr?.attribute_values) {
       try {
         const attributeValues =
-          typeof colorAttribute.attribute_values === "string"
-            ? JSON.parse(colorAttribute.attribute_values)
-            : colorAttribute.attribute_values;
+          typeof colorAttr.attribute_values === "string"
+            ? JSON.parse(colorAttr.attribute_values)
+            : colorAttr.attribute_values;
 
         if (Array.isArray(attributeValues)) {
-          variations = attributeValues.map((valueObj) => ({
-            color: valueObj.value, // e.g., "Red"
-            colorCode: valueObj.code, // <--- CHANGED FROM 'hex_code' TO 'code'
-            colorImage: "./assets/images/product/color/48x48.png", // This might still be a generic placeholder or dynamic based on color name
-            image:
-              backendProduct.main_image || "./assets/images/product/bag-1.png", // Use main product image or default
+          variations = attributeValues.map((v) => ({
+            color: v.value || "Unknown",
+            colorCode: v.code || "#000000",
+            colorImage: "./assets/images/product/color/48x48.png",
+            image: backendProduct.main_image || "./assets/images/product/bag-1.png",
           }));
         }
-      } catch (e) {
-        console.warn(
-          "Could not parse color attribute_values for product:",
-          backendProduct.id,
-          e
-        );
+      } catch {
+        console.warn("Failed to parse attribute_values for product:", backendProduct.id);
       }
     }
   }
 
-  // Fallback to default variations if none are generated from backend attributes
+  // Default variations if backend lacks color info
   if (variations.length === 0) {
     variations = [
       {
-        color: "red",
+        color: "Red",
         colorCode: "#DB4444",
         colorImage: "./assets/images/product/color/48x48.png",
         image: backendProduct.main_image || "./assets/images/product/bag-1.png",
       },
       {
-        color: "yellow",
+        color: "Yellow",
         colorCode: "#ECB018",
         colorImage: "./assets/images/product/color/48x48.png",
         image: backendProduct.main_image || "./assets/images/product/bag-1.png",
       },
     ];
   }
-  // --- END OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
 
+  // ---- 4. Default Sizes ----
+  const defaultSizes = ["S", "M", "L", "XL"];
+
+  // ---- 5. Final Data Object ----
   return {
-    id: String(backendProduct.id), // Ensure ID is a string for consistency
-    category: backendProduct.category,
-    type: backendProduct.type,
-    name: backendProduct.name,
+    id: String(backendProduct.id || ""),
+    category: backendProduct.category || "Uncategorized",
+    type: backendProduct.type || "",
+    name: backendProduct.name || "Untitled Product",
     new: Boolean(backendProduct.is_new),
     sale: Boolean(backendProduct.on_sale),
-    rate: parseFloat(backendProduct.rate),
-    price: parseFloat(backendProduct.price),
-    originPrice: parseFloat(backendProduct.origin_price),
-    brand: backendProduct.brand,
-    sold: backendProduct.sold,
-    quantity: backendProduct.quantity,
-    quantityPurchase: 1, // Default, not in backend data
-    sizes: defaultSizes, // Default sizes, or fetch/infer from backend if available
-    variation: variations, // Use the dynamically generated variations
-    thumbImage: thumbImages, // Combined main and thumb image
-    images: galleryImages.length > 0 ? galleryImages : thumbImages, // Use gallery if available, otherwise thumbImages
-    description: backendProduct.description,
-    action: backendProduct.action,
-    slug: backendProduct.slug,
+    rate: parseFloat(backendProduct.rate) || 0,
+    price: parseFloat(backendProduct.price) || 0,
+    originPrice: parseFloat(backendProduct.origin_price) || 0,
+    brand: backendProduct.brand || "",
+    sold: backendProduct.sold || 0,
+    quantity: backendProduct.quantity || 0,
+    quantityPurchase: 1,
+    sizes: defaultSizes,
+    variation: variations,
+    thumbImage: thumbImages,
+    images: galleryImages.length > 0 ? galleryImages : thumbImages,
+    description: backendProduct.description || "",
+    action: backendProduct.action || "",
+    slug: backendProduct.slug || `product-${backendProduct.id}`,
   };
+}
 
 
 // Select language, currency top nav
