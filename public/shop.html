@@ -1978,33 +1978,55 @@
             </div>
         </div>
         <script>
-            document.addEventListener('DOMContentLoaded', async () => { // Made async
+            document.addEventListener('DOMContentLoaded', () => {
                 showSkeletons();
-        
-                // Ensure shop.js has loaded and exposed its functions
-                // You might need a small delay or a more robust way to ensure shop.js is ready
-                // For simplicity, we assume it's parsed and global functions are available.
-                if (typeof window.fetchProductsFromBackendAndRender === 'undefined') {
-                    console.error("shop.js functions not loaded yet. Check script loading order.");
-                    // Fallback or retry logic if shop.js isn't ready
-                    return;
-                }
-        
                 // Call the new diagnostic function before loading and rendering
-                await diagnoseAndRectifyCategories(); // Await diagnosis
-        
-                await loadAndRenderWithCategory(); // Await the main rendering logic
+                diagnoseAndRectifyCategories().then(() => {
+                    loadAndRenderWithCategory();
+                });
             });
         
-            // ... (Your existing showSkeletons and normalize functions) ...
-        
-            // Fetch all products (now using the exposed function from shop.js)
-            async function fetchAllTransformed() {
-                if (typeof window.fetchAllTransformed === 'function') {
-                    return await window.fetchAllTransformed();
-                } else {
-                    throw new Error("window.fetchAllTransformed is not defined. shop.js might not be loaded correctly.");
+            // Show lightweight placeholders while loading
+            function showSkeletons(count = 9) {
+                const list = document.querySelector('.list-product-block .list-product');
+                if (!list) return;
+                list.innerHTML = '';
+                for (let i = 0; i < count; i++) {
+                    const sk = document.createElement('div');
+                    sk.className = 'product-item grid-type';
+                    sk.innerHTML = `
+                        <div class="product-main block">
+                          <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
+                            <div class="product-img w-full h-full aspect-[3/4] animate-pulse bg-surface"></div>
+                          </div>
+                          <div class="product-infor mt-4">
+                            <div class="w-2/3 h-4 bg-surface rounded mb-2 animate-pulse"></div>
+                            <div class="w-1/3 h-4 bg-surface rounded animate-pulse"></div>
+                          </div>
+                        </div>
+                      `;
+                    list.appendChild(sk);
                 }
+                const pag = document.querySelector('.list-pagination');
+                if (pag) pag.innerHTML = '';
+            }
+        
+            // Normalize for easy matching
+            function normalize(str) {
+                return (str || '').toString().toLowerCase().trim().replace(/\s+/g, '-');
+            }
+        
+            // Fetch all products
+            async function fetchAllTransformed() {
+                const res = await fetch('/api/admin/products');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const raw = await res.json();
+                const transform = typeof window.transformBackendProduct === 'function' ?
+                    window.transformBackendProduct :
+                    (x) => x;
+                // Assuming the raw product data is an array of objects
+                // and each object has a 'category' property corresponding to the 4th field
+                return raw.map(transform);
             }
         
             /**
@@ -2012,12 +2034,10 @@
              * Logs issues to console and optionally updates hrefs.
              */
             async function diagnoseAndRectifyCategories() {
-                // ... (Your existing diagnoseAndRectifyCategories logic) ...
-                // Ensure it uses the new fetchAllTransformed which internally uses shop.js's logic
                 console.log("--- Starting Category Diagnosis and Rectification ---");
                 let allProducts = [];
                 try {
-                    allProducts = await fetchAllTransformed(); // Using the exposed function
+                    allProducts = await fetchAllTransformed();
                 } catch (error) {
                     console.error("Diagnosis Error: Could not fetch products.", error);
                     console.log("--- Category Diagnosis Aborted ---");
@@ -2052,25 +2072,35 @@
                         issuesFound = true;
                         console.warn(`Collection "${linkText}": Requested category "${normalizedRequestedCat}" (from href="${link.href}") does NOT exist in product data.`);
         
+                        // Attempt to find a similar category for rectification
                         let suggestedCategory = null;
                         const normalizedLinkText = normalize(linkText);
         
+                        // Strategy 1: Look for exact match of normalized link text in categories
                         if (availableCategories.has(normalizedLinkText)) {
                             suggestedCategory = normalizedLinkText;
                         } else {
+                            // Strategy 2: Look for categories that contain parts of the link text
                             for (const cat of availableCategories) {
                                 if (normalizedLinkText.includes(cat) || cat.includes(normalizedLinkText)) {
                                     suggestedCategory = cat;
-                                    break;
+                                    break; // Take the first reasonable suggestion
                                 }
                             }
                         }
         
                         if (suggestedCategory) {
                             console.log(`  Suggestion: Found a similar category "${suggestedCategory}".`);
+                            // IMPORTANT: You might want to ask the user before applying this automatically
+                            // For now, I'll make it automatic, but you can uncomment the prompt for manual confirmation.
+                            // const confirmChange = confirm(`Change "${linkText}" link from "${normalizedRequestedCat}" to "${suggestedCategory}"?`);
+                            // if (confirmChange) {
                             url.searchParams.set('cat', suggestedCategory);
                             link.href = url.toString();
                             console.log(`  Rectified: Link for "${linkText}" updated to "${link.href}"`);
+                            // } else {
+                            //     console.log(`  Rectification skipped for "${linkText}".`);
+                            // }
                         } else {
                             console.log(`  No clear rectification suggestion found for "${linkText}". Manual review needed.`);
                         }
@@ -2089,17 +2119,18 @@
             async function loadAndRenderWithCategory() {
                 try {
                     const url = new URL(window.location.href);
-                    const cat = url.searchParams.get('cat');
+                    const cat = url.searchParams.get('cat'); // e.g. ?cat=bedsheets
         
-                    const products = await fetchAllTransformed(); // Fetch all products first
-                    let productsToRender = products; // Default to all products
+                    const products = await fetchAllTransformed();
+                    let filtered = products;
         
                     if (cat && cat.trim() !== '') {
                         const normalizedCat = normalize(cat);
-                        const filtered = products.filter(
+                        filtered = products.filter(
                             (p) => normalize(p.category) === normalizedCat
                         );
         
+                        // If no matching products, show nothing (don’t fallback to all)
                         if (filtered.length === 0) {
                             console.warn('No products found for category:', cat);
                             const list = document.querySelector('.list-product-block .list-product');
@@ -2112,26 +2143,13 @@
                             }
                             const pag = document.querySelector('.list-pagination');
                             if (pag) pag.innerHTML = '';
-                            return; // Stop here if no products for category
-                        } else {
-                            productsToRender = filtered; // Use filtered products
+                            return;
                         }
                     }
         
-                    // Now, call the shop.js function to render, passing the determined product set
-                    if (typeof window.fetchProductsFromBackendAndRender === 'function') {
-                        window.fetchProductsFromBackendAndRender(productsToRender);
-                    } else {
-                        console.error("window.fetchProductsFromBackendAndRender is not defined. shop.js might not be loaded correctly.");
-                        const list = document.querySelector('.list-product-block .list-product');
-                        if (list) {
-                            list.innerHTML = `
-                                <div class="text-center py-10 text-red-500 text-lg">
-                                  Initialization error: Shop functionality not available.
-                                </div>
-                              `;
-                        }
-                    }
+                    // Render products or all if no category filter
+                    if (typeof renderProducts === 'function') renderProducts(1, filtered);
+                    if (typeof renderPagination === 'function') renderPagination(filtered);
         
                 } catch (err) {
                     console.error('Error loading products:', err);
