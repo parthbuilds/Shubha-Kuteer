@@ -252,9 +252,9 @@ async function fetchProductsFromBackend() {
         
                 // After updating window.productsPerPage, reset currentPage and re-render
                 currentPage = 1; // Always reset to page 1 on layout change
-                window.renderProducts(currentPage, window.productsData); // Use the currently filtered products
-                window.renderPagination(window.productsData); // Use the currently filtered products
-                window.addEventToProductItem(window.productsData); // Re-attach events to the correct products
+                window.renderProducts(currentPage, window.productsData); 
+                window.renderPagination(window.productsData); 
+                window.addEventToProductItem(window.productsData); 
             });
         });
 

@@ -68,48 +68,6 @@ let currentIndex;
 let classes = productDetail.className.split(' ');
 let typePage = classes[1];
 
-
-// function mapApiProductToFrontend(product) {
-//     return {
-//         id: String(product.id),
-//         category: product.category,
-//         type: product.type,
-//         name: product.name,
-//         new: !!product.is_new,
-//         sale: !!product.on_sale,
-//         rate: Number(product.rate),
-//         price: Number(product.price),
-//         originPrice: Number(product.origin_price),
-//         brand: product.brand,
-//         sold: product.sold,
-//         quantity: product.quantity,
-//         quantityPurchase: product.quantityPurchase || 1, // default to 1
-//         sizes: Array.isArray(product.sizes)
-//             ? product.sizes
-//             : product.sizes
-//                 ? JSON.parse(product.sizes)
-//                 : [],
-//         variation: Array.isArray(product.variation)
-//             ? product.variation
-//             : product.variations
-//                 ? JSON.parse(product.variations)
-//                 : [],
-//         thumbImage: Array.isArray(product.thumbImage)
-//             ? product.thumbImage
-//             : product.thumb_image
-//                 ? [product.thumb_image]
-//                 : [],
-//         images: Array.isArray(product.images)
-//             ? product.images
-//             : product.gallery
-//                 ? JSON.parse(product.gallery)
-//                 : [],
-//         description: product.description,
-//         action: product.action,
-//         slug: product.slug,
-//     };
-// }
-
 function mapApiProductToFrontend(product) {
     // --- Helper: Safe JSON parse ---
     const safeParse = (value, fallback = []) => {

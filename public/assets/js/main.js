@@ -54,20 +54,7 @@
 function transformBackendProduct(backendProduct) {
   // ---- 1. Handle Gallery Images ----
   let galleryImages = [];
-  // try {
-  //   if (backendProduct.gallery) {
-  //     // Try parsing as JSON (if it's a JSON string)
-  //     galleryImages = JSON.parse(backendProduct.gallery);
-  //     if (!Array.isArray(galleryImages)) galleryImages = [];
-  //   }
-  // } catch {
-  //   // If not JSON, but a single URL, wrap it in an array
-  //   if (typeof backendProduct.gallery === "string" && backendProduct.gallery.startsWith("http")) {
-  //     galleryImages = [backendProduct.gallery];
-  //   } else {
-  //     console.warn("Invalid gallery format for product:", backendProduct.id);
-  //   }
-  // }
+
 
   // ---- 2. Handle Thumbnail Images ----
   const thumbImages = [];
