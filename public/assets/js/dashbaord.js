@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td class="py-3">
                             ${order.products.map(product => `
                                 <a href="product-default.html?id=${product.id}" class="product flex items-center gap-3">
-                                    <img src="${product.image || '/assets/images/product/1000x1000.png'}"
+                                    <img src="${product.image || '/assets/images/product/productDefault.png'}"
                                         alt="${product.name}" class="flex-shrink-0 w-12 h-12 rounded" />
                                     <div class="info flex flex-col">
                                         <strong class="product_name text-button">${product.name}</strong>
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="prd_item flex flex-wrap items-center justify-between gap-3 py-5 border-b border-line">
                                 <a href="product-default.html?id=${product.id}" class="flex items-center gap-5">
                                     <div class="bg-img flex-shrink-0 md:w-[100px] w-20 aspect-square rounded-lg overflow-hidden">
-                                        <img src="${product.image || '/assets/images/product/1000x1000.png'}"
+                                        <img src="${product.image || '/assets/images/product/productDefault.png'}"
                                             alt="${product.name}" class="w-full h-full object-cover" />
                                     </div>
                                     <div>
