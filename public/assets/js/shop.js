@@ -53,7 +53,7 @@ const productList = document.querySelector('.list-product-block .list-product');
 const listPagination = document.querySelector('.list-pagination');
 
 let currentPage = 1;
-let productsPerPage = productList ? Number(productList.getAttribute('data-item')) : 12;
+window.productsPerPage = productList ? Number(productList.getAttribute('data-item')) : 12; 
 window.productsData = []; // Expose productsData globally
 let allFetchedProducts = []; // Store the initially fetched products
 
@@ -217,8 +217,7 @@ async function fetchProductsFromBackend() {
         layoutItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
-
-                // First, update productsPerPage based on the clicked layout
+        
                 if (item.classList.contains('style-grid')) {
                     productContainer.classList.remove('style-list');
                     productContainer.classList.add('style-grid');
@@ -226,37 +225,38 @@ async function fetchProductsFromBackend() {
                     if (currentProductList) {
                         currentProductList.classList.remove('flex', 'flex-col');
                         currentProductList.classList.add('grid');
-                        // Check for the specific "five-col" button's effect
-                        if (item.classList.contains('five-col')) { // Assuming 'five-col' is another class on the grid button
-                             productsPerPage = 9; // 3x3 grid
-                             currentProductList.setAttribute('data-item', '9');
+        
+                        // Determine the correct productsPerPage for the grid layout
+                        // Assuming 'five-col' is the class on the button you described
+                        // and it's meant to show 6 products. Adjust to 9 if 3x3.
+                        if (item.classList.contains('five-col')) { // Check for your specific 6-grid button class
+                            window.productsPerPage = 6; // Set to 6 for a 2x3 grid, or 9 for a 3x3 grid
+                            currentProductList.setAttribute('data-item', '6'); // Update data-item attribute
                         } else {
-                            // Default grid (e.g., 4 items per page if 2x2, or some other default)
-                            productsPerPage = 12; // Or your default grid size
-                            currentProductList.setAttribute('data-item', '12');
+                            // Default grid, assuming 4x3 if you have other grid options
+                            window.productsPerPage = 12; // Your default grid count
+                            currentProductList.setAttribute('data-item', '12'); // Update data-item attribute
                         }
                     }
-                }
-                else if (item.classList.contains('style-list')) {
+                } else if (item.classList.contains('style-list')) {
                     productContainer.classList.remove('style-grid');
                     productContainer.classList.add('style-list');
                     const currentProductList = productContainer.querySelector('.list-product');
                     if (currentProductList) {
                         currentProductList.classList.remove('grid');
                         currentProductList.classList.add('flex', 'flex-col');
-                        productsPerPage = 4; // List view typically shows fewer items per "row"
-                        currentProductList.setAttribute('data-item', '4');
+                        window.productsPerPage = 4; // List view
+                        currentProductList.setAttribute('data-item', '4'); // Update data-item attribute
                     }
                 }
-
-                // After updating productsPerPage, re-render using the CURRENTLY FILTERED products.
-                // window.productsData already holds the currently filtered products from handleFiltersChange
-                currentPage = 1; // Reset to the first page for the new layout
-                window.renderProducts(currentPage, window.productsData);
-                window.renderPagination(window.productsData);
-                window.addEventToProductItem(window.productsData); // Re-attach events
-            })
-        })
+        
+                // After updating window.productsPerPage, reset currentPage and re-render
+                currentPage = 1; // Always reset to page 1 on layout change
+                window.renderProducts(currentPage, window.productsData); // Use the currently filtered products
+                window.renderPagination(window.productsData); // Use the currently filtered products
+                window.addEventToProductItem(window.productsData); // Re-attach events to the correct products
+            });
+        });
 
         let selectedFilters = {};
 
@@ -631,8 +631,8 @@ window.renderProducts = function renderProducts(page, products = []) { // Expose
     productList.innerHTML = '';
     const productsToDisplay = products;
 
-    const startIndex = (page - 1) * productsPerPage;
-    const endIndex = startIndex + productsPerPage;
+    const startIndex = (page - 1) * window.productsPerPage;
+    const endIndex = startIndex + window.productsPerPage;
     const displayedProducts = productsToDisplay.slice(startIndex, endIndex);
 
     if (displayedProducts.length === 0) {
@@ -908,7 +908,7 @@ window.renderPagination = function renderPagination(products = []) { // Expose g
     listPagination.innerHTML = '';
     const productsToDisplay = products.length ? products : window.productsData; // Use window.productsData if no specific list is passed
 
-    let totalPages = Math.ceil(productsToDisplay.length / productsPerPage);
+    let totalPages = Math.ceil(productsToDisplay.length / window.productsPerPage);
     const maxVisiblePages = 3; // Keep maximum of 3 page buttons visible
 
     if (productsToDisplay.length <= productsPerPage) {
