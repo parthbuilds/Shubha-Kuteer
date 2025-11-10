@@ -525,6 +525,10 @@ input[type=file]::-webkit-file-upload-button {
   color: var(--secondary);
 }
 
+.checkout-btn:hover{
+  border-color: black;
+}
+
 .button-main {
   font-size: 14px;
   line-height: 20px;
