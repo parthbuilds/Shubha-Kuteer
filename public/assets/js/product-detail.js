@@ -69,46 +69,100 @@ let classes = productDetail.className.split(' ');
 let typePage = classes[1];
 
 
+// function mapApiProductToFrontend(product) {
+//     return {
+//         id: String(product.id),
+//         category: product.category,
+//         type: product.type,
+//         name: product.name,
+//         new: !!product.is_new,
+//         sale: !!product.on_sale,
+//         rate: Number(product.rate),
+//         price: Number(product.price),
+//         originPrice: Number(product.origin_price),
+//         brand: product.brand,
+//         sold: product.sold,
+//         quantity: product.quantity,
+//         quantityPurchase: product.quantityPurchase || 1, // default to 1
+//         sizes: Array.isArray(product.sizes)
+//             ? product.sizes
+//             : product.sizes
+//                 ? JSON.parse(product.sizes)
+//                 : [],
+//         variation: Array.isArray(product.variation)
+//             ? product.variation
+//             : product.variations
+//                 ? JSON.parse(product.variations)
+//                 : [],
+//         thumbImage: Array.isArray(product.thumbImage)
+//             ? product.thumbImage
+//             : product.thumb_image
+//                 ? [product.thumb_image]
+//                 : [],
+//         images: Array.isArray(product.images)
+//             ? product.images
+//             : product.gallery
+//                 ? JSON.parse(product.gallery)
+//                 : [],
+//         description: product.description,
+//         action: product.action,
+//         slug: product.slug,
+//     };
+// }
+
 function mapApiProductToFrontend(product) {
+    // --- Helper: Safe JSON parse ---
+    const safeParse = (value, fallback = []) => {
+        if (!value) return fallback;
+        try {
+            const parsed = typeof value === "string" ? JSON.parse(value) : value;
+            return Array.isArray(parsed) ? parsed : fallback;
+        } catch {
+            console.warn("Failed to parse JSON for product:", product.id, value);
+            return fallback;
+        }
+    };
+
+    // --- Handle gallery/images ---
+    const galleryImages = safeParse(product.gallery, []);
+    const thumbImages = [];
+
+    if (product.thumb_image) thumbImages.push(product.thumb_image);
+    if (product.main_image && !thumbImages.includes(product.main_image)) {
+        thumbImages.push(product.main_image);
+    }
+    if (thumbImages.length === 0 && galleryImages.length > 0) {
+        thumbImages.push(galleryImages[0]);
+    }
+    if (thumbImages.length === 0) {
+        thumbImages.push("./assets/images/placeholder.png");
+    }
+
+    // --- Final Mapped Product Object ---
     return {
-        id: String(product.id),
-        category: product.category,
-        type: product.type,
-        name: product.name,
-        new: !!product.is_new,
-        sale: !!product.on_sale,
-        rate: Number(product.rate),
-        price: Number(product.price),
-        originPrice: Number(product.origin_price),
-        brand: product.brand,
-        sold: product.sold,
-        quantity: product.quantity,
-        quantityPurchase: product.quantityPurchase || 1, // default to 1
-        sizes: Array.isArray(product.sizes)
-            ? product.sizes
-            : product.sizes
-                ? JSON.parse(product.sizes)
-                : [],
-        variation: Array.isArray(product.variation)
-            ? product.variation
-            : product.variations
-                ? JSON.parse(product.variations)
-                : [],
-        thumbImage: Array.isArray(product.thumbImage)
-            ? product.thumbImage
-            : product.thumb_image
-                ? [product.thumb_image]
-                : [],
-        images: Array.isArray(product.images)
-            ? product.images
-            : product.gallery
-                ? JSON.parse(product.gallery)
-                : [],
-        description: product.description,
-        action: product.action,
-        slug: product.slug,
+        id: String(product.id || ""),
+        category: product.category || "Uncategorized",
+        type: product.type || "",
+        name: product.name || "Untitled Product",
+        new: Boolean(product.is_new),
+        sale: Boolean(product.on_sale),
+        rate: Number(product.rate) || 0,
+        price: Number(product.price) || 0,
+        originPrice: Number(product.origin_price) || 0,
+        brand: product.brand || "",
+        sold: product.sold || 0,
+        quantity: product.quantity || 0,
+        quantityPurchase: product.quantityPurchase || 1,
+        sizes: safeParse(product.sizes, ["S", "M", "L", "XL"]),
+        variation: safeParse(product.variation || product.variations, []),
+        thumbImage: thumbImages,
+        images: galleryImages.length > 0 ? galleryImages : thumbImages,
+        description: product.description || "",
+        action: product.action || "",
+        slug: product.slug || `product-${product.id}`,
     };
 }
+
 
 
 if (productDetail) {
