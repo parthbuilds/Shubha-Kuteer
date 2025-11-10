@@ -53,22 +53,46 @@
 //function to modulate data
 function transformBackendProduct(backendProduct) {
   let galleryImages = [];
+
   try {
-    // Attempt to parse as JSON first
-    galleryImages = JSON.parse(backendProduct.gallery);
-  } catch (e) {
-    // If parsing fails, check if it's a non-empty string and treat it as a single URL
-    if (typeof backendProduct.gallery === 'string' && backendProduct.gallery.startsWith('http')) {
-      galleryImages = [backendProduct.gallery];
-    } else {
-      console.warn(
-        "Could not parse gallery string for product:",
-        backendProduct.id,
-        e
-      );
+    // ✅ Only parse if it's a string
+    if (typeof backendProduct.gallery === "string") {
+      // If it's valid JSON string (e.g. '["url1", "url2"]')
+      if (backendProduct.gallery.trim().startsWith("[")) {
+        galleryImages = JSON.parse(backendProduct.gallery);
+      } 
+      // If it's a single URL string
+      else if (backendProduct.gallery.startsWith("http")) {
+        galleryImages = [backendProduct.gallery];
+      } 
+      // Otherwise empty
+      else {
+        galleryImages = [];
+      }
+    } 
+    // ✅ Already an array — just use it
+    else if (Array.isArray(backendProduct.gallery)) {
+      galleryImages = backendProduct.gallery;
+    } 
+    // Anything else → fallback
+    else {
       galleryImages = [];
     }
+
+  } catch (e) {
+    console.warn(
+      "Could not parse gallery string for product:",
+      backendProduct.id,
+      e
+    );
+    galleryImages = [];
   }
+
+  return {
+    ...backendProduct,
+    gallery: galleryImages,
+  };
+}
 
   // Combine main_image and thumb_image into thumbImage array, ensuring no duplicates
   const thumbImages = [];
@@ -172,7 +196,7 @@ function transformBackendProduct(backendProduct) {
     action: backendProduct.action,
     slug: backendProduct.slug,
   };
-}
+
 
 // Select language, currency top nav
 const chooseType = document.querySelectorAll(".top-nav .choose-type");
