@@ -1075,46 +1075,6 @@ if (document.querySelector(".swiper-list-three-product")) {
   });
 }
 
-// Lookbook Underwear
-// const lookbookUnderwear = document.querySelector('.lookbook-underwear')
-
-// if (lookbookUnderwear) {
-//   fetch("./assets/data/Product.json")
-//     .then((response) => response.json())
-//     .then((products) => {
-//       const itemDot = lookbookUnderwear.querySelector('.list-img .item .dots')
-//       const itemDots = lookbookUnderwear.querySelectorAll('.list-img .item .dots')
-//       const listPrd = lookbookUnderwear.querySelector('.list-product')
-//       const prdId = itemDot.getAttribute('data-item');
-
-//       // Display products
-//       products
-//         .filter((product) => product.id === prdId)
-//         .forEach((product) => {
-//           const productElement = createProductItem(product);
-//           listPrd.appendChild(productElement);
-//         });
-
-//       itemDots.forEach(item => {
-//         item.addEventListener('click', () => {
-//           const prdId = item.getAttribute('data-item');
-
-//           // Display products
-//           listPrd.innerHTML = ''
-
-//           products
-//             .filter((product) => product.id === prdId)
-//             .forEach((product) => {
-//               const productElement = createProductItem(product);
-//               listPrd.appendChild(productElement);
-//               addEventToProductItem()
-//             });
-//         })
-//       })
-//     })
-//     .catch((error) => console.error("Error loading products:", error));
-// }
-
 // list-feature-product Underwear
 var swiperUnderwear = new Swiper(".mySwiper", {
   spaceBetween: 0,
