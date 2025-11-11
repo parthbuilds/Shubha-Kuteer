@@ -2247,7 +2247,7 @@
         <script src="./assets/js/main.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                (async function renderRandomProducts() {
+                (async function renderRelatedProducts() {
                     try {
                         // Target the specific container for Other products on the product detail page
                         const relatedProductsContainer = document.querySelector('.list-collection .swiper-wrapper');
@@ -2284,13 +2284,18 @@
             
                             const showOrigin = origin && Number(p.origin_price) > Number(p.price || 0);
                             const salePercentage = showOrigin ? Math.round(((p.origin_price - p.price) / p.origin_price) * 100) : null;
-                            const saleTag = salePercentage ? `<div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">-${salePercentage}%</div>` : '';
+                            const saleTag = salePercentage
+                                ? `<div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">-${salePercentage}%</div>`
+                                : '';
             
+                            // Default values for sold/available/progress if not in product data
                             const sold = p.sold || 0;
                             const available = p.available || 0;
                             const totalStock = sold + available;
                             const soldProgress = totalStock > 0 ? (sold / totalStock) * 100 : 0;
-                            const isNewTag = p.isNew ? '<div class="product-tag text-button-uppercase bg-green px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">New</div>' : '';
+                            const isNewTag = p.isNew
+                                ? '<div class="product-tag text-button-uppercase bg-green px-3 py-0.5 inline-block rounded-full absolute top-3 left-3 z-[1]">New</div>'
+                                : '';
             
                             return `
                                 <div class="swiper-slide">
@@ -2314,8 +2319,13 @@
                                                     <img class="w-full h-full object-cover duration-700" src="${img2}" alt="${p.name || 'product image hover'}" />
                                                 </div>
                                                 <div class="list-action grid grid-cols-2 gap-3 px-5 absolute w-full bottom-5 max-lg:hidden">
-                                                    <a href="product-default.html?id=${encodeURIComponent(p.id)}" class="quick-view-btn w-full .text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary">Quick View</a>
-                                                    <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white text-secondary">Add To Cart</div>
+                                                    <a href="product-default.html?id=${encodeURIComponent(p.id)}"
+                                                        class="quick-view-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary">
+                                                        Quick View
+                                                    </a>
+                                                    <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white text-secondary">
+                                                        Add To Cart
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="product-infor mt-4 lg:mb-7">
@@ -2336,15 +2346,23 @@
                                                 </div>
                                                 <div class="product-name text-title duration-300">${p.name || ''}</div>
                                                 <div class="list-color py-2 max-md:hidden flex items-center gap-3 flex-wrap duration-500">
-                                                    ${(p.colors || []).map(color => `
-                                                        <div class="color-item bg-${color.toLowerCase()} w-8 h-8 rounded-full duration-300 relative">
-                                                            <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${color}</div>
-                                                        </div>
-                                                    `).join('')}
+                                                    ${(p.colors || [])
+                                                        .map(
+                                                            (color) => `
+                                                            <div class="color-item bg-${color.toLowerCase()} w-8 h-8 rounded-full duration-300 relative">
+                                                                <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${color}</div>
+                                                            </div>
+                                                        `
+                                                        )
+                                                        .join('')}
                                                 </div>
                                                 <div class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
                                                     <div class="product-price text-title">${price}</div>
-                                                    ${showOrigin ? `<div class="product-origin-price caption1 text-secondary2"><del>${origin}</del></div>` : ''}
+                                                    ${
+                                                        showOrigin
+                                                            ? `<div class="product-origin-price caption1 text-secondary2"><del>${origin}</del></div>`
+                                                            : ''
+                                                    }
                                                     ${saleTag}
                                                 </div>
                                             </div>
@@ -2354,39 +2372,46 @@
                             `;
                         };
             
+                        // Fetch all products
                         const res = await fetch('/api/admin/products');
                         if (!res.ok) throw new Error('HTTP ' + res.status);
                         const allProducts = await res.json();
             
-                        // Exclude the current product
-                        const filteredProducts = allProducts.filter(p => String(p.id) !== String(currentProductId));
-            
-                        // Filter for available products only (assuming p.available > 0 means it's in stock)
-                        const availableProducts = filteredProducts.filter(p => Number(p.available || 0) > 0);
-            
-                        if (availableProducts.length === 0) {
-                            relatedProductsContainer.innerHTML = '<p>No available products found.</p>';
+                        // Find current product
+                        const currentProduct = allProducts.find(p => String(p.id) === String(currentProductId));
+                        if (!currentProduct || !currentProduct.category) {
+                            relatedProductsContainer.innerHTML = '<p>Current product or its category not found.</p>';
                             return;
                         }
             
-                        // Shuffle array and take 5 random products
-                        const randomProducts = availableProducts
-                            .sort(() => 0.5 - Math.random())
+                        const currentCategory = String(currentProduct.category).toLowerCase();
+            
+                        // Filter related products (same category, not current) and limit to 5
+                        const relatedProducts = allProducts
+                            .filter(
+                                p =>
+                                    String(p.id) !== String(currentProduct.id) &&
+                                    String(p.category || '').toLowerCase() === currentCategory
+                            )
                             .slice(0, 5);
             
-                        // Render them
-                        relatedProductsContainer.innerHTML = randomProducts.map(productTpl).join('');
+                        if (relatedProducts.length === 0) {
+                            relatedProductsContainer.innerHTML = '<p>No related products found in this category.</p>';
+                            return;
+                        }
             
+                        // Render related products
+                        relatedProductsContainer.innerHTML = relatedProducts.map(productTpl).join('');
                     } catch (e) {
-                        console.error('Error rendering random products:', e);
+                        console.error('Error rendering related products:', e);
                         const relatedProductsContainer = document.querySelector('.list-collection .swiper-wrapper');
                         if (relatedProductsContainer) {
-                            relatedProductsContainer.innerHTML = '<p>Failed to load products.</p>';
+                            relatedProductsContainer.innerHTML = '<p>Failed to load related products.</p>';
                         }
                     }
                 })();
             });
-            </script>            
+            </script>                        
             <script src="./assets/js/search.js" ></script>
         
 </body>
