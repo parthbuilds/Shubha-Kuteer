@@ -508,14 +508,6 @@ input[type=file]::-webkit-file-upload-button {
   color: var(--secondary);
 }
 
-.text-button-uppercase {
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--primary);
-}
-
 .caption1 {
   font-size: 14px;
   line-height: 22px;
