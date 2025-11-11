@@ -1583,7 +1583,7 @@ const createProductItem = (product) => {
                             </div>
                         `
                             : `
-                            <div class="quick-shop-btn text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white max-lg:hidden">
+                            <div class="quick-shop-btn text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white max-lg:hidden text-secondary">
                                 Quick Shop</div>
                             <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary lg:hidden">
                                 <span class="max-lg:hidden">Add To Cart</span>
