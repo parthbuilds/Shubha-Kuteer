@@ -2014,7 +2014,7 @@
 
                 try {
                     // Call backend to create Razorpay order
-                    const res = await fetch("/api/orders/create-order", {
+                    const res = await fetch("/api/order/create-order", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(formData)
@@ -2036,7 +2036,7 @@
                         order_id: orderData.razorpay_order.id,
                         handler: async function (response) {
                             // Send payment capture to backend with order details
-                            await fetch("/api/orders/capture-order", {
+                            await fetch("/api/order/capture-order", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({

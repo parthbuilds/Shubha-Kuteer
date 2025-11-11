@@ -11,7 +11,7 @@ const razorpay = new Razorpay({
 
 const router = express.Router();
 
-// 🔹 POST /api/orders/create-order
+// 🔹 POST /api/order/create-order
 router.post("/create-order", async (req, res) => {
     const { amount, currency, receipt } = req.body;
     try {
@@ -27,14 +27,14 @@ router.post("/create-order", async (req, res) => {
     }
 });
 
-// 🔹 POST /api/orders/verify-payment
+// 🔹 POST /api/order/verify-payment
 router.post("/verify-payment", (req, res) => {
     // Payment verification logic here
     // You may need to parse raw body for webhook verification
     res.json({ message: "Payment verification endpoint (implement logic)" });
 });
 
-// 🔹 GET /api/orders
+// 🔹 GET /api/order
 router.get("/", async (req, res) => {
     try {
         const [orders] = await pool.query("SELECT * FROM orders ORDER BY id DESC");
