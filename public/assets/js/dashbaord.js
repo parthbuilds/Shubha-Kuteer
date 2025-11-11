@@ -76,11 +76,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderDashboardOverview(dashboardSummary);
 
             // Fetch and display recent orders for dashboard
-            const recentOrders = await callApi('/api/order/recent'); // Assuming a new API for recent orders
+            const recentOrders = await callApi('/api/orders/recent'); // Assuming a new API for recent orders
             renderRecentOrders(recentOrders.orders);
 
             // Fetch and display all orders for order history tab
-            const allOrders = await callApi('/api/order');
+            const allOrders = await callApi('/api/orders');
             renderOrderHistory(allOrders.orders); // Initially render all orders
 
             // Fetch and display user addresses
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // You could also fetch from API if you want server-side filtering
         // try {
-        //     const endpoint = status === 'all' ? '/api/order' : `/api/order?status=${status}`;
+        //     const endpoint = status === 'all' ? '/api/orders' : `/api/orders?status=${status}`;
         //     const filteredOrders = await callApi(endpoint);
         //     renderOrderHistory(filteredOrders.orders);
         // } catch (error) {
@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function cancelOrder(orderId) {
         try {
-            const result = await callApi(`/api/order/cancel/${orderId}`, 'PUT'); // Or DELETE depending on your API
+            const result = await callApi(`/api/orders/cancel/${orderId}`, 'PUT'); // Or DELETE depending on your API
             alert(result.message || 'Order cancelled successfully!');
             // Re-render orders or update the specific order's status in the DOM
             const cancelledOrderItem = document.querySelector(`.order_item[data-order-id="${orderId}"]`);
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dashboardSummary = await callApi('/api/user/dashboard-summary');
             renderDashboardOverview(dashboardSummary);
             // Re-render all orders to reflect the change visually across tabs
-            const allOrders = await callApi('/api/order');
+            const allOrders = await callApi('/api/orders');
             renderOrderHistory(allOrders.orders);
         } catch (error) {
             console.error('Cancel order error:', error);

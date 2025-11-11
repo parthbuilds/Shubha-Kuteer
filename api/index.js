@@ -630,7 +630,7 @@ export default async function handler(req, res) {
         }
 
         // Orders routes
-        if (pathname.startsWith('/api/order')) {
+        if (pathname.startsWith('/api/orders')) {
             try {
                 const pool = await import("../backend/utils/db.js");
 
@@ -651,8 +651,8 @@ export default async function handler(req, res) {
                     key_secret: process.env.RAZORPAY_KEY_SECRET,
                 });
 
-                // POST /api/order/create-order
-                if (pathname === '/api/order/create-order' && req.method === 'POST') {
+                // POST /api/orders/create-order
+                if (pathname === '/api/orders/create-order' && req.method === 'POST') {
                     const {
                         first_name, last_name, email, phone_number,
                         city, apartment, postal_code, note, amount, products
@@ -705,8 +705,8 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // POST /api/order/capture-order
-                if (pathname === '/api/order/capture-order' && req.method === 'POST') {
+                // POST /api/orders/capture-order
+                if (pathname === '/api/orders/capture-order' && req.method === 'POST') {
                     const { razorpay_order_id, razorpay_payment_id, payment_status, order_id } = req.body;
 
                     try {
@@ -733,8 +733,8 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // GET /api/order - Get all orders with product details
-                if (pathname === '/api/order' && req.method === 'GET') {
+                // GET /api/orders - Get all orders with product details
+                if (pathname === '/api/orders' && req.method === 'GET') {
                     try {
                         const [orders] = await pool.default.query(`
                             SELECT 
@@ -765,8 +765,8 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // GET /api/order/:id - Get specific order details
-                if (pathname.startsWith('/api/order/') && req.method === 'GET') {
+                // GET /api/orders/:id - Get specific order details
+                if (pathname.startsWith('/api/orders/') && req.method === 'GET') {
                     const orderId = pathname.split('/')[3];
 
                     try {
@@ -803,8 +803,8 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // DELETE /api/order/:id - Delete order
-                if (pathname.startsWith('/api/order/') && req.method === 'DELETE') {
+                // DELETE /api/orders/:id - Delete order
+                if (pathname.startsWith('/api/orders/') && req.method === 'DELETE') {
                     const orderId = pathname.split('/')[3];
 
                     try {
@@ -832,8 +832,8 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // GET /api/order/test - Test endpoint
-                if (pathname === '/api/order/test' && req.method === 'GET') {
+                // GET /api/orders/test - Test endpoint
+                if (pathname === '/api/orders/test' && req.method === 'GET') {
                     return res.status(200).json({
                         success: true,
                         message: "Orders API is working",

@@ -1057,7 +1057,7 @@
                 }
 
                 // ✅ Fetch order details from backend
-                const res = await fetch(`/api/order/${orderId}`);
+                const res = await fetch(`/api/orders/${orderId}`);
                 console.log('API Response status:', res.status);
                 
                 if (!res.ok) throw new Error(`Order ${orderId} not found (status ${res.status})`);
