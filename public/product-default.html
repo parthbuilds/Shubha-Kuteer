@@ -2247,9 +2247,9 @@
         <script src="./assets/js/main.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                (async function renderRelatedProducts() {
+                (async function renderRandomProducts() {
                     try {
-                        // Target the specific container for related products on the product detail page
+                        // Target the specific container for Other products on the product detail page
                         const relatedProductsContainer = document.querySelector('.list-collection .swiper-wrapper');
                         if (!relatedProductsContainer) {
                             console.warn('Related products container not found.');
@@ -2275,19 +2275,17 @@
                             return './assets/images/placeholder.png'; // Fallback placeholder image
                         };
             
-                        // Template function for a single product item, matching your provided HTML structure
+                        // Template function for a single product item
                         const productTpl = (p) => {
                             const price = p.price != null ? '₹' + Number(p.price).toFixed(2) : '';
                             const origin = p.origin_price != null ? '₹' + Number(p.origin_price).toFixed(2) : '';
                             const img1 = pickImage(p);
-                            // Assuming a second image might be available for hover effect, if not, use the first one again
                             const img2 = (Array.isArray(p.images) && p.images.length > 1) ? p.images[1] : img1;
             
                             const showOrigin = origin && Number(p.origin_price) > Number(p.price || 0);
                             const salePercentage = showOrigin ? Math.round(((p.origin_price - p.price) / p.origin_price) * 100) : null;
                             const saleTag = salePercentage ? `<div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">-${salePercentage}%</div>` : '';
             
-                            // Default values for sold/available/progress if not in product data
                             const sold = p.sold || 0;
                             const available = p.available || 0;
                             const totalStock = sold + available;
@@ -2356,45 +2354,39 @@
                             `;
                         };
             
-                        // IMPORTANT: use absolute path to avoid relative path issues
                         const res = await fetch('/api/admin/products');
                         if (!res.ok) throw new Error('HTTP ' + res.status);
                         const allProducts = await res.json();
             
-                        const currentProduct = allProducts.find(p => String(p.id) === String(currentProductId));
+                        // Exclude the current product
+                        const filteredProducts = allProducts.filter(p => String(p.id) !== String(currentProductId));
             
-                        if (!currentProduct || !currentProduct.category) {
-                            relatedProductsContainer.innerHTML = '<p>Current product or its category not found.</p>';
+                        // Filter for available products only (assuming p.available > 0 means it's in stock)
+                        const availableProducts = filteredProducts.filter(p => Number(p.available || 0) > 0);
+            
+                        if (availableProducts.length === 0) {
+                            relatedProductsContainer.innerHTML = '<p>No available products found.</p>';
                             return;
                         }
             
-                        const currentCategory = String(currentProduct.category).toLowerCase();
+                        // Shuffle array and take 5 random products
+                        const randomProducts = availableProducts
+                            .sort(() => 0.5 - Math.random())
+                            .slice(0, 5);
             
-                        // Filter for related products (same category, not the current product) and take exactly 5
-                        const relatedProducts = allProducts.filter(p =>
-                            String(p.id) !== String(currentProduct.id) &&
-                            String(p.category || '').toLowerCase() === currentCategory
-                        ).slice(0, 5); // Limit to 5 products
-            
-                        if (relatedProducts.length === 0) {
-                            relatedProductsContainer.innerHTML = '<p>No related products found in this category.</p>';
-                            return;
-                        }
-            
-                        // Render the related products
-                        relatedProductsContainer.innerHTML = relatedProducts.map(productTpl).join('');
+                        // Render them
+                        relatedProductsContainer.innerHTML = randomProducts.map(productTpl).join('');
             
                     } catch (e) {
-                        console.error('Error rendering related products:', e);
+                        console.error('Error rendering random products:', e);
                         const relatedProductsContainer = document.querySelector('.list-collection .swiper-wrapper');
                         if (relatedProductsContainer) {
-                            relatedProductsContainer.innerHTML = '<p>Failed to load related products.</p>';
+                            relatedProductsContainer.innerHTML = '<p>Failed to load products.</p>';
                         }
-                        // Swallow to avoid breaking other scripts
                     }
                 })();
             });
-            </script>
+            </script>            
             <script src="./assets/js/search.js" ></script>
         
 </body>
