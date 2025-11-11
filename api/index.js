@@ -225,8 +225,8 @@ export default async function handler(req, res) {
                 // GET all products
                 if (pathname === '/api/admin/products' && req.method === 'GET') {
                     const [rows] = await pool.default.query(`
-                        SELECT id, name, slug, price, origin_price, quantity, sold, 
-                            rate, is_new, on_sale, category, description, type, brand, 
+                        SELECT id, name, slug, price, origin_price, quantity, sold,
+                            rate, is_new, on_sale, category, description, type, brand,
                             main_image, thumb_image, gallery, action, created_at
                         FROM products
                         ORDER BY created_at DESC
@@ -302,9 +302,9 @@ export default async function handler(req, res) {
 
                         // Prepare the SQL query and values
                         const sql = `
-                            INSERT INTO products 
-                            (name, slug, price, origin_price, quantity, sold, rate, 
-                            is_new, on_sale, category, description, type, brand, 
+                            INSERT INTO products
+                            (name, slug, price, origin_price, quantity, sold, rate,
+                            is_new, on_sale, category, description, type, brand,
                             main_image, thumb_image, gallery, sizes, variations, action)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         `;
@@ -462,7 +462,7 @@ export default async function handler(req, res) {
                     }
 
                     const [result] = await pool.default.query(
-                        `INSERT INTO attributes (category_id, attribute_name, attribute_values) 
+                        `INSERT INTO attributes (category_id, attribute_name, attribute_values)
                         VALUES (?, ?, ?)`,
                         [category_id, attribute_name, JSON.stringify(attribute_values)]
                     );
@@ -566,7 +566,7 @@ export default async function handler(req, res) {
                     const password_hash = await bcrypt.default.hash(password, 10);
 
                     const [result] = await pool.default.query(`
-                INSERT INTO admins (name, email, password_hash, phone, role, permissions) 
+                INSERT INTO admins (name, email, password_hash, phone, role, permissions)
                 VALUES (?, ?, ?, ?, ?, ?)
             `, [name, email, password_hash, phone || null, role || 'admin', JSON.stringify(permissions || {})]);
 
@@ -637,10 +637,12 @@ export default async function handler(req, res) {
                 // Check if Razorpay credentials are available
                 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
                     console.error("Razorpay credentials not found in environment variables");
-                    return res.status(500).json({
-                        success: false,
-                        error: "Payment gateway configuration error"
-                    });
+                    // Important: Decide if you want to block all order operations if payment gateway is not configured
+                    // For now, we'll let non-payment-related order routes proceed.
+                    // return res.status(500).json({
+                    //     success: false,
+                    //     error: "Payment gateway configuration error"
+                    // });
                 }
 
                 const Razorpay = await import("razorpay");
@@ -677,8 +679,8 @@ export default async function handler(req, res) {
 
                         // Save order to database with products JSON
                         const [result] = await pool.default.query(`
-                            INSERT INTO orders (first_name, last_name, email, phone_number, 
-                                city, apartment, postal_code, note, amount, 
+                            INSERT INTO orders (first_name, last_name, email, phone_number,
+                                city, apartment, postal_code, note, amount,
                                 razorpay_order_id, status, products, created_at)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                         `, [
@@ -697,10 +699,11 @@ export default async function handler(req, res) {
                             order_id: result.insertId
                         });
                     } catch (error) {
-                        console.error("Razorpay error details:", error);
+                        console.error("Razorpay order creation or DB save error details:", error);
                         return res.status(500).json({
                             success: false,
-                            error: `Payment gateway error: ${error.message || 'Unknown error'}`
+                            error: `Payment gateway or database save error: ${error.message || 'Unknown error'}`,
+                            details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
                         });
                     }
                 }
@@ -712,7 +715,7 @@ export default async function handler(req, res) {
                     try {
                         // Update order status in database
                         await pool.default.query(`
-                            UPDATE orders 
+                            UPDATE orders
                             SET razorpay_payment_id = ?, status = ?, updated_at = NOW()
                             WHERE razorpay_order_id = ?
                         `, [razorpay_payment_id, payment_status, razorpay_order_id]);
@@ -728,7 +731,8 @@ export default async function handler(req, res) {
                         console.error("Payment capture error:", error);
                         return res.status(500).json({
                             success: false,
-                            error: 'Failed to capture payment'
+                            error: 'Failed to capture payment',
+                            details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
                         });
                     }
                 }
@@ -736,47 +740,70 @@ export default async function handler(req, res) {
                 // GET /api/orders - Get all orders with product details
                 if (pathname === '/api/orders' && req.method === 'GET') {
                     try {
+                        console.log("Attempting to fetch all orders from database...");
                         const [orders] = await pool.default.query(`
-                            SELECT 
+                            SELECT
                                 id, first_name, last_name, email, phone_number,
                                 city, apartment, postal_code, note, amount,
                                 razorpay_order_id, razorpay_payment_id, status,
                                 products, created_at, updated_at
-                            FROM orders 
+                            FROM orders
                             ORDER BY created_at DESC
                         `);
+                        console.log(`Successfully fetched ${orders.length} raw orders.`);
 
-                        // Parse products JSON for each order
-                        const ordersWithProducts = orders.map(order => ({
-                            ...order,
-                            products: order.products ? JSON.parse(order.products) : []
-                        }));
+                        // Parse products JSON for each order with error handling
+                        const ordersWithProducts = orders.map(order => {
+                            let parsedProducts = [];
+                            if (order.products) {
+                                try {
+                                    parsedProducts = JSON.parse(order.products);
+                                    // Ensure it's an array if expected, or handle other types
+                                    if (!Array.isArray(parsedProducts)) {
+                                        console.warn(`Order ${order.id}: 'products' column contained non-array JSON. Defaulting to empty array. Raw: ${order.products}`);
+                                        parsedProducts = [];
+                                    }
+                                } catch (jsonParseError) {
+                                    console.error(`Order ${order.id}: Failed to parse 'products' JSON. Raw data: ${order.products}. Error: ${jsonParseError.message}`);
+                                    // Decide how to handle this: return empty, null, or a specific error object
+                                    parsedProducts = []; // Default to empty array on parse error
+                                }
+                            }
+                            return {
+                                ...order,
+                                products: parsedProducts
+                            };
+                        });
+                        console.log("Successfully parsed products for all orders.");
 
                         return res.status(200).json({
                             success: true,
                             orders: ordersWithProducts
                         });
-                    } catch (error) {
-                        console.error("Get orders error:", error);
+                    } catch (dbError) { // Changed 'error' to 'dbError' for clarity
+                        console.error("Database query error for GET /api/orders:", dbError);
                         return res.status(500).json({
                             success: false,
-                            error: 'Failed to fetch orders'
+                            error: 'Failed to fetch orders from the database.',
+                            details: process.env.NODE_ENV !== 'production' ? dbError.message : undefined,
+                            stack: process.env.NODE_ENV !== 'production' ? dbError.stack : undefined
                         });
                     }
                 }
 
                 // GET /api/orders/:id - Get specific order details
                 if (pathname.startsWith('/api/orders/') && req.method === 'GET') {
+                    // Split by '/', then get the 4th element (0-indexed: '', 'api', 'orders', ':id')
                     const orderId = pathname.split('/')[3];
 
                     try {
                         const [orders] = await pool.default.query(`
-                            SELECT 
+                            SELECT
                                 id, first_name, last_name, email, phone_number,
                                 city, apartment, postal_code, note, amount,
                                 razorpay_order_id, razorpay_payment_id, status,
                                 products, created_at, updated_at
-                            FROM orders 
+                            FROM orders
                             WHERE id = ?
                         `, [orderId]);
 
@@ -788,17 +815,32 @@ export default async function handler(req, res) {
                         }
 
                         const order = orders[0];
-                        order.products = order.products ? JSON.parse(order.products) : [];
+                        let parsedProducts = [];
+                        if (order.products) {
+                            try {
+                                parsedProducts = JSON.parse(order.products);
+                                if (!Array.isArray(parsedProducts)) {
+                                    console.warn(`Order ${order.id}: products was non-array JSON for single fetch. Raw: ${order.products}`);
+                                    parsedProducts = [];
+                                }
+                            } catch (jsonParseError) {
+                                console.error(`Order ${order.id}: Failed to parse products JSON for single fetch. Raw data: ${order.products}. Error: ${jsonParseError.message}`);
+                                parsedProducts = [];
+                            }
+                        }
+                        order.products = parsedProducts;
 
                         return res.status(200).json({
                             success: true,
                             order: order
                         });
                     } catch (error) {
-                        console.error("Get order error:", error);
+                        console.error("Get specific order error:", error);
                         return res.status(500).json({
                             success: false,
-                            error: 'Failed to fetch order'
+                            error: 'Failed to fetch order',
+                            details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+                            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
                         });
                     }
                 }
@@ -827,7 +869,9 @@ export default async function handler(req, res) {
                         console.error("Delete order error:", error);
                         return res.status(500).json({
                             success: false,
-                            error: 'Failed to delete order'
+                            error: 'Failed to delete order',
+                            details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+                            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
                         });
                     }
                 }
@@ -845,8 +889,12 @@ export default async function handler(req, res) {
 
                 return res.status(404).json({ message: "Order endpoint not found" });
             } catch (error) {
-                console.error("Order operation error:", error);
-                return res.status(500).json({ message: "Order operation failed", error: error.message });
+                console.error("Order operation error (outer catch):", error); // Clarified log
+                return res.status(500).json({
+                    message: "Order operation failed (outer catch)", // Clarified message
+                    error: error.message,
+                    details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+                });
             }
         }
 
@@ -982,7 +1030,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // Default response
+        // Default response for unhandled API paths
         return res.status(200).json({
             message: "API function is running",
             path: pathname,
@@ -991,12 +1039,12 @@ export default async function handler(req, res) {
         });
 
     } catch (error) {
-        console.error("Function error:", error);
+        console.error("Function error (top-level catch):", error); // Clarified log
         return res.status(500).json({
-            error: "Internal server error",
+            error: "Internal server error (top-level catch)", // Clarified message
             message: error.message,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
         });
     }
 }
-
