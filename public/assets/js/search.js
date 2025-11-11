@@ -234,6 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "table runner": "Table Range",
         "bag": "Bags and Kits",
         "travel kit": "Bags and Kits",
+        "travel kits": "Bags and Kits",
         "curtain": "More" 
     };
 
