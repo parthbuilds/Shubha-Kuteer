@@ -710,7 +710,7 @@ window.renderProducts = function renderProducts(page, products = []) { // Expose
                                     ${product.action === 'add to cart' ? (
                     `
                                         <div
-                                            class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white"
+                                            class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary"
                                             >
                                             <span class="max-lg:hidden">Add To Cart</span>
                                             <i class="ph ph-shopping-bag-open lg:hidden text-xl"></i>
@@ -722,7 +722,7 @@ window.renderProducts = function renderProducts(page, products = []) { // Expose
                                             class="quick-shop-btn text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white max-lg:hidden">
                                             Quick Shop</div>
                                         <div
-                                            class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white lg:hidden"
+                                            class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary lg:hidden"
                                             >
                                             <span class="max-lg:hidden">Add To Cart</span>
                                             <i class="ph ph-shopping-bag-open lg:hidden text-xl"></i>
