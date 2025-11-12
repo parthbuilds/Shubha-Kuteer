@@ -1,110 +1,208 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Moved token retrieval to specific functions or callApi for consistency.
-    // The 'logoutBtn' will always point to the login.html link, but we'll conditionally change its text/behavior.
-    const logoutBtnAnchor = document.querySelector('.menu-tab a[href="login.html"]');
+    // Selectors
+    const logoutBtnAnchor = document.querySelector('.menu-tab a.logout-btn'); // Select by class for more robustness
     const userDisplayName = document.querySelector('.user-infor .name');
     const userDisplayEmail = document.querySelector('.user-infor .mail');
-    const userAvatarImg = document.querySelector('.user-infor .avatar img');
-    const uploadImgPreview = document.querySelector('.upload_img'); // Also need to target this for avatar preview
+    const dashboardContentDiv = document.getElementById('dashboard-content'); // In dashboard.html
 
     // --- Utility function for API calls ---
     async function callApi(endpoint, method = 'GET', body = null) {
-        const currentToken = localStorage.getItem('userToken'); // Always get the latest token here
-
-        const headers = {
-            'Content-Type': 'application/json',
-        };
-
-        // Add Authorization header only if a token exists
+        const currentToken = localStorage.getItem('userToken');
+        const headers = { 'Content-Type': 'application/json' };
         if (currentToken) {
             headers['Authorization'] = `Bearer ${currentToken}`;
-        } else {
-            // Optional: Log a warning or throw an error if an API call is made without a token
-            console.warn(`Attempted API call to ${endpoint} without an authentication token.`);
-            // You might want to immediately redirect if most calls require auth
-            // window.location.href = '/login.html';
-            // throw new Error('Authentication required.');
         }
-
         const config = {
             method,
             headers,
+            body: body ? JSON.stringify(body) : undefined,
         };
-
-        if (body) {
-            config.body = JSON.stringify(body);
-        }
-
         try {
             const response = await fetch(endpoint, config);
+
+            // Centralized 401 handling for ALL API calls
+            if (response.status === 401) {
+                console.warn('Authentication failed for API call. Redirecting to login.');
+                alert('Session expired or invalid. Please log in again.');
+                localStorage.removeItem('userToken');
+                window.location.href = '/login.html';
+                return Promise.reject(new Error('Unauthorized'));
+            }
+
             const data = await response.json().catch(() => {
-                // Handle cases where response is not JSON (e.g., server error pages)
-                console.error(`Failed to parse JSON for ${endpoint}. Response status: ${response.status}`);
+                console.error(`Failed to parse JSON for ${endpoint}. Status: ${response.status}`);
                 return { message: `Server error (${response.status})` };
             });
 
             if (!response.ok) {
-                // Specific handling for 401 Unauthorized errors
-                if (response.status === 401) {
-                    alert('Session expired or invalid. Please log in again.');
-                    localStorage.removeItem('userToken');
-                    window.location.href = '/login.html';
-                    return; // Crucial to stop execution after redirect
-                }
                 throw new Error(data.message || `API call to ${endpoint} failed with status ${response.status}`);
             }
             return data;
         } catch (error) {
             console.error(`Network or fetch error for ${endpoint}:`, error);
-            // Re-throw to be caught by specific function's try-catch if needed,
-            // or handle as a general failure.
             throw error;
         }
     }
 
-    // --- 1. Initial Authentication Check and Data Loading ---
-    async function checkAuthAndLoadUserData() {
-        const currentToken = localStorage.getItem('userToken'); // Always check the latest token
-
-        if (!currentToken) {
-            // User is not logged in, adjust UI for non-authenticated state
-            console.log('No token found. User is not authenticated.');
-            alert('Please log in to access your account.'); // This might be annoying, consider if always needed
-            // Ensure logout button shows "Login" if user is not logged in
-            if (logoutBtnAnchor) {
-                logoutBtnAnchor.textContent = 'Login';
-                logoutBtnAnchor.href = '/login.html';
-            }
-            window.location.href = '/login.html';
+    // --- Function to load and render dashboard content from API ---
+    async function loadDashboardContent() {
+        if (!dashboardContentDiv) {
+            console.warn('Dashboard content div not found. Skipping content load.');
             return;
         }
 
-        // If a token exists, try to validate it with the backend
-        try {
-            console.log('Token found, attempting authentication check...');
-            const authData = await callApi('/api/auth/check');
-            if (authData.message === 'Authorized ✅') {
-                console.log('User is authenticated. ✅');
-                // Adjust UI for authenticated state
-                if (logoutBtnAnchor) {
-                    logoutBtnAnchor.textContent = 'Logout';
-                    // We'll handle logout logic with an event listener, not just href
-                }
+        dashboardContentDiv.innerHTML = '<p>Loading your dashboard data...</p>';
 
-                // Proceed to load dashboard data
-                await loadAndRenderAllUserData();
-                switchTab('dashboard'); // Default to dashboard view
-            } else {
-                // If backend says not authorized but didn't return 401 (e.g., custom message)
-                console.warn('Backend rejected token without 401:', authData.message);
-                throw new Error(authData.message || 'Session invalid');
+        try {
+            const dashboardData = await callApi('/api/dashboard-content', 'GET');
+
+            if (dashboardData) {
+                if (userDisplayName) userDisplayName.textContent = dashboardData.userData.first_name + (dashboardData.userData.last_name ? ' ' + dashboardData.userData.last_name : '');
+                if (userDisplayEmail) userDisplayEmail.textContent = dashboardData.userData.email;
+
+                dashboardContentDiv.innerHTML = `
+                    <h2>${dashboardData.message}</h2>
+                    <p>Welcome, ${dashboardData.userData.first_name}!</p>
+                    <h3>Your Dashboard Stats:</h3>
+                    <p>${dashboardData.dashboardStats}</p>
+                    <h3>Recent Activity:</h3>
+                    <ul>
+                        ${dashboardData.recentActivity.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                `;
             }
         } catch (error) {
-            console.error('Auth check error (in checkAuthAndLoadUserData catch block):', error);
-            // The 401 handler in callApi usually catches this. This is for other errors.
-            alert('Session expired or invalid. Please log in again.');
-            localStorage.removeItem('userToken');
-            window.location.href = '/login.html';
+            console.error('Error loading dashboard content:', error);
+            dashboardContentDiv.innerHTML = `<p class="error">Failed to load dashboard. ${error.message}</p>`;
+        }
+    }
+
+    // --- Logout Handler ---
+    function handleLogout(event) {
+        event.preventDefault();
+        console.log('User initiated logout. Clearing token.');
+        localStorage.removeItem('userToken');
+        alert('You have been logged out.');
+        window.location.href = '/login.html';
+    }
+
+    // --- Core Dashboard Access Logic ---
+    async function checkDashboardAccess() {
+        if (window.location.pathname !== '/dashboard.html') {
+            return; // Only run this logic on the dashboard page
+        }
+
+        const currentToken = localStorage.getItem('userToken');
+
+        // Check for token and if it can be validated.
+        // This is a client-side interpretation of "logged in".
+        // The server will still verify the token for actual data.
+        if (currentToken) {
+            try {
+                // Perform a quick check with the backend to validate the token
+                // This makes the "logout button active" state more reliable than just localstorage presence
+                const authData = await callApi('/api/auth/check');
+                if (authData.message === 'Authorized ✅') {
+                    console.log('Token validated. User is authenticated.');
+                    // Set logout button text and attach handler
+                    if (logoutBtnAnchor) {
+                        logoutBtnAnchor.textContent = 'Logout';
+                        logoutBtnAnchor.removeEventListener('click', handleLogout); // Avoid duplicate listeners
+                        logoutBtnAnchor.addEventListener('click', handleLogout);
+                    }
+                    // Load dashboard content as user is authenticated
+                    loadDashboardContent();
+                    return; // Stop here, user is in.
+                } else {
+                    // Backend said not authorized, but not a 401
+                    console.warn('Backend rejected token without 401:', authData.message);
+                    localStorage.removeItem('userToken'); // Clear bad token
+                    alert('Session invalid. Please log in again.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+            } catch (error) {
+                // callApi's 401 handler already redirects.
+                // This catches other errors during auth/check.
+                console.error('Error during initial auth check for dashboard:', error);
+                localStorage.removeItem('userToken'); // Clear potentially problematic token
+                alert('An error occurred during authentication. Please log in again.');
+                window.location.href = '/login.html';
+                return;
+            }
+        }
+
+        // If no token, or token failed validation above, redirect to login
+        console.log('No valid token found. Redirecting to login.');
+        alert('You must be logged in to view the dashboard.');
+        localStorage.removeItem('userToken'); // Just in case a partial token was there
+        window.location.href = '/login.html';
+    }
+
+    // --- Form Submission Handlers (Login and Register) ---
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const email = loginForm.elements.email.value;
+            const password = loginForm.elements.password.value;
+
+            try {
+                const response = await callApi('/api/auth/login', 'POST', { email, password });
+                if (response && response.token) {
+                    localStorage.setItem('userToken', response.token);
+                    alert(response.message);
+                    window.location.href = '/dashboard.html'; // Redirect to dashboard
+                } else {
+                    alert(response.message || 'Login failed.');
+                }
+            } catch (error) {
+                console.error('Login form submission error:', error);
+                alert(error.message || 'An error occurred during login.');
+            }
+        });
+    }
+
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const name = registerForm.elements.name.value;
+            const email = registerForm.elements.email.value;
+            const password = registerForm.elements.password.value;
+
+            try {
+                const response = await callApi('/api/auth/register', 'POST', { name, email, password });
+                alert(response.message);
+                if (response.message.includes("successful")) {
+                    window.location.href = '/login.html'; // Redirect to login after successful registration
+                }
+            } catch (error) {
+                console.error('Registration form submission error:', error);
+                alert(error.message || 'An error occurred during registration.');
+            }
+        });
+    }
+
+    // --- Initial page load logic ---
+    if (window.location.pathname.startsWith('/dashboard')) {
+        checkDashboardAccess(); // This will handle all authentication/redirection for dashboard
+    } else if (window.location.pathname === '/login.html' || window.location.pathname === '/register.html') {
+        // If on login/register page, check if already logged in and redirect to dashboard
+        const currentToken = localStorage.getItem('userToken');
+        if (currentToken) {
+            callApi('/api/auth/check')
+                .then(data => {
+                    if (data.message === 'Authorized ✅') {
+                        console.log('Already logged in on login/register page, redirecting to dashboard.');
+                        window.location.href = '/dashboard.html';
+                    }
+                })
+                .catch(error => {
+                    // Token invalid, clear it. callApi's 401 handler might already do this.
+                    console.warn('Failed auth check on login/register page, clearing token.');
+                    localStorage.removeItem('userToken');
+                });
         }
     }
 
