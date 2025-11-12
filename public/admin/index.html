@@ -921,14 +921,15 @@
                                     </div>
                                     <!-- /earnings -->
                                 </div>
-                                <!-- history -->
+                                <!-- Transfer History -->
                                 <div class="tf-section-1">
                                     <div class="wg-box">
                                         <h5>Transfer History</h5>
+
                                         <div class="wg-table table-all-attribute">
                                             <ul class="table-title flex gap20 mb-14">
                                                 <li>
-                                                    <div class="body-title">Transfer Id</div>
+                                                    <div class="body-title">Transfer ID</div>
                                                 </li>
                                                 <li>
                                                     <div class="body-title">Name</div>
@@ -943,83 +944,23 @@
                                                     <div class="body-title">Action</div>
                                                 </li>
                                             </ul>
-                                            <ul class="flex flex-column">
-                                                <li class="attribute-item flex items-center justify-between gap20">
-                                                    <div class="body-text">55700223</div>
-                                                    <div class="body-text">Albert Flores</div>
-                                                    <div class="body-text">Mar 20, 2023</div>
-                                                    <div class="body-text">₹2,700</div>
-                                                    <div class="list-icon-function">
-                                                        <div class="item eye">
-                                                            <i class="icon-eye"></i>
-                                                        </div>
-                                                        <div class="item edit">
-                                                            <i class="icon-edit-3"></i>
-                                                        </div>
-                                                        <div class="item trash">
-                                                            <i class="icon-trash-2"></i>
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                                <li class="attribute-item flex items-center justify-between gap20">
-                                                    <div class="body-text">34034474</div>
-                                                    <div class="body-text">Robert Fox</div>
-                                                    <div class="body-text">Mar 20, 2023</div>
-                                                    <div class="body-text">₹2,700</div>
-                                                    <div class="list-icon-function">
-                                                        <div class="item eye">
-                                                            <i class="icon-eye"></i>
-                                                        </div>
-                                                        <div class="item edit">
-                                                            <i class="icon-edit-3"></i>
-                                                        </div>
-                                                        <div class="item trash">
-                                                            <i class="icon-trash-2"></i>
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                                <li class="attribute-item flex items-center justify-between gap20">
-                                                    <div class="body-text">34034474</div>
-                                                    <div class="body-text">Theresa Webb</div>
-                                                    <div class="body-text">Mar 20, 2023</div>
-                                                    <div class="body-text">₹2,700</div>
-                                                    <div class="list-icon-function">
-                                                        <div class="item eye">
-                                                            <i class="icon-eye"></i>
-                                                        </div>
-                                                        <div class="item edit">
-                                                            <i class="icon-edit-3"></i>
-                                                        </div>
-                                                        <div class="item trash">
-                                                            <i class="icon-trash-2"></i>
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                            </ul>
+
+                                            <!-- Dynamic Order List -->
+                                            <ul id="transferHistoryList" class="flex flex-column"></ul>
                                         </div>
+
                                         <div class="divider"></div>
                                         <div class="flex items-center justify-between flex-wrap gap10">
-                                            <div class="text-tiny">Showing 10 to 16 in 30 records</div>
+                                            <div id="transferPaginationText" class="text-tiny"></div>
                                             <ul class="wg-pagination">
-                                                <li>
-                                                    <a href="#"><i class="icon-chevron-left"></i></a>
-                                                </li>
-                                                <li>
-                                                    <a href="#">1</a>
-                                                </li>
-                                                <li class="active">
-                                                    <a href="#">2</a>
-                                                </li>
-                                                <li>
-                                                    <a href="#">3</a>
-                                                </li>
-                                                <li>
-                                                    <a href="#"><i class="icon-chevron-right"></i></a>
-                                                </li>
+                                                <li><a href="#"><i class="icon-chevron-left"></i></a></li>
+                                                <li class="active"><a href="#">1</a></li>
+                                                <li><a href="#"><i class="icon-chevron-right"></i></a></li>
                                             </ul>
                                         </div>
                                     </div>
                                 </div>
+                                <!-- /Transfer History -->
                             </div>
                         </div>
                         <!-- /history -->
@@ -1146,6 +1087,93 @@
         // Load on page ready
         document.addEventListener('DOMContentLoaded', loadOrders);
     </script>
+
+    <script>
+        async function loadTransferHistory() {
+            try {
+                const res = await fetch('/api/orders');
+                const data = await res.json();
+
+                if (!data.success || !Array.isArray(data.orders)) {
+                    console.error("Invalid order data:", data);
+                    return;
+                }
+
+                const orders = data.orders;
+                const list = document.getElementById('transferHistoryList');
+                const paginationText = document.getElementById('transferPaginationText');
+
+                list.innerHTML = ''; // clear previous entries
+
+                if (orders.length === 0) {
+                    list.innerHTML = `<li class="body-text text-gray-500 px-3 py-2">No transfers found</li>`;
+                    paginationText.textContent = 'No records found';
+                    return;
+                }
+
+                // Limit display (example: show 10 latest)
+                const visibleOrders = orders.slice(0, 10);
+
+                visibleOrders.forEach(order => {
+                    const productNames = order.products?.map(p => p.name).join(', ') || 'N/A';
+                    const totalAmount = parseFloat(order.amount).toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+                    const orderDate = new Date(order.created_at).toLocaleDateString('en-IN', {
+                        day: '2-digit', month: 'short', year: 'numeric'
+                    });
+
+                    const li = document.createElement('li');
+                    li.className = 'attribute-item flex items-center justify-between gap20';
+
+                    li.innerHTML = `
+            <div class="body-text">#${order.id}</div>
+            <div class="body-text">${order.first_name || ''} ${order.last_name || ''}</div>
+            <div class="body-text">${orderDate}</div>
+            <div class="body-text">${totalAmount}</div>
+            <div class="list-icon-function">
+              <div class="item eye" title="View Order" onclick="viewOrder(${order.id})">
+                <i class="icon-eye"></i>
+              </div>
+              <div class="item edit" title="Edit Order" onclick="editOrder(${order.id})">
+                <i class="icon-edit-3"></i>
+              </div>
+              <div class="item trash" title="Delete Order" onclick="deleteOrder(${order.id})">
+                <i class="icon-trash-2"></i>
+              </div>
+            </div>
+          `;
+
+                    list.appendChild(li);
+                });
+
+                // Pagination info
+                paginationText.textContent = `Showing ${visibleOrders.length} of ${orders.length} records`;
+
+            } catch (err) {
+                console.error('Error loading transfer history:', err);
+            }
+        }
+
+        // Optional action handlers
+        function viewOrder(id) {
+            window.location.href = `/admin/order/${id}`; // adjust path as needed
+        }
+        function editOrder(id) {
+            alert(`Edit order ${id} (implement this action)`);
+        }
+        function deleteOrder(id) {
+            if (confirm(`Are you sure you want to delete order #${id}?`)) {
+                fetch(`/api/orders/${id}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(resp => {
+                        if (resp.success) loadTransferHistory();
+                        else alert('Failed to delete order');
+                    });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadTransferHistory);
+    </script>
+
 
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
