@@ -90,6 +90,36 @@ export default async function handler(req, res) {
             }
         }
 
+        if (pathname === '/api/dashboard-content' && method === 'GET') {
+            let authResult;
+            const authCheckMockRes = {
+                status: (code) => ({
+                    json: (data) => {
+                        authResult = { code, data };
+                        if (code !== 200) {
+                            sendResponse(code, data);
+                        }
+                    }
+                }),
+                json: (data) => {
+                    authResult = { code: 200, data };
+                    sendResponse(200, data);
+                }
+            };
+        
+            await checkAuth(req, authCheckMockRes);
+        
+            if (authResult && authResult.code === 200) {
+                sendResponse(200, {
+                    message: `Welcome to your dashboard, ${authResult.data.user.first_name}!`,
+                    userData: authResult.data.user,
+                    dashboardStats: "Your personalized statistics are here.",
+                    recentActivity: ["User logged in", "Viewed analytics"]
+                });
+            }
+            return;
+        }
+
         // Admin auth routes
         if (pathname === '/api/admin/auth/login' && req.method === 'POST') {
             try {
