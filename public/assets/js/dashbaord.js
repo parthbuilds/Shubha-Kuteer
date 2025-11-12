@@ -6,92 +6,93 @@ document.addEventListener('DOMContentLoaded', () => {
     const userAvatarImg = document.querySelector('.user-infor .avatar img');
 
     // Utility function for API calls
-    async function callApi(endpoint, method = 'GET', body = null) {
-        const headers = {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        };
-
-        const config = {
-            method,
-            headers,
-        };
-
-        if (body) {
-            config.body = JSON.stringify(body);
-        }
-
-        const response = await fetch(endpoint, config);
-        const data = await response.json();
-
-        if (!response.ok) {
-            if (response.status === 401) {
-                // Token expired or invalid, force re-login
-                alert('Session expired or invalid. Please log in again.');
-                localStorage.removeItem('userToken');
-                window.location.href = '/login.html';
-            }
-            throw new Error(data.message || 'API call failed');
-        }
-        return data;
+async function callApi(endpoint, method = 'GET', body = null) {
+    const token = localStorage.getItem('userToken'); // <--- Get token HERE
+    
+    // If no token exists, immediately handle it (optional, as checkAuthAndLoadUserData also does this)
+    if (!token) {
+        // You might want to log an error or just let the 401 handler below deal with it
+        console.warn('Attempted API call without a token.');
+        // Or throw an error immediately:
+        // throw new Error('No authentication token found.'); 
     }
 
-    // 1. Initial Authentication Check and Data Loading
-    async function checkAuthAndLoadUserData() {
-        if (!token) {
-            alert('Please log in to access your account.');
-            window.location.href = '/login.html';
-            return;
-        }
+    const headers = {
+        'Content-Type': 'application/json',
+    };
+    
+    // Only add Authorization header if a token exists
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
 
-        try {
-            const authData = await callApi('/api/auth/check');
-            if (authData.message === 'Authorized ✅') {
-                console.log('User is authenticated.');
-                // Show logout button/dashboard specific elements
-                if (logoutBtn) logoutBtn.style.display = 'flex'; // Or remove 'hidden' class
-                
-                // Fetch and render initial data for the dashboard
-                await loadAndRenderAllUserData();
-                switchTab('dashboard'); // Default to dashboard view
-            } else {
-                throw new Error(authData.message || 'Session invalid');
-            }
-        } catch (error) {
-            console.error('Auth check error:', error);
+    const config = {
+        method,
+        headers,
+    };
+
+    if (body) {
+        config.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(endpoint, config);
+    // It's generally good practice to check response.ok *before* trying response.json()
+    // as some error responses might not be valid JSON.
+    const data = await response.json().catch(() => ({ message: 'Could not parse JSON response.' })); // Fallback for non-JSON errors
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            // Token expired or invalid, force re-login
+            alert('Session expired or invalid. Please log in again.');
+            localStorage.removeItem('userToken');
+            window.location.href = '/login.html';
+            return; // Exit here to prevent further execution after redirect
+        }
+        throw new Error(data.message || 'API call failed');
+    }
+    return data;
+}
+
+// Your checkAuthAndLoadUserData and loadAndRenderAllUserData can remain mostly the same
+// but you should ensure the global 'token' variable is either removed or specifically
+// set to localStorage.getItem('userToken') at page load, or even better,
+// directly use localStorage.getItem('userToken') in checkAuthAndLoadUserData itself for the initial check.
+
+// Initial Authentication Check and Data Loading
+async function checkAuthAndLoadUserData() {
+    // Get token directly for this check, don't rely on a global 'token' variable
+    const currentToken = localStorage.getItem('userToken'); 
+
+    if (!currentToken) { // Use currentToken here
+        alert('Please log in to access your account.');
+        window.location.href = '/login.html';
+        return;
+    }
+
+    try {
+        const authData = await callApi('/api/auth/check'); // callApi now handles token retrieval
+        if (authData.message === 'Authorized ✅') {
+            console.log('User is authenticated.');
+            // Show logout button/dashboard specific elements
+            if (logoutBtn) logoutBtn.style.display = 'flex'; // Or remove 'hidden' class
+            
+            // Fetch and render initial data for the dashboard
+            await loadAndRenderAllUserData();
+            switchTab('dashboard'); // Default to dashboard view
+        } else {
+            throw new Error(authData.message || 'Session invalid');
+        }
+    } catch (error) {
+        console.error('Auth check error:', error);
+        // The 401 handler in callApi will usually catch this and redirect,
+        // but this catch block provides a fallback for other types of errors.
+        if (error.message !== 'Session expired or invalid. Please log in again.') { // Prevent duplicate alerts
             alert('Session expired or invalid. Please log in again.');
             localStorage.removeItem('userToken');
             window.location.href = '/login.html';
         }
     }
-
-    async function loadAndRenderAllUserData() {
-        try {
-            // Fetch and display user profile data
-            const profileData = await callApi('/api/user/profile');
-            loadProfileData(profileData.user);
-
-            // Fetch and display dashboard summary
-            const dashboardSummary = await callApi('/api/user/dashboard-summary');
-            renderDashboardOverview(dashboardSummary);
-
-            // Fetch and display recent orders for dashboard
-            const recentOrders = await callApi('/api/orders/recent'); // Assuming a new API for recent orders
-            renderRecentOrders(recentOrders.orders);
-
-            // Fetch and display all orders for order history tab
-            const allOrders = await callApi('/api/orders');
-            renderOrderHistory(allOrders.orders); // Initially render all orders
-
-            // Fetch and display user addresses
-            const userAddresses = await callApi('/api/user/addresses');
-            loadAddressData(userAddresses.addresses);
-
-        } catch (error) {
-            console.error('Error loading all user data:', error);
-            alert('Failed to load user data. Please try again.');
-        }
-    }
+}
 
     // 2. Dashboard Overview Functions
     function renderDashboardOverview(data) {
