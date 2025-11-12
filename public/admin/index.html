@@ -267,7 +267,7 @@
                             <div class="center-item">
                                 <div class="center-heading">Setting</div>
                                 <ul class="menu-list">
-                                    
+
                                     <li class="menu-item">
                                         <a href="/admin/setting.html" class="">
                                             <div class="icon"><i class="icon-settings"></i></div>
@@ -665,7 +665,7 @@
                                         <i class="icon-maximize"></i>
                                     </div>
                                 </div>
-                                
+
                                 <div class="popup-wrap user type-header">
                                     <div class="dropdown">
                                         <button class="btn btn-secondary dropdown-toggle" type="button"
@@ -1084,6 +1084,93 @@
         // Load on page ready
         document.addEventListener('DOMContentLoaded', loadOrders);
     </script>
+
+    <script>
+        async function loadTransferHistory() {
+            try {
+                const res = await fetch('/api/orders');
+                const data = await res.json();
+
+                if (!data.success || !Array.isArray(data.orders)) {
+                    console.error("Invalid order data:", data);
+                    return;
+                }
+
+                const orders = data.orders;
+                const list = document.getElementById('transferHistoryList');
+                const paginationText = document.getElementById('transferPaginationText');
+
+                list.innerHTML = ''; // clear previous entries
+
+                if (orders.length === 0) {
+                    list.innerHTML = `<li class="body-text text-gray-500 px-3 py-2">No transfers found</li>`;
+                    paginationText.textContent = 'No records found';
+                    return;
+                }
+
+                // Limit display (example: show 10 latest)
+                const visibleOrders = orders.slice(0, 10);
+
+                visibleOrders.forEach(order => {
+                    const productNames = order.products?.map(p => p.name).join(', ') || 'N/A';
+                    const totalAmount = parseFloat(order.amount).toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+                    const orderDate = new Date(order.created_at).toLocaleDateString('en-IN', {
+                        day: '2-digit', month: 'short', year: 'numeric'
+                    });
+
+                    const li = document.createElement('li');
+                    li.className = 'attribute-item flex items-center justify-between gap20';
+
+                    li.innerHTML = `
+            <div class="body-text">#${order.id}</div>
+            <div class="body-text">${order.first_name || ''} ${order.last_name || ''}</div>
+            <div class="body-text">${orderDate}</div>
+            <div class="body-text">${totalAmount}</div>
+            <div class="list-icon-function">
+              <div class="item eye" title="View Order" onclick="viewOrder(${order.id})">
+                <i class="icon-eye"></i>
+              </div>
+              <div class="item edit" title="Edit Order" onclick="editOrder(${order.id})">
+                <i class="icon-edit-3"></i>
+              </div>
+              <div class="item trash" title="Delete Order" onclick="deleteOrder(${order.id})">
+                <i class="icon-trash-2"></i>
+              </div>
+            </div>
+          `;
+
+                    list.appendChild(li);
+                });
+
+                // Pagination info
+                paginationText.textContent = `Showing ${visibleOrders.length} of ${orders.length} records`;
+
+            } catch (err) {
+                console.error('Error loading transfer history:', err);
+            }
+        }
+
+        // Optional action handlers
+        function viewOrder(id) {
+            window.location.href = `/admin/order/${id}`; // adjust path as needed
+        }
+        function editOrder(id) {
+            alert(`Edit order ${id} (implement this action)`);
+        }
+        function deleteOrder(id) {
+            if (confirm(`Are you sure you want to delete order #${id}?`)) {
+                fetch(`/api/orders/${id}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(resp => {
+                        if (resp.success) loadTransferHistory();
+                        else alert('Failed to delete order');
+                    });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadTransferHistory);
+    </script>
+
 
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
