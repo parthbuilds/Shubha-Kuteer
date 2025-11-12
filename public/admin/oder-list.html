@@ -975,53 +975,81 @@
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
             const orderList = document.querySelector(".table-all-category .flex-column");
-            orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">Loading orders...</div></li>`;
+            orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">Loading orders...</div></li>`; // Initial loading state
         
             try {
-                // 🧑‍💻 Check admin auth
+                // 🧑‍💻 Check admin authentication
                 const authRes = await fetch("/api/admin/auth/check");
-                if (!authRes.ok) return (window.location.href = "/admin/login.html");
+                if (!authRes.ok) {
+                    console.warn("Admin not authenticated. Redirecting to login.");
+                    window.location.href = "/admin/login.html";
+                    return; // Stop execution if not authenticated
+                }
         
                 // 🧾 Fetch orders
                 const res = await fetch("/api/orders");
-                if (!res.ok) throw new Error("Server error " + res.status);
+                if (!res.ok) {
+                    // Log specific error if available
+                    const errorData = await res.json().catch(() => ({ message: `HTTP status ${res.status}` }));
+                    throw new Error(`Server error fetching orders: ${errorData.message || res.statusText}`);
+                }
+                
                 const response = await res.json();
-                const orders = response.success ? response.orders : [];
+                const orders = response.success && Array.isArray(response.orders) ? response.orders : [];
         
-                orderList.innerHTML = "";
+                orderList.innerHTML = ""; // Clear loading state
         
                 if (!orders.length) {
-                    orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">No orders found</div></li>`;
-                    return;
+                    orderList.innerHTML = `<li class="product-item gap14"><div class="body-text text-gray-500">No orders found.</div></li>`;
+                    return; // Exit if no orders
                 }
         
                 orders.forEach(order => {
-                    const totalItems = order.products?.reduce((sum, p) => sum + (p.quantity || 0), 0) || 0;
-                    const productNames = order.products?.map(p => p.name).join(', ') || 'No products';
+                    // *** CRITICAL FIX: Parse the products string into a JavaScript array ***
+                    let parsedProducts = [];
+                    if (typeof order.products === 'string') {
+                        try {
+                            parsedProducts = JSON.parse(order.products);
+                        } catch (parseError) {
+                            console.error("Error parsing products string for order ID:", order.id, parseError);
+                            // Continue with an empty array if parsing fails
+                        }
+                    } else if (Array.isArray(order.products)) {
+                        parsedProducts = order.products;
+                    }
+        
+                    // Calculate total items and get product names from the PARSED products
+                    const totalItems = parsedProducts.reduce((sum, p) => sum + (parseInt(p.quantity) || 0), 0);
+                    const productNames = parsedProducts.map(p => p.name).join(', ') || 'No products listed';
+                    
+                    // Get the first product image for display
+                    const firstProductImage = parsedProducts.length > 0 && parsedProducts[0].image 
+                                            ? parsedProducts[0].image 
+                                            : '/admin/images/products/default-order.png';
         
                     const li = document.createElement("li");
                     li.className = "product-item gap14";
-                    li.dataset.id = order.id;
+                    li.dataset.id = order.id; // Store order ID directly on the li for easy lookup
         
                     li.innerHTML = `
                         <div class="image no-bg">
-                            <img src="/admin/images/products/default-order.png" alt="Order">
+                            <img src="${firstProductImage}" alt="${productNames.split(',')[0] || 'Order Product'}">
                         </div>
                         <div class="flex items-center justify-between gap20 flex-grow">
                             <div class="name">
-                                <a href="#!" class="body-title-2">${order.first_name} ${order.last_name}</a>
+                                <a href="/admin/order-detail.html?id=${order.id}" class="body-title-2">${order.first_name || ''} ${order.last_name || ''}</a>
                                 <div class="text-tiny mt-1 text-gray-600 truncate" title="${productNames}">
                                     ${productNames}
                                 </div>
                             </div>
-                            <div class="body-text">#${order.razorpay_order_id || order.id}</div>
-                            <div class="body-text">₹${order.amount}</div>
+                            <div class="body-text">#${order.razorpay_order_id || order.id || 'N/A'}</div>
+                            <div class="body-text">₹${(parseFloat(order.amount) || 0).toFixed(2)}</div>
                             <div class="body-text">${totalItems}</div>
-                            <div class="body-text">${order.email}</div>
-                            <div class="body-text">${new Date(order.created_at).toLocaleString()}</div>
+                            <div class="body-text">${order.email || 'N/A'}</div>
+                            <div class="body-text">${order.created_at ? new Date(order.created_at).toLocaleString() : 'N/A'}</div>
                             <div>
-                                <div class="block-available ${order.status === 'completed' ? 'success' : 'pending'}">
-                                    ${order.status}
+                                <div class="block-available ${order.status === 'completed' ? 'success' : order.status === 'pending' ? 'pending' : 'warning'}">
+                                    ${order.status || 'N/A'}
                                 </div>
                             </div>
                             <div class="list-icon-function">
@@ -1030,40 +1058,72 @@
                             </div>
                         </div>
                     `;
-        
-                    // View order detail
-                    li.querySelector(".eye").addEventListener("click", () => {
+                    
+                    // Event listeners
+                    li.querySelector(".eye").addEventListener("click", (event) => {
+                        // Prevent navigating if the click was on a nested element that also has a default action
+                        event.preventDefault(); 
                         window.location.href = `/admin/order-detail.html?id=${order.id}`;
                     });
-        
-                    // Delete handler
-                    li.querySelector(".trash").addEventListener("click", () => deleteOrder(order.id));
+                    li.querySelector(".trash").addEventListener("click", (event) => {
+                        event.stopPropagation(); // Prevent li click event if trash is clicked
+                        deleteOrder(order.id);
+                    });
         
                     orderList.appendChild(li);
                 });
+        
             } catch (err) {
                 console.error("⚠️ Error fetching orders:", err);
-                orderList.innerHTML = `<li class="product-item gap14"><div class="body-text">Error loading orders</div></li>`;
+                orderList.innerHTML = `<li class="product-item gap14"><div class="body-text text-red-500">Error loading orders: ${err.message}</div></li>`;
             }
         });
         
         // 🗑️ Delete function
         async function deleteOrder(id) {
-            if (!confirm("Are you sure you want to delete this order?")) return;
+            if (!confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
             try {
                 const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
                 const data = await res.json();
                 if (res.ok) {
-                    alert("✅ " + data.message);
-                    document.querySelector(`li[data-id="${id}"]`).remove();
+                    alert("✅ " + (data.message || "Order deleted successfully!"));
+                    document.querySelector(`li[data-id="${id}"]`).remove(); // Remove the deleted item from the DOM
                 } else {
-                    alert("❌ Error: " + (data.error || data.message));
+                    // Use specific error message from backend if available
+                    alert("❌ Error: " + (data.error || data.message || "Failed to delete order."));
                 }
             } catch (err) {
                 console.error("Delete failed:", err);
-                alert("⚠️ Failed to delete order");
+                alert("⚠️ Failed to delete order due to a network or server error.");
             }
         }
+        
+        // Separate script for loading admin data (unchanged, but good to keep separate)
+        // This assumes elements with IDs "admin-name" and "admin-role" exist in your header/sidebar
+        async function loadAdminData() {
+            try {
+                const res = await fetch("/api/admin/users/me");
+                if (!res.ok) {
+                    console.warn("Admin data fetch failed. Redirecting to login.");
+                    window.location.href = "/admin/login.html";
+                    return; // Stop execution
+                }
+                const data = await res.json();
+        
+                const adminNameEl = document.getElementById("admin-name");
+                const adminRoleEl = document.getElementById("admin-role");
+        
+                if (adminNameEl) adminNameEl.textContent = data.admin.name || 'Admin';
+                if (adminRoleEl) adminRoleEl.textContent = data.admin.role || 'Role';
+        
+            } catch (err) {
+                console.error("Error loading admin data:", err);
+                // Optionally, display a message or leave defaults
+            }
+        }
+        
+        // Call admin data loading function
+        loadAdminData();
         </script>
         
     <script src="/admin/js/jquery.min.js"></script>
