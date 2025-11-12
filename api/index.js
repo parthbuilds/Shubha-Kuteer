@@ -994,6 +994,7 @@ export default async function handler(req, res) {
             const userId = decoded.id;
 
             // GET /api/user/profile - Fetch user data and their orders
+            // GET /api/user/profile - Fetch user data and their orders
             if (pathname === '/api/user/profile' && req.method === 'GET') {
                 try {
                     // 1. Fetch user basic data from the 'users' table
