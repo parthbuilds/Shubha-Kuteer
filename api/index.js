@@ -969,60 +969,91 @@ export default async function handler(req, res) {
             }
         }
 
-        // User Profile Routes
         if (pathname.startsWith('/api/user')) {
             const jwt = await import("jsonwebtoken");
             const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
             const pool = await import("../backend/utils/db.js");
             const bcrypt = await import("bcrypt");
-
+        
             // Extract token from Authorization header (Bearer token)
             const authHeader = req.headers.authorization;
             const token = authHeader && authHeader.split(' ')[1];
-
+        
             if (!token) {
                 return res.status(401).json({ message: "Unauthorized: No token provided ❌" });
             }
-
+        
             let decoded;
             try {
                 decoded = jwt.default.verify(token, JWT_SECRET);
             } catch (err) {
                 return res.status(401).json({ message: "Unauthorized: Invalid token ❌" });
             }
-
-            const userId = decoded.id;
-
-            // GET /api/user/profile - Fetch user data
+        
+            const userId = decoded.id; // This is the user ID from the 'users' table
+        
+            // GET /api/user/profile - Fetch user data AND their orders
             if (pathname === '/api/user/profile' && req.method === 'GET') {
                 try {
-                    const [rows] = await pool.default.query(
+                    // 1. Fetch user basic data from the 'users' table
+                    const [userRows] = await pool.default.query(
                         "SELECT id, name, email FROM users WHERE id = ?",
                         [userId]
                     );
-                    if (rows.length === 0) {
+        
+                    if (userRows.length === 0) {
                         return res.status(404).json({ message: "User not found ❌" });
                     }
-                    const user = rows[0];
-                    // Split name for first_name/last_name
+                    const user = userRows[0];
                     const [firstName, lastName] = user.name ? user.name.split(' ') : ['', ''];
+        
+                    // 2. Fetch user's orders from the 'orders' table
+                    const [orderRows] = await pool.default.query(
+                        `
+                        SELECT
+                            id, first_name, last_name, email, phone_number, city, apartment,
+                            postal_code, note, amount, razorpay_order_id, razorpay_payment_id,
+                            status, products, created_at, updated_at
+                        FROM orders
+                        WHERE email = ? -- Linking orders to the user via email
+                        ORDER BY created_at DESC;
+                        `,
+                        [user.email] // Use the email fetched from the 'users' table
+                    );
+        
+                    // Parse the 'products' JSON string in each order
+                    const ordersWithParsedProducts = orderRows.map(order => {
+                        if (order.products && typeof order.products === 'string') {
+                            try {
+                                order.products = JSON.parse(order.products);
+                            } catch (e) {
+                                console.error(`Error parsing products JSON for order ${order.id}:`, e);
+                                order.products = [];
+                            }
+                        } else {
+                            order.products = [];
+                        }
+                        return order;
+                    });
+        
                     return res.status(200).json({
-                        message: "User data fetched successfully ✅",
+                        message: "User data and orders fetched successfully ✅",
                         user: {
                             id: user.id,
                             first_name: firstName,
                             last_name: lastName || '',
                             email: user.email,
-                            phone_number: '', // Not in table
-                            dob: '' // Not in table
-                        }
+                            phone_number: '',
+                            dob: ''
+                        },
+                        orders: ordersWithParsedProducts
                     });
-                } catch (error) {
-                    console.error("Fetch user error:", error);
-                    return res.status(500).json({ message: "Failed to fetch user data ❌", error: error.message });
+                } catch (error) { // This catch block closes the try for /api/user/profile GET
+                    console.error("Fetch user data and orders error:", error);
+                    return res.status(500).json({ message: "Failed to fetch user data and orders ❌", error: error.message });
                 }
             }
-
+        
             // PUT /api/user/profile - Update profile
             if (pathname === '/api/user/profile' && req.method === 'PUT') {
                 const { first_name, last_name, phone_number, email, dob } = req.body;
@@ -1044,7 +1075,7 @@ export default async function handler(req, res) {
                     return res.status(500).json({ message: "Failed to update profile ❌", error: error.message });
                 }
             }
-
+        
             // PUT /api/user/password - Change password
             if (pathname === '/api/user/password' && req.method === 'PUT') {
                 const { current_password, new_password, confirm_new_password } = req.body;
@@ -1074,10 +1105,10 @@ export default async function handler(req, res) {
                     return res.status(500).json({ message: "Failed to change password ❌", error: error.message });
                 }
             }
-
+        
             return res.status(404).json({ message: "User endpoint not found" });
         }
-
+        
         // Add /api/auth/check endpoint before the default response
         if (pathname === '/api/auth/check' && req.method === 'GET') {
             try {
@@ -1100,7 +1131,7 @@ export default async function handler(req, res) {
                 return res.status(500).json({ message: "Auth check failed ❌", error: error.message });
             }
         }
-
+        
         // Default response for unhandled API paths
         return res.status(200).json({
             message: "API function is running",
