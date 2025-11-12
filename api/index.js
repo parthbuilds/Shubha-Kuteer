@@ -737,50 +737,64 @@ export default async function handler(req, res) {
                     }
                 }
 
+                // Assume 'pool' is your database connection pool (e.g., MySQL) and 'res' is the response object.
+                // 'pathname' and 'req' are from your HTTP request handling.
+
                 // GET /api/orders - Get all orders with product details
                 if (pathname === '/api/orders' && req.method === 'GET') {
                     try {
                         console.log("Attempting to fetch all orders from database...");
                         const [orders] = await pool.default.query(`
-                            SELECT
-                                id, first_name, last_name, email, phone_number,
-                                city, apartment, postal_code, note, amount,
-                                razorpay_order_id, razorpay_payment_id, status,
-                                products, created_at, updated_at
-                            FROM orders
-                            ORDER BY created_at DESC
-                        `);
+            SELECT
+                id, first_name, last_name, email, phone_number,
+                city, apartment, postal_code, note, amount,
+                razorpay_order_id, razorpay_payment_id, status,
+                products, created_at, updated_at
+            FROM orders
+            ORDER BY created_at DESC
+        `);
                         console.log(`Successfully fetched ${orders.length} raw orders.`);
 
                         // Parse products JSON for each order with error handling
                         const ordersWithProducts = orders.map(order => {
                             let parsedProducts = [];
+                            let recalculatedAmount = parseFloat(order.amount) || 0; // Start with DB amount
+
                             if (order.products) {
                                 try {
-                                    parsedProducts = JSON.parse(order.products);
-                                    // Ensure it's an array if expected, or handle other types
-                                    if (!Array.isArray(parsedProducts)) {
+                                    const productsFromDb = JSON.parse(order.products);
+                                    if (Array.isArray(productsFromDb)) {
+                                        parsedProducts = productsFromDb;
+                                        // Option 1: Recalculate amount from products (if DB amount isn't always reliable)
+                                        // This might be desired if 'amount' in DB could be stale
+                                        recalculatedAmount = parsedProducts.reduce((sum, p) => {
+                                            const price = parseFloat(p.price) || 0;
+                                            const quantity = parseInt(p.quantity) || 0;
+                                            return sum + (price * quantity);
+                                        }, 0);
+
+                                    } else {
                                         console.warn(`Order ${order.id}: 'products' column contained non-array JSON. Defaulting to empty array. Raw: ${order.products}`);
-                                        parsedProducts = [];
                                     }
                                 } catch (jsonParseError) {
                                     console.error(`Order ${order.id}: Failed to parse 'products' JSON. Raw data: ${order.products}. Error: ${jsonParseError.message}`);
-                                    // Decide how to handle this: return empty, null, or a specific error object
-                                    parsedProducts = []; // Default to empty array on parse error
+                                    // Fallback: keep parsedProducts as empty, recalculatedAmount remains original DB amount
                                 }
                             }
+
                             return {
                                 ...order,
-                                products: parsedProducts
+                                products: parsedProducts,
+                                amount: recalculatedAmount.toFixed(2) // Ensure amount is consistently formatted
                             };
                         });
-                        console.log("Successfully parsed products for all orders.");
+                        console.log("Successfully parsed products and potentially recalculated amounts for all orders.");
 
                         return res.status(200).json({
                             success: true,
                             orders: ordersWithProducts
                         });
-                    } catch (dbError) { // Changed 'error' to 'dbError' for clarity
+                    } catch (dbError) {
                         console.error("Database query error for GET /api/orders:", dbError);
                         return res.status(500).json({
                             success: false,
@@ -793,21 +807,22 @@ export default async function handler(req, res) {
 
                 // GET /api/orders/:id - Get specific order details
                 if (pathname.startsWith('/api/orders/') && req.method === 'GET') {
-                    // Split by '/', then get the 4th element (0-indexed: '', 'api', 'orders', ':id')
                     const orderId = pathname.split('/')[3];
 
                     try {
+                        console.log(`Attempting to fetch specific order ID: ${orderId} from database...`);
                         const [orders] = await pool.default.query(`
-                            SELECT
-                                id, first_name, last_name, email, phone_number,
-                                city, apartment, postal_code, note, amount,
-                                razorpay_order_id, razorpay_payment_id, status,
-                                products, created_at, updated_at
-                            FROM orders
-                            WHERE id = ?
-                        `, [orderId]);
+            SELECT
+                id, first_name, last_name, email, phone_number,
+                city, apartment, postal_code, note, amount,
+                razorpay_order_id, razorpay_payment_id, status,
+                products, created_at, updated_at
+            FROM orders
+            WHERE id = ?
+        `, [orderId]);
 
                         if (orders.length === 0) {
+                            console.warn(`Order ID: ${orderId} not found.`);
                             return res.status(404).json({
                                 success: false,
                                 error: 'Order not found'
@@ -816,26 +831,40 @@ export default async function handler(req, res) {
 
                         const order = orders[0];
                         let parsedProducts = [];
+                        let recalculatedAmount = parseFloat(order.amount) || 0; // Start with the amount from the DB
+
                         if (order.products) {
                             try {
-                                parsedProducts = JSON.parse(order.products);
-                                if (!Array.isArray(parsedProducts)) {
-                                    console.warn(`Order ${order.id}: products was non-array JSON for single fetch. Raw: ${order.products}`);
-                                    parsedProducts = [];
+                                const productsFromDb = JSON.parse(order.products);
+                                if (Array.isArray(productsFromDb)) {
+                                    parsedProducts = productsFromDb;
+                                    // Recalculate the amount from the products
+                                    recalculatedAmount = parsedProducts.reduce((sum, p) => {
+                                        const price = parseFloat(p.price) || 0;
+                                        const quantity = parseInt(p.quantity) || 0;
+                                        return sum + (price * quantity);
+                                    }, 0);
+                                    console.log(`Order ${order.id}: Recalculated amount from products: ${recalculatedAmount.toFixed(2)}.`);
+
+                                } else {
+                                    console.warn(`Order ${order.id}: products was non-array JSON. Raw: ${order.products}`);
                                 }
                             } catch (jsonParseError) {
-                                console.error(`Order ${order.id}: Failed to parse products JSON for single fetch. Raw data: ${order.products}. Error: ${jsonParseError.message}`);
-                                parsedProducts = [];
+                                console.error(`Order ${order.id}: Failed to parse products JSON. Raw data: ${order.products}. Error: ${jsonParseError.message}`);
                             }
                         }
-                        order.products = parsedProducts;
 
+                        // Assign the parsed products and potentially recalculated amount back to the order object
+                        order.products = parsedProducts;
+                        order.amount = recalculatedAmount.toFixed(2); // Ensure amount is consistently formatted
+
+                        console.log(`Successfully fetched and processed order ID: ${order.id}.`);
                         return res.status(200).json({
                             success: true,
                             order: order
                         });
                     } catch (error) {
-                        console.error("Get specific order error:", error);
+                        console.error(`Get specific order ID: ${orderId} error:`, error);
                         return res.status(500).json({
                             success: false,
                             error: 'Failed to fetch order',
@@ -844,7 +873,6 @@ export default async function handler(req, res) {
                         });
                     }
                 }
-
                 // DELETE /api/orders/:id - Delete order
                 if (pathname.startsWith('/api/orders/') && req.method === 'DELETE') {
                     const orderId = pathname.split('/')[3];
