@@ -1515,164 +1515,223 @@ const createProductItem = (product) => {
     productImages += `<img key="${index}" class="w-full h-full object-cover duration-700 bg-card" src="${img}" alt="img">`;
   });
 
-  // ✅ FIX: Show color names instead of color codes
-  const formatColorVariation = (variation) => {
-    if (variation.color && variation.colorCode) {
-      return `
-        <div class="color-item w-12 h-12 rounded-xl duration-300 relative" style="background-color: ${variation.colorCode};">
-          <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">
-            ${variation.color}
-          </div>
-        </div>
-      `;
+  // 🎨 Color dictionary
+const colorMap = {
+  red: "#DB4444",
+  blue: "#1E90FF",
+  green: "#228B22",
+  yellow: "#ECB018",
+  black: "#000000",
+  white: "#FFFFFF",
+  gray: "#808080",
+  pink: "#FFC0CB",
+  purple: "#800080",
+  orange: "#FFA500",
+  brown: "#8B4513",
+  beige: "#F5F5DC",
+  maroon: "#800000",
+  olive: "#808000",
+  navy: "#000080",
+  gold: "#FFD700",
+  silver: "#C0C0C0",
+};
+
+// 🧠 Extract multiple colors from product name
+function extractColorsFromName(name) {
+  if (!name) return [];
+
+  const lower = name.toLowerCase();
+  const foundColors = [];
+
+  for (const color in colorMap) {
+    if (lower.includes(color)) {
+      foundColors.push({
+        color: capitalize(color),
+        colorCode: colorMap[color],
+      });
     }
-    return "";
-  };
+  }
+
+  // Return at least one fallback if no colors found
+  return foundColors.length
+    ? foundColors
+    : [{ color: "Default", colorCode: "#CCCCCC" }];
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// 🧩 Build variations based on backend product
+function getProductVariations(backendProduct) {
+  let { variations = [], name = "", main_image } = backendProduct;
+
+  if (!variations || variations.length === 0) {
+    const detectedColors = extractColorsFromName(name);
+    variations = detectedColors.map((c) => ({
+      color: c.color,
+      colorCode: c.colorCode,
+      colorImage: "./assets/images/product/color/48x48.png",
+      image: main_image || "./assets/images/product/bag-1.png",
+    }));
+  }
+
+  return variations;
+}
+
+// ✅ Render the color variation HTML
+const formatColorVariation = (variation) => {
+  if (variation.color && variation.colorCode) {
+    return `
+      <div class="color-item w-12 h-12 rounded-xl duration-300 relative" 
+           style="background-color: ${variation.colorCode};">
+        <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">
+          ${variation.color}
+        </div>
+      </div>
+    `;
+  }
+  return "";
+};
+
+// 🧱 Main renderer
+function renderProductItem(product) {
+  const productItem = document.createElement("div");
+
+  // ✅ Ensure variations exist
+  product.variation = getProductVariations(product);
+
+  // Product tags or sale tags (use your existing logic)
+  const productTags = product.sale
+    ? `<div class="product-tag absolute top-3 left-3 bg-red text-white px-2 py-0.5 rounded-sm text-xs">Sale</div>`
+    : "";
+
+  const productImages = `<img src="${product.variation[0]?.image || './assets/images/product/bag-1.png'}" alt="${product.name}" class="w-full h-full object-cover rounded-2xl"/>`;
 
   productItem.innerHTML = `
-        <div class="product-main cursor-pointer block" data-item="${
-          product.id
-        }">
-            <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
-                ${productTags}
-                <div class="list-action-right absolute top-3 right-3 max-lg:hidden">
-                    <div class="add-wishlist-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative">
-                        <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">
-                            Add To Wishlist</div>
-                        <i class="ph ph-heart text-lg"></i>
-                    </div>
-                    <div class="compare-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative mt-2">
-                        <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">
-                            Compare Product</div>
-                        <i class="ph ph-arrow-counter-clockwise text-lg compare-icon"></i>
-                        <i class="ph ph-check-circle text-lg checked-icon"></i>
-                    </div>
+    <div class="product-main cursor-pointer block" data-item="${product.id}">
+        <div class="product-thumb bg-white relative overflow-hidden rounded-2xl">
+            ${productTags}
+            <div class="list-action-right absolute top-3 right-3 max-lg:hidden">
+                <div class="add-wishlist-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative">
+                    <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">
+                        Add To Wishlist</div>
+                    <i class="ph ph-heart text-lg"></i>
                 </div>
-                <div class="product-img w-full h-full aspect-[3/4]">
-                    ${productImages}
+                <div class="compare-btn w-[32px] h-[32px] flex items-center justify-center rounded-full bg-white duration-300 relative mt-2">
+                    <div class="tag-action bg-black text-white caption2 px-1.5 py-0.5 rounded-sm">
+                        Compare Product</div>
+                    <i class="ph ph-arrow-counter-clockwise text-lg compare-icon"></i>
+                    <i class="ph ph-check-circle text-lg checked-icon"></i>
+                </div>
+            </div>
+            <div class="product-img w-full h-full aspect-[3/4]">
+                ${productImages}
+            </div>
+            ${
+              product.sale
+                ? `
+              <div class="countdown-time-block py-1.5 flex items-center justify-center">
+                <div class="text-xs font-semibold uppercase text-red">
+                  <span class='countdown-day'>24</span>
+                  <span>D : </span>
+                  <span class='countdown-hour'>14</span>
+                  <span>H : </span>
+                  <span class='countdown-minute'>36</span>
+                  <span>M : </span>
+                  <span class='countdown-second'>51</span>
+                  <span>S</span>
+                </div>
+              </div>
+            `
+                : ""
+            }
+            <div class="list-action grid grid-cols-2 gap-3 px-5 absolute w-full bottom-5">
+                <div class="quick-view-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary">
+                    <span class="max-lg:hidden">Quick View</span>
+                    <i class="ph ph-eye lg:hidden text-xl"></i>
                 </div>
                 ${
-                  product.sale
+                  product.action === "add to cart"
                     ? `
-                  <div class="countdown-time-block py-1.5 flex items-center justify-center">
-                    <div class="text-xs font-semibold uppercase text-red">
-                      <span class='countdown-day'>24</span>
-                      <span>D : </span>
-                      <span class='countdown-hour'>14</span>
-                      <span>H : </span>
-                      <span class='countdown-minute'>36</span>
-                      <span>M : </span>
-                      <span class='countdown-second'>51</span>
-                      <span>S</span>
+                    <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary">
+                        <span class="max-lg:hidden">Add To Cart</span>
+                        <i class="ph ph-shopping-bag-open lg:hidden text-xl"></i>
                     </div>
-                  </div>
+                `
+                    : `
+                    <div class="quick-shop-btn text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white max-lg:hidden text-secondary">
+                        Quick Shop</div>
+                    <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary lg:hidden">
+                        <span class="max-lg:hidden">Add To Cart</span>
+                        <i class="ph ph-shopping-bag-open lg:hidden text-xl"></i>
+                    </div>
+                    <div class="quick-shop-block absolute left-5 right-5 bg-white p-5 rounded-[20px]">
+                        <div class="list-size flex items-center justify-center flex-wrap gap-2">
+                            ${
+                              product.sizes &&
+                              product.sizes
+                                .map(
+                                  (size, index) =>
+                                    `<div key="${index}" class="size-item w-10 h-10 rounded-full flex items-center justify-center text-button bg-white border border-line">${size.trim()}</div>`
+                                )
+                                .join("")
+                            }
+                        </div >
+                        <div class="add-cart-btn button-main w-full text-center rounded-full py-3 mt-4">Add To cart</div>
+                    </div >
+                `
+                }
+            </div>
+        </div>
+        <div class="product-infor mt-4 lg:mb-7">
+            <div class="product-sold sm:pb-4 pb-2">
+                <div class="progress bg-line h-1.5 w-full rounded-full overflow-hidden relative">
+                    <div class='progress-sold bg-red absolute left-0 top-0 h-full' style="width: ${Math.floor(
+                      (product.sold / product.quantity) * 100
+                    )}%"></div>
+                </div>
+                <div class="flex items-center justify-between gap-3 gap-y-1 flex-wrap mt-2">
+                    <div class="text-button-uppercase">
+                        <span class='text-secondary2 max-sm:text-xs'>Sold: </span>
+                        <span class='max-sm:text-xs'>${product.sold}</span>
+                    </div>
+                    <div class="text-button-uppercase">
+                        <span class='text-secondary2 max-sm:text-xs'>Available: </span>
+                        <span class='max-sm:text-xs'>${
+                          product.quantity - product.sold
+                        }</span>
+                    </div>
+                </div>
+            </div>
+            <div class="product-name text-title duration-300">${product.name}</div>
+            <div class="list-color py-2 max-md:hidden flex items-center gap-3 flex-wrap duration-500">
+                ${product.variation.map(formatColorVariation).join("")}
+            </div>
+            <div class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
+                <div class="product-price text-title">₹${product.price}.00</div>
+                ${
+                  Math.floor(100 - (product.price / product.originPrice) * 100) > 0
+                    ? `
+                        <div class="product-origin-price caption1 text-secondary2">
+                            <del>₹${product.originPrice}.00</del>
+                        </div>
+                        <div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">
+                            -${Math.floor(
+                              100 - (product.price / product.originPrice) * 100
+                            )}%
+                        </div>
                 `
                     : ""
                 }
-                <div class="list-action grid grid-cols-2 gap-3 px-5 absolute w-full bottom-5">
-                    <div class="quick-view-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary">
-                        <span class="max-lg:hidden">Quick View</span>
-                        <i class="ph ph-eye lg:hidden text-xl"></i>
-                        </div>
-                        ${
-                          product.action === "add to cart"
-                            ? `
-                            <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary">
-                                <span class="max-lg:hidden">Add To Cart</span>
-                                <i class="ph ph-shopping-bag-open lg:hidden text-xl"></i>
-                            </div>
-                        `
-                            : `
-                            <div class="quick-shop-btn text-button-uppercase py-2 text-center rounded-full duration-500 bg-white hover:bg-black hover:text-white max-lg:hidden text-secondary">
-                                Quick Shop</div>
-                            <div class="add-cart-btn w-full text-button-uppercase py-2 text-center rounded-full duration-300 bg-white hover:bg-black hover:text-white text-secondary lg:hidden">
-                                <span class="max-lg:hidden">Add To Cart</span>
-                                <i class="ph ph-shopping-bag-open lg:hidden text-xl"></i>
-                            </div>
-                            <div class="quick-shop-block absolute left-5 right-5 bg-white p-5 rounded-[20px]">
-                                <div class="list-size flex items-center justify-center flex-wrap gap-2">
-                                    ${
-                                      product.sizes &&
-                                      product.sizes
-                                        .map(
-                                          (size, index) =>
-                                            `<div key="${index}" class="size-item w-10 h-10 rounded-full flex items-center justify-center text-button bg-white border border-line">${size.trim()}</div>`
-                                        )
-                                        .join("")
-                                    }
-                                </div >
-    <div class="add-cart-btn button-main w-full text-center rounded-full py-3 mt-4">Add
-        To cart</div>
-                            </div >
-    `
-                        }
-                </div>
             </div>
-            <div class="product-infor mt-4 lg:mb-7">
-                <div class="product-sold sm:pb-4 pb-2">
-                    <div class="progress bg-line h-1.5 w-full rounded-full overflow-hidden relative">
-                        <div class='progress-sold bg-red absolute left-0 top-0 h-full' style="width: ${Math.floor(
-                          (product.sold / product.quantity) * 100
-                        )}%">
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between gap-3 gap-y-1 flex-wrap mt-2">
-                        <div class="text-button-uppercase">
-                            <span class='text-secondary2 max-sm:text-xs'>Sold:
-                            </span>
-                            <span class='max-sm:text-xs'>${product.sold}</span>
-                        </div>
-                        <div class="text-button-uppercase">
-                            <span class='text-secondary2 max-sm:text-xs'>Available:
-                            </span>
-                            <span class='max-sm:text-xs'>${
-                              product.quantity - product.sold
-                            }</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="product-name text-title duration-300">${
-                  product.name
-                }</div>
-                ${
-                  product.variation.length > 0 &&
-                  product.action === "add to cart"
-                    ? `
-                        <div class="list-color py-2 max-md:hidden flex items-center gap-3 flex-wrap duration-500">
-                            ${product.variation
-                              .map(formatColorVariation)
-                              .join("")}
-                        </div>`
-                    : `
-                    <div class="list-color list-color-image max-md:hidden flex items-center gap-3 flex-wrap duration-500">
-                        ${product.variation.map(formatColorVariation).join("")}
-                    </div>
-                `
-                }
-        <div class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
-        <div class="product-price text-title">₹${product.price}.00</div>
-        ${
-          Math.floor(100 - (product.price / product.originPrice) * 100) > 0
-            ? `
-                <div class="product-origin-price caption1 text-secondary2">
-                    <del>₹${product.originPrice}.00</del>
-                </div>
-                <div class="product-sale caption1 font-medium bg-green px-3 py-0.5 inline-block rounded-full">
-                    -${Math.floor(
-                      100 - (product.price / product.originPrice) * 100
-                    )}%
-                </div>
-        `
-            : ""
-        }
-            </div>
-        </div>
         </div>
     </div>
-    `;
+  `;
 
   return productItem;
-};
+}
+
 
 function addEventToProductItem(products) {
   // Product item
