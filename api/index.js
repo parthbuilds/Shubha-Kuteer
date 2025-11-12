@@ -802,74 +802,74 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // GET /api/orders/:id - Get specific order details
-                if (pathname.startsWith('/api/orders/') && req.method === 'GET') {
-                    const orderId = pathname.split('/')[3];
+        //         // GET /api/orders/:id - Get specific order details
+        //         if (pathname.startsWith('/api/orders/') && req.method === 'GET') {
+        //             const orderId = pathname.split('/')[3];
 
-                    try {
-                        console.log(`Attempting to fetch specific order ID: ${orderId} from database...`);
-                        const [orders] = await pool.default.query(`
-            SELECT
-                id, first_name, last_name, email, phone_number,
-                city, apartment, postal_code, note, amount,
-                razorpay_order_id, razorpay_payment_id, status,
-                products, created_at, updated_at
-            FROM orders
-            WHERE id = ?
-        `, [orderId]);
+        //             try {
+        //                 console.log(`Attempting to fetch specific order ID: ${orderId} from database...`);
+        //                 const [orders] = await pool.default.query(`
+        //     SELECT
+        //         id, first_name, last_name, email, phone_number,
+        //         city, apartment, postal_code, note, amount,
+        //         razorpay_order_id, razorpay_payment_id, status,
+        //         products, created_at, updated_at
+        //     FROM orders
+        //     WHERE id = ?
+        // `, [orderId]);
 
-                        if (orders.length === 0) {
-                            console.warn(`Order ID: ${orderId} not found.`);
-                            return res.status(404).json({
-                                success: false,
-                                error: 'Order not found'
-                            });
-                        }
+        //                 if (orders.length === 0) {
+        //                     console.warn(`Order ID: ${orderId} not found.`);
+        //                     return res.status(404).json({
+        //                         success: false,
+        //                         error: 'Order not found'
+        //                     });
+        //                 }
 
-                        const order = orders[0];
-                        let parsedProducts = [];
-                        let recalculatedAmount = parseFloat(order.amount) || 0; // Start with the amount from the DB
+        //                 const order = orders[0];
+        //                 let parsedProducts = [];
+        //                 let recalculatedAmount = parseFloat(order.amount) || 0; // Start with the amount from the DB
 
-                        if (order.products) {
-                            try {
-                                const productsFromDb = JSON.parse(order.products);
-                                if (Array.isArray(productsFromDb)) {
-                                    parsedProducts = productsFromDb;
-                                    // Recalculate the amount from the products
-                                    recalculatedAmount = parsedProducts.reduce((sum, p) => {
-                                        const price = parseFloat(p.price) || 0;
-                                        const quantity = parseInt(p.quantity) || 0;
-                                        return sum + (price * quantity);
-                                    }, 0);
-                                    console.log(`Order ${order.id}: Recalculated amount from products: ${recalculatedAmount.toFixed(2)}.`);
+        //                 if (order.products) {
+        //                     try {
+        //                         const productsFromDb = JSON.parse(order.products);
+        //                         if (Array.isArray(productsFromDb)) {
+        //                             parsedProducts = productsFromDb;
+        //                             // Recalculate the amount from the products
+        //                             recalculatedAmount = parsedProducts.reduce((sum, p) => {
+        //                                 const price = parseFloat(p.price) || 0;
+        //                                 const quantity = parseInt(p.quantity) || 0;
+        //                                 return sum + (price * quantity);
+        //                             }, 0);
+        //                             console.log(`Order ${order.id}: Recalculated amount from products: ${recalculatedAmount.toFixed(2)}.`);
 
-                                } else {
-                                    console.warn(`Order ${order.id}: products was non-array JSON. Raw: ${order.products}`);
-                                }
-                            } catch (jsonParseError) {
-                                console.error(`Order ${order.id}: Failed to parse products JSON. Raw data: ${order.products}. Error: ${jsonParseError.message}`);
-                            }
-                        }
+        //                         } else {
+        //                             console.warn(`Order ${order.id}: products was non-array JSON. Raw: ${order.products}`);
+        //                         }
+        //                     } catch (jsonParseError) {
+        //                         console.error(`Order ${order.id}: Failed to parse products JSON. Raw data: ${order.products}. Error: ${jsonParseError.message}`);
+        //                     }
+        //                 }
 
-                        // Assign the parsed products and potentially recalculated amount back to the order object
-                        order.products = parsedProducts;
-                        order.amount = recalculatedAmount.toFixed(2); // Ensure amount is consistently formatted
+        //                 // Assign the parsed products and potentially recalculated amount back to the order object
+        //                 order.products = parsedProducts;
+        //                 order.amount = recalculatedAmount.toFixed(2); // Ensure amount is consistently formatted
 
-                        console.log(`Successfully fetched and processed order ID: ${order.id}.`);
-                        return res.status(200).json({
-                            success: true,
-                            order: order
-                        });
-                    } catch (error) {
-                        console.error(`Get specific order ID: ${orderId} error:`, error);
-                        return res.status(500).json({
-                            success: false,
-                            error: 'Failed to fetch order',
-                            details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
-                            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-                        });
-                    }
-                }
+        //                 console.log(`Successfully fetched and processed order ID: ${order.id}.`);
+        //                 return res.status(200).json({
+        //                     success: true,
+        //                     order: order
+        //                 });
+        //             } catch (error) {
+        //                 console.error(`Get specific order ID: ${orderId} error:`, error);
+        //                 return res.status(500).json({
+        //                     success: false,
+        //                     error: 'Failed to fetch order',
+        //                     details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+        //                     stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+        //                 });
+        //             }
+        //         }
 
                 async function getSpecificOrderDetails(req, res, pathname) {
                     // Extract orderId from the pathname, assuming format /api/orders/:id
