@@ -737,9 +737,6 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // Assume 'pool' is your database connection pool (e.g., MySQL) and 'res' is the response object.
-                // 'pathname' and 'req' are from your HTTP request handling.
-
                 // GET /api/orders - Get all orders with product details
                 if (pathname === '/api/orders' && req.method === 'GET') {
                     try {
@@ -873,6 +870,70 @@ export default async function handler(req, res) {
                         });
                     }
                 }
+
+                // Add this new block to your server's routing logic
+// (e.g., near your other /api/orders handlers)
+
+// GET /api/debug-products/:id - Specifically fetch ONLY the products column for an order
+if (pathname.startsWith('/api/debug-products/') && req.method === 'GET') {
+    const orderId = pathname.split('/')[3]; // Extract the ID from the URL
+
+    if (!orderId) {
+        return res.status(400).json({ success: false, error: 'Order ID is required.' });
+    }
+
+    try {
+        console.log(`DEBUG: Attempting to fetch ONLY 'products' column for order ID: ${orderId}`);
+        const [rows] = await pool.default.query(
+            `SELECT products FROM orders WHERE id = ?`,
+            [orderId]
+        );
+
+        if (rows.length === 0) {
+            console.warn(`DEBUG: No order found for ID: ${orderId}`);
+            return res.status(404).json({ success: false, error: 'Order not found.' });
+        }
+
+        const rawProductsData = rows[0].products;
+        console.log(`DEBUG: Raw 'products' data fetched for ID ${orderId}:`, rawProductsData, `(Type: ${typeof rawProductsData})`);
+
+        let parsedProducts = null;
+        if (rawProductsData) {
+            const productsString = String(rawProductsData).trim();
+            if (productsString === "") {
+                console.warn(`DEBUG: 'products' column for ID ${orderId} was an empty string.`);
+            } else {
+                try {
+                    parsedProducts = JSON.parse(productsString);
+                    console.log(`DEBUG: Successfully parsed 'products' for ID ${orderId}. Result:`, parsedProducts);
+                } catch (jsonParseError) {
+                    console.error(`DEBUG: Failed to JSON.parse 'products' for ID ${orderId}. Raw string: "${productsString}". Error: ${jsonParseError.message}`);
+                }
+            }
+        } else {
+            console.warn(`DEBUG: 'products' column for ID ${orderId} was NULL or undefined.`);
+        }
+
+        return res.status(200).json({
+            success: true,
+            orderId: orderId,
+            rawProductsColumn: rawProductsData,
+            parsedProducts: parsedProducts,
+            parseError: parsedProducts === null && rawProductsData ? "Failed to parse JSON (see server logs)" : undefined
+        });
+
+    } catch (dbError) {
+        console.error(`DEBUG: Database query error for /api/debug-products/${orderId}:`, dbError);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to query database for products.',
+            details: process.env.NODE_ENV !== 'production' ? dbError.message : undefined
+        });
+    }
+}
+
+
+
                 // DELETE /api/orders/:id - Delete order
                 if (pathname.startsWith('/api/orders/') && req.method === 'DELETE') {
                     const orderId = pathname.split('/')[3];
