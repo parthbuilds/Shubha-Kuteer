@@ -839,9 +839,8 @@ export default async function handler(req, res) {
                         const completeOrders = stats.complete_orders || 0;
                         const totalVisitors = stats.unique_customers || 0;
 
-                        // Adjusted “Orders Paid” logic
+                        // Adjusted logic: completed orders count as “paid” and total sales reduced accordingly
                         const ordersPaid = completeOrders;
-                        // Optional: totalSales reflects totalOrders but slightly reduced if not all complete
                         const totalSales = totalOrders > 0 ? totalOrders - (totalOrders - completeOrders) : 0;
 
                         return res.status(200).json({
@@ -850,13 +849,7 @@ export default async function handler(req, res) {
                                 totalSales,
                                 totalIncome,
                                 ordersPaid,
-                                totalVisitors,
-                                // change: {
-                                //     sales: 1.56,
-                                //     income: -1.56,
-                                //     orders: 0.00,
-                                //     visitors: 1.56
-                                // }
+                                totalVisitors
                             }
                         });
                     } catch (error) {
