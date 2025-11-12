@@ -851,12 +851,12 @@ export default async function handler(req, res) {
                                 totalIncome,
                                 ordersPaid,
                                 totalVisitors,
-                                change: {
-                                    sales: 1.56,
-                                    income: -1.56,
-                                    orders: 0.00,
-                                    visitors: 1.56
-                                }
+                                // change: {
+                                //     sales: 1.56,
+                                //     income: -1.56,
+                                //     orders: 0.00,
+                                //     visitors: 1.56
+                                // }
                             }
                         });
                     } catch (error) {
