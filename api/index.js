@@ -871,69 +871,113 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // Add this new block to your server's routing logic
-// (e.g., near your other /api/orders handlers)
-
-// GET /api/debug-products/:id - Specifically fetch ONLY the products column for an order
-if (pathname.startsWith('/api/debug-products/') && req.method === 'GET') {
-    const orderId = pathname.split('/')[3]; // Extract the ID from the URL
-
-    if (!orderId) {
-        return res.status(400).json({ success: false, error: 'Order ID is required.' });
-    }
-
-    try {
-        console.log(`DEBUG: Attempting to fetch ONLY 'products' column for order ID: ${orderId}`);
-        const [rows] = await pool.default.query(
-            `SELECT products FROM orders WHERE id = ?`,
-            [orderId]
-        );
-
-        if (rows.length === 0) {
-            console.warn(`DEBUG: No order found for ID: ${orderId}`);
-            return res.status(404).json({ success: false, error: 'Order not found.' });
-        }
-
-        const rawProductsData = rows[0].products;
-        console.log(`DEBUG: Raw 'products' data fetched for ID ${orderId}:`, rawProductsData, `(Type: ${typeof rawProductsData})`);
-
-        let parsedProducts = null;
-        if (rawProductsData) {
-            const productsString = String(rawProductsData).trim();
-            if (productsString === "") {
-                console.warn(`DEBUG: 'products' column for ID ${orderId} was an empty string.`);
-            } else {
-                try {
-                    parsedProducts = JSON.parse(productsString);
-                    console.log(`DEBUG: Successfully parsed 'products' for ID ${orderId}. Result:`, parsedProducts);
-                } catch (jsonParseError) {
-                    console.error(`DEBUG: Failed to JSON.parse 'products' for ID ${orderId}. Raw string: "${productsString}". Error: ${jsonParseError.message}`);
+                async function getSpecificOrderDetails(req, res, pathname) {
+                    // Extract orderId from the pathname, assuming format /api/orders/:id
+                    const parts = pathname.split('/');
+                    const orderId = parts[3];
+                
+                    // Basic validation for orderId
+                    if (!orderId || isNaN(orderId)) {
+                        console.warn(`Attempt to fetch order with invalid ID: ${orderId}`);
+                        return res.status(400).json({
+                            success: false,
+                            error: 'Invalid order ID provided.'
+                        });
+                    }
+                
+                    try {
+                        console.log(`Backend: Fetching specific order ID: ${orderId}`);
+                
+                        // Query the database for all columns of the specific order
+                        const [rows] = await pool.default.query(
+                            `SELECT
+                                id, first_name, last_name, email, phone_number,
+                                city, apartment, postal_code, note, amount,
+                                razorpay_order_id, razorpay_payment_id, status,
+                                products, created_at, updated_at
+                            FROM orders
+                            WHERE id = ?`,
+                            [orderId]
+                        );
+                
+                        // Check if an order was found
+                        if (rows.length === 0) {
+                            console.warn(`Backend: Order ID ${orderId} not found in database.`);
+                            return res.status(404).json({
+                                success: false,
+                                error: `Order with ID ${orderId} not found.`
+                            });
+                        }
+                
+                        // Get the single order object
+                        const order = rows[0];
+                
+                        // --- Products Parsing and Amount Recalculation ---
+                        let parsedProducts = [];
+                        // Initialize recalculated amount with the amount from DB (will update if products are parsed)
+                        let recalculatedAmount = parseFloat(order.amount) || 0;
+                
+                        console.log(`Backend: Raw 'products' data for order ${order.id}:`, order.products, `(Type: ${typeof order.products})`);
+                
+                        if (order.products) { // Check if the 'products' column is not null/undefined
+                            const productsString = String(order.products).trim(); // Ensure it's a string and trim whitespace
+                
+                            if (productsString === "") {
+                                console.warn(`Backend: Order ${order.id}: 'products' column was an empty string.`);
+                                // parsedProducts remains empty array
+                            } else {
+                                try {
+                                    const productsFromDb = JSON.parse(productsString);
+                
+                                    if (Array.isArray(productsFromDb)) {
+                                        parsedProducts = productsFromDb;
+                
+                                        // Recalculate total amount from the actual products
+                                        recalculatedAmount = parsedProducts.reduce((sum, p) => {
+                                            const price = parseFloat(p.price) || 0;
+                                            const quantity = parseInt(p.quantity) || 0;
+                                            return sum + (price * quantity);
+                                        }, 0);
+                                        console.log(`Backend: Order ${order.id}: Recalculated amount from products: ${recalculatedAmount.toFixed(2)}.`);
+                
+                                    } else {
+                                        console.warn(`Backend: Order ${order.id}: 'products' column contained non-array JSON after parsing. Raw: "${productsString}". Parsed result:`, productsFromDb);
+                                        // parsedProducts remains empty array
+                                    }
+                                } catch (jsonParseError) {
+                                    console.error(`Backend: Order ${order.id}: Failed to JSON.parse 'products'. Raw string: "${productsString}". Error: ${jsonParseError.message}`);
+                                    // parsedProducts remains empty array
+                                }
+                            }
+                        } else {
+                            console.warn(`Backend: Order ${order.id}: 'products' column was NULL or undefined in DB.`);
+                            // parsedProducts remains empty array
+                        }
+                
+                        // Assign the processed data back to the order object
+                        order.products = parsedProducts;
+                        order.amount = recalculatedAmount.toFixed(2); // Format to 2 decimal places
+                
+                        console.log(`Backend: Successfully processed and sending order ID: ${order.id}.`);
+                
+                        // Send the complete and processed order object in the response
+                        return res.status(200).json({
+                            success: true,
+                            order: order // The 'order' object now contains the parsed products and recalculated amount
+                        });
+                
+                    } catch (dbError) {
+                        // Catch any database or unexpected errors
+                        console.error(`Backend: Error fetching or processing order ID ${orderId}:`, dbError);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to fetch order details from the database.',
+                            details: process.env.NODE_ENV !== 'production' ? dbError.message : undefined,
+                            stack: process.env.NODE_ENV !== 'production' ? dbError.stack : undefined
+                        });
+                    }
                 }
-            }
-        } else {
-            console.warn(`DEBUG: 'products' column for ID ${orderId} was NULL or undefined.`);
-        }
-
-        return res.status(200).json({
-            success: true,
-            orderId: orderId,
-            rawProductsColumn: rawProductsData,
-            parsedProducts: parsedProducts,
-            parseError: parsedProducts === null && rawProductsData ? "Failed to parse JSON (see server logs)" : undefined
-        });
-
-    } catch (dbError) {
-        console.error(`DEBUG: Database query error for /api/debug-products/${orderId}:`, dbError);
-        return res.status(500).json({
-            success: false,
-            error: 'Failed to query database for products.',
-            details: process.env.NODE_ENV !== 'production' ? dbError.message : undefined
-        });
-    }
-}
-
-
-
+                
                 // DELETE /api/orders/:id - Delete order
                 if (pathname.startsWith('/api/orders/') && req.method === 'DELETE') {
                     const orderId = pathname.split('/')[3];
