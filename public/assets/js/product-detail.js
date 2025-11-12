@@ -180,7 +180,7 @@ if (productDetail) {
 
                     slides.forEach((img, index) => {
                         img.addEventListener('click', () => {
-                            // Chuyển swiper 2 đến vị trí tương ứng với ảnh được click trong swiper 1
+                            
                             swiper2.slideTo(index);
                         });
                     });
