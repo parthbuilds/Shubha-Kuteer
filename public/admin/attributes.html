@@ -839,31 +839,22 @@
 
                         if (attr.attribute_values) {
                             try {
-                                valuesArray = JSON.parse(attr.attribute_values);
+                                // If it's already an object or array, use it directly
+                                if (typeof attr.attribute_values === 'object') {
+                                    valuesArray = attr.attribute_values;
+                                }
+                                // If it's still a string (older DB entries or fallback), parse it
+                                else if (typeof attr.attribute_values === 'string') {
+                                    valuesArray = JSON.parse(attr.attribute_values);
+                                }
 
-                                // Handle different attribute value structures
                                 if (Array.isArray(valuesArray)) {
                                     valuesText = valuesArray.map(v => {
-                                        // Handle color attributes with color name and code
-                                        if (v.color && v.colorCode) {
-                                            return `${v.color} (${v.colorCode})`;
-                                        }
-                                        // Handle size attributes
-                                        else if (v.size) {
-                                            return v.size;
-                                        }
-                                        // Handle generic value attributes
-                                        else if (v.value) {
-                                            return v.value;
-                                        }
-                                        // Handle plain string values
-                                        else if (typeof v === 'string') {
-                                            return v;
-                                        }
-                                        // Fallback to first property value
-                                        else if (typeof v === 'object') {
+                                        if (typeof v === 'object') {
                                             const firstValue = Object.values(v)[0];
                                             return firstValue || '';
+                                        } else if (typeof v === 'string') {
+                                            return v;
                                         }
                                         return '';
                                     }).filter(Boolean).join(', ');
@@ -873,6 +864,7 @@
                                 valuesText = "Invalid JSON data";
                             }
                         }
+
 
                         li.innerHTML = `
                             <div class="flex items-center justify-between gap20 flex-grow">
