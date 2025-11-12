@@ -1052,41 +1052,71 @@
                 // Check admin authentication first
                 const authRes = await fetch("/api/admin/auth/check");
                 if (!authRes.ok) {
+                    // If not authenticated, redirect to login and prevent further execution
                     window.location.href = "/admin/login.html";
                     return;
                 }
-
-                // ✅ Fetch order details from backend
+    
+                // Fetch order details from backend
                 const res = await fetch(`/api/orders/${orderId}`);
                 console.log('API Response status:', res.status);
                 
-                if (!res.ok) throw new Error(`Order ${orderId} not found (status ${res.status})`);
+                if (!res.ok) {
+                    // Handle specific HTTP errors
+                    if (res.status === 404) {
+                        throw new Error(`Order #${orderId} not found.`);
+                    } else if (res.status === 401 || res.status === 403) {
+                        throw new Error("Authentication failed or access denied.");
+                    } else {
+                        throw new Error(`Failed to fetch order details (status ${res.status}).`);
+                    }
+                }
                 
                 const response = await res.json();
-                console.log('API Response data:', response);
-
-                // Handle new API response format
-                const order = response.success ? response.order : response;
-                console.log('Parsed order data:', order);
-
+                console.log('API Raw Response data:', response);
+    
+                // Handle API response format: assuming 'success' field or direct order object
+                let order;
+                if (response.success && response.order) {
+                    order = response.order;
+                } else if (response.id) { // Check for a key that indicates it's the order object itself
+                    order = response;
+                } else {
+                    throw new Error("Invalid API response format for order details.");
+                }
+                
+                console.log('Parsed order data before product parsing:', order);
+    
+                // *** CRITICAL FIX: Parse the products string into a JavaScript array ***
+                if (typeof order.products === 'string') {
+                    try {
+                        order.products = JSON.parse(order.products);
+                        console.log('Parsed products array:', order.products);
+                    } catch (parseError) {
+                        console.error("Error parsing products string:", parseError);
+                        order.products = []; // Default to empty array if parsing fails
+                    }
+                } else if (!Array.isArray(order.products)) {
+                    order.products = []; // Ensure products is an array
+                }
+    
+    
                 // Update page title and heading
                 document.title = `Order #${order.id} - Shubha Kuteer Admin`;
                 const orderHeading = document.querySelector("h3");
                 if (orderHeading) {
                     orderHeading.innerHTML = `Order <span class="highlight">#${order.id}</span>`;
                 }
-
+    
                 // Update breadcrumb
                 const breadcrumbEl = document.querySelector(".breadcrumbs li:last-child .text-tiny");
                 if (breadcrumbEl) {
                     breadcrumbEl.textContent = `Order #${order.id}`;
                 }
-
-                // ✅ ADD CUSTOMER DETAILS ABOVE THE "ALL ITEM" SECTION
-                // Find the section before "All item" and add customer details there
+    
+                // ADD CUSTOMER DETAILS ABOVE THE "ALL ITEM" SECTION
                 const allItemSection = document.querySelector(".table-order-detail");
                 if (allItemSection) {
-                    // Create customer details section above the items
                     const customerSection = document.createElement('div');
                     customerSection.className = 'wg-box mb-4';
                     customerSection.innerHTML = `
@@ -1095,54 +1125,50 @@
                         </div>
                         <div class="flex items-center gap-6 p-4">
                             <div class="image no-bg">
-                                <img src="/admin/images/products/default-order.png" alt="Customer" style="width: 60px; height: 60px;">
+                                <img src="/admin/images/products/default-user.png" alt="Customer" style="width: 60px; height: 60px;">
                             </div>
-                            <div class="flex items-center justify-between gap-8 flex-grow">
+                            <div class="flex items-center justify-between gap-8 flex-grow flex-wrap"> <!-- Added flex-wrap -->
                                 <div class="name">
                                     <div class="text-tiny mb-1">Customer Name</div>
-                                    <div class="body-title-2">${order.first_name} ${order.last_name}</div>
+                                    <div class="body-title-2">${order.first_name || ''} ${order.last_name || ''}</div>
                                 </div>
                                 <div class="name">
                                     <div class="text-tiny mb-1">Email</div>
-                                    <div class="body-title-2">${order.email}</div>
+                                    <div class="body-title-2">${order.email || 'N/A'}</div>
                                 </div>
                                 <div class="name">
                                     <div class="text-tiny mb-1">Phone</div>
-                                    <div class="body-title-2">${order.phone_number}</div>
+                                    <div class="body-title-2">${order.phone_number || 'N/A'}</div>
                                 </div>
                                 <div class="name">
                                     <div class="text-tiny mb-1">Order Date</div>
-                                    <div class="body-title-2">${new Date(order.created_at).toLocaleDateString()}</div>
+                                    <div class="body-title-2">${order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A'}</div>
                                 </div>
                             </div>
                         </div>
                     `;
-                    
-                    // Insert customer section before the "All item" section
                     allItemSection.parentNode.insertBefore(customerSection, allItemSection);
                 }
-
-                // Update order items section - show ONLY product data (no customer info)
+    
+                // Update order items section - show ONLY product data
                 const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
                 if (itemsContainer) {
-                    // Clear existing items
-                    itemsContainer.innerHTML = '';
-
-                    // Add ONLY product items (customer info is now above)
+                    itemsContainer.innerHTML = ''; // Clear existing items
+    
                     if (order.products && order.products.length > 0) {
-                        console.log('Processing products:', order.products);
+                        console.log('Rendering products:', order.products);
                         
                         order.products.forEach((product, index) => {
                             const productLi = document.createElement('li');
                             productLi.className = 'product-item gap14';
                             productLi.innerHTML = `
                                 <div class="image no-bg">
-                                    <img src="${product.image || '/admin/images/products/default-order.png'}" alt="${product.name}">
+                                    <img src="${product.image || '/admin/images/products/default-order.png'}" alt="${product.name || 'Product'}">
                                 </div>
-                                <div class="flex items-center justify-between gap40 flex-grow">
+                                <div class="flex items-center justify-between gap40 flex-grow flex-wrap"> <!-- Added flex-wrap -->
                                     <div class="name">
                                         <div class="text-tiny mb-1">Product ${index + 1}</div>
-                                        <a href="#!" class="body-title-2">${product.name}</a>
+                                        <a href="#!" class="body-title-2">${product.name || 'N/A'}</a>
                                         <div class="text-tiny mt-1" style="color: #666;">
                                             ${product.category ? `Category: ${product.category}` : ''}
                                             ${product.brand ? ` | Brand: ${product.brand}` : ''}
@@ -1156,15 +1182,15 @@
                                     </div>
                                     <div class="name">
                                         <div class="text-tiny mb-1">Quantity</div>
-                                        <div class="body-title-2">${product.quantity}</div>
+                                        <div class="body-title-2">${product.quantity || 0}</div>
                                     </div>
                                     <div class="name">
                                         <div class="text-tiny mb-1">Unit Price</div>
-                                        <div class="body-title-2">₹${product.price}</div>
+                                        <div class="body-title-2">₹${(product.price || 0).toFixed(2)}</div>
                                     </div>
                                     <div class="name">
                                         <div class="text-tiny mb-1">Total</div>
-                                        <div class="body-title-2">₹${product.price * product.quantity}</div>
+                                        <div class="body-title-2">₹${((product.price || 0) * (product.quantity || 0)).toFixed(2)}</div>
                                     </div>
                                 </div>
                             `;
@@ -1172,7 +1198,6 @@
                         });
                     } else {
                         console.log('No products found for this order');
-                        // No products found
                         const noProductsLi = document.createElement('li');
                         noProductsLi.className = 'product-item gap14';
                         noProductsLi.innerHTML = `
@@ -1182,113 +1207,91 @@
                             <div class="flex items-center justify-between gap40 flex-grow">
                                 <div class="name">
                                     <div class="text-tiny mb-1">Products</div>
-                                    <div class="body-title-2" style="color: #999;">No products found</div>
+                                    <div class="body-title-2" style="color: #999;">No products found for this order.</div>
                                 </div>
                             </div>
                         `;
                         itemsContainer.appendChild(noProductsLi);
                     }
                 }
-
-                // Calculate totals from products (FIXED CALCULATION)
+    
+                // Calculate totals from products
                 let calculatedSubtotal = 0;
                 let totalItems = 0;
                 
                 if (order.products && order.products.length > 0) {
                     order.products.forEach(product => {
-                        const productTotal = parseFloat(product.price) * parseInt(product.quantity);
+                        const productPrice = parseFloat(product.price) || 0;
+                        const productQuantity = parseInt(product.quantity) || 0;
+                        const productTotal = productPrice * productQuantity;
                         calculatedSubtotal += productTotal;
-                        totalItems += parseInt(product.quantity);
-                        console.log(`Product: ${product.name}, Price: ${product.price}, Qty: ${product.quantity}, Total: ${productTotal}`);
+                        totalItems += productQuantity;
                     });
                 }
-
-                console.log('Calculated subtotal:', calculatedSubtotal);
-                console.log('Order amount from DB:', order.amount);
+    
+                console.log('Calculated subtotal:', calculatedSubtotal.toFixed(2));
+                console.log('Order amount from DB (original):', order.amount); // Keep for debugging
                 console.log('Total items:', totalItems);
-
-                // Update cart totals section with CORRECT calculations
+    
+                // Update cart totals section
                 const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
                 const shippingEl = document.querySelector(".cart-totals-item:nth-child(3) .body-title-2");
                 const taxEl = document.querySelector(".cart-totals-item:nth-child(5) .body-title-2");
-
-                // Use calculated subtotal if available, otherwise use order amount
-                const displaySubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : order.amount;
                 
-                if (subtotalEl) {
-                    subtotalEl.textContent = `₹${displaySubtotal}`;
-                    console.log('Updated subtotal to:', `₹${displaySubtotal}`);
-                }
-                if (shippingEl) {
-                    shippingEl.textContent = "₹0.00";
-                    console.log('Updated shipping to: ₹0.00');
-                }
-                if (taxEl) {
-                    taxEl.textContent = "₹0.00";
-                    console.log('Updated tax to: ₹0.00');
-                }
-                
-                // ✅ FIX TOTAL PRICE - Target the specific element with tf-color-1 class
-                const finalTotal = calculatedSubtotal > 0 ? calculatedSubtotal : order.amount;
-                
-                // Target the exact element: .body-title.tf-color-1
+                if (subtotalEl) subtotalEl.textContent = `₹${calculatedSubtotal.toFixed(2)}`;
+                if (shippingEl) shippingEl.textContent = "₹0.00"; // Assuming shipping is free
+                if (taxEl) taxEl.textContent = "₹0.00"; // Assuming tax is 0
+    
+                // FIX TOTAL PRICE - Target the specific element with tf-color-1 class
+                const finalTotal = calculatedSubtotal;
                 const totalPriceEl = document.querySelector('.body-title.tf-color-1');
                 
                 if (totalPriceEl) {
-                    totalPriceEl.textContent = `₹${finalTotal}`;
-                    console.log('Updated total price element to:', `₹${finalTotal}`);
+                    totalPriceEl.textContent = `₹${finalTotal.toFixed(2)}`;
+                    console.log('Updated total price element to:', `₹${finalTotal.toFixed(2)}`);
                 } else {
                     console.error('Could not find .body-title.tf-color-1 element!');
-                    
-                    // Fallback: search for element containing ₹90.58
-                    const allElements = document.querySelectorAll('.body-title');
-                    allElements.forEach(el => {
-                        if (el.textContent.includes('₹90.58')) {
-                            el.textContent = `₹${finalTotal}`;
-                            console.log('Updated total by content matching');
-                        }
-                    });
                 }
                 
-                console.log('Final total calculated:', finalTotal);
-
+                console.log('Final total calculated:', finalTotal.toFixed(2));
+    
                 // Update summary section (right sidebar)
-                const orderIdEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
-                const dateEl = document.querySelector(".summary-item:nth-child(3) .body-title-2");
+                const orderIdSummaryEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
+                const dateSummaryEl = document.querySelector(".summary-item:nth-child(3) .body-title-2");
                 const totalSummaryEl = document.querySelector(".summary-item:nth-child(4) .body-title-2");
-
-                if (orderIdEl) orderIdEl.textContent = `#${order.id}`;
-                if (dateEl) dateEl.textContent = new Date(order.created_at).toLocaleDateString();
-                if (totalSummaryEl) totalSummaryEl.textContent = `₹${finalTotal}`;
-
-                // ✅ Fix shipping address - REMOVE person's name, just address
+    
+                if (orderIdSummaryEl) orderIdSummaryEl.textContent = `#${order.id || 'N/A'}`;
+                if (dateSummaryEl) dateSummaryEl.textContent = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
+                if (totalSummaryEl) totalSummaryEl.textContent = `₹${finalTotal.toFixed(2)}`;
+    
+                // Fix shipping address
                 const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
                 if (shippingAddressEl) {
                     shippingAddressEl.innerHTML = `
                         ${order.apartment || ''}<br>
                         ${order.city || ''}<br>
                         ${order.postal_code || ''}<br>
-                        <strong>Phone:</strong> ${order.phone_number}<br>
-                        <strong>Email:</strong> ${order.email}
+                        <strong>Phone:</strong> ${order.phone_number || 'N/A'}<br>
+                        <strong>Email:</strong> ${order.email || 'N/A'}
                     `;
                 }
-
+    
                 // Update payment method with more details
                 const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
                 if (paymentMethodEl) {
                     paymentMethodEl.innerHTML = `
                         <strong>Payment Method:</strong> Razorpay<br>
-                        <strong>Status:</strong> ${order.status}<br>
+                        <strong>Status:</strong> <span class="${order.status === 'completed' ? 'text-green' : 'text-orange'}">${order.status || 'N/A'}</span><br>
                         <strong>Payment ID:</strong> ${order.razorpay_payment_id || 'Pending'}<br>
-                        <strong>Order ID:</strong> ${order.razorpay_order_id || 'N/A'}<br>
+                        <strong>Order ID (Razorpay):</strong> ${order.razorpay_order_id || 'N/A'}<br>
                         <strong>Total Items:</strong> ${totalItems}<br>
                         <strong>Note:</strong> ${order.note || 'No additional notes'}
                     `;
                 }
-
+    
                 // Update expected delivery date - CHANGE TO 7-10 DAYS
                 const deliveryDateEl = document.querySelector(".wg-box:nth-child(4) .body-title-2");
-                if (deliveryDateEl) {
+                if (deliveryDateEl && order.created_at) {
                     const orderDate = new Date(order.created_at);
                     const minDeliveryDate = new Date(orderDate);
                     const maxDeliveryDate = new Date(orderDate);
@@ -1297,48 +1300,67 @@
                     maxDeliveryDate.setDate(orderDate.getDate() + 10); // 10 days maximum
                     
                     deliveryDateEl.textContent = `${minDeliveryDate.toLocaleDateString()} - ${maxDeliveryDate.toLocaleDateString()}`;
+                } else if (deliveryDateEl) {
+                    deliveryDateEl.textContent = 'N/A';
                 }
-
+    
                 console.log('Order details loaded successfully');
-
+    
             } catch (err) {
                 console.error("⚠️ Error loading order details:", err);
                 alert("Failed to load order details: " + err.message);
+                // Consider redirecting to an error page or the order list page on critical errors
+                // window.location.href = "/admin/orders.html"; 
+            } finally {
+                 // You might have a loading spinner. Hide it here.
+                 // For example, if you have a loader div:
+                 // document.getElementById('loading-indicator').style.display = 'none';
             }
         }
-
-        // ✅ Get orderId from URL (order-detail.html?id=15)
+    
+        // Get orderId from URL (order-detail.html?id=15)
         const urlParams = new URLSearchParams(window.location.search);
         const orderId = urlParams.get("id");
-
+    
         console.log('Order ID from URL:', orderId);
-
+    
         if (orderId) {
             loadOrderDetails(orderId);
         } else {
-            alert("No order ID found in URL");
+            alert("No order ID found in URL. Please provide an ID like ?id=123");
+            // Redirect to order list or show a message
+            // window.location.href = "/admin/orders.html"; 
         }
     </script>
-
-
+    
     <script>
-async function loadAdminData() {
-    try {
-        const res = await fetch("/api/admin/users/me");
-        if (!res.ok) throw new Error("Failed to fetch admin");
-        const data = await res.json();
-
-        // Insert into DOM
-        document.getElementById("admin-name").textContent = data.admin.name;
-        document.getElementById("admin-role").textContent = data.admin.role;
-    } catch (err) {
-        console.error("Error loading admin:", err);
+    // This script is separate and handles admin data for the header/sidebar
+    async function loadAdminData() {
+        try {
+            const res = await fetch("/api/admin/users/me");
+            if (!res.ok) {
+                // If admin session is invalid, redirect to login
+                window.location.href = "/admin/login.html";
+                throw new Error("Failed to fetch admin data or session expired.");
+            }
+            const data = await res.json();
+    
+            // Insert into DOM
+            const adminNameEl = document.getElementById("admin-name");
+            const adminRoleEl = document.getElementById("admin-role");
+    
+            if (adminNameEl) adminNameEl.textContent = data.admin.name;
+            if (adminRoleEl) adminRoleEl.textContent = data.admin.role;
+    
+        } catch (err) {
+            console.error("Error loading admin data:", err);
+            // Optionally, display a message to the user or log out
+        }
     }
-}
-
-// Call without ID
-loadAdminData();
-</script>
+    
+    // Call without ID
+    loadAdminData();
+    </script>
 
 <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
