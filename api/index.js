@@ -970,112 +970,152 @@ export default async function handler(req, res) {
         }
 
         // User Profile Routes
-if (pathname.startsWith('/api/user')) {
-    const jwt = await import("jsonwebtoken");
-    const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
-    const pool = await import("../backend/utils/db.js");
-    const bcrypt = await import("bcrypt");
+        if (pathname.startsWith('/api/user')) {
+            const jwt = await import("jsonwebtoken");
+            const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+            const pool = await import("../backend/utils/db.js");
+            const bcrypt = await import("bcrypt");
 
-    // Extract token from Authorization header (Bearer token)
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
+            // Extract token from Authorization header (Bearer token)
+            const authHeader = req.headers.authorization;
+            const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) {
-        return res.status(401).json({ message: "Unauthorized: No token provided ❌" });
-    }
-
-    let decoded;
-    try {
-        decoded = jwt.default.verify(token, JWT_SECRET);
-    } catch (err) {
-        return res.status(401).json({ message: "Unauthorized: Invalid token ❌" });
-    }
-
-    const userId = decoded.id;
-
-    // GET /api/user/profile - Fetch user data and their orders
-    if (pathname === '/api/user/profile' && req.method === 'GET') {
-        try {
-            // Fetch user basic data
-            const [userRows] = await pool.default.query(
-                "SELECT id, name, email FROM users WHERE id = ?",
-                [userId]
-            );
-
-            if (userRows.length === 0) {
-                return res.status(404).json({ message: "User not found ❌" });
+            if (!token) {
+                return res.status(401).json({ message: "Unauthorized: No token provided ❌" });
             }
-            const user = userRows[0];
-            const [firstName, lastName] = user.name ? user.name.split(' ') : ['', ''];
 
-            // Fetch user's orders and their associated products
-            const [orderRows] = await pool.default.query(
-                `
-                SELECT
-                    o.id AS order_id,
-                    o.order_date,
-                    o.total_amount,
-                    o.status,
-                    oi.quantity,
-                    oi.price_at_purchase,
-                    p.id AS product_id,
-                    p.name AS product_name,
-                    p.description AS product_description,
-                    p.price AS product_original_price,
-                    p.image_url AS product_image_url
-                FROM orders o
-                JOIN order_items oi ON o.id = oi.order_id
-                JOIN products p ON oi.product_id = p.id
-                WHERE o.user_id = ?
-                ORDER BY o.order_date DESC, o.id DESC;
-                `,
-                [userId]
-            );
+            let decoded;
+            try {
+                decoded = jwt.default.verify(token, JWT_SECRET);
+            } catch (err) {
+                return res.status(401).json({ message: "Unauthorized: Invalid token ❌" });
+            }
 
-            // Group order items by order
-            const orders = {};
-            orderRows.forEach(row => {
-                if (!orders[row.order_id]) {
-                    orders[row.order_id] = {
-                        order_id: row.order_id,
-                        order_date: row.order_date,
-                        total_amount: row.total_amount,
-                        status: row.status,
-                        items: []
-                    };
+            const userId = decoded.id;
+
+            // GET /api/user/profile - Fetch user data
+            if (pathname === '/api/user/profile' && req.method === 'GET') {
+                try {
+                    const [rows] = await pool.default.query(
+                        "SELECT id, name, email FROM users WHERE id = ?",
+                        [userId]
+                    );
+                    if (rows.length === 0) {
+                        return res.status(404).json({ message: "User not found ❌" });
+                    }
+                    const user = rows[0];
+                    // Split name for first_name/last_name
+                    const [firstName, lastName] = user.name ? user.name.split(' ') : ['', ''];
+                    return res.status(200).json({
+                        message: "User data fetched successfully ✅",
+                        user: {
+                            id: user.id,
+                            first_name: firstName,
+                            last_name: lastName || '',
+                            email: user.email,
+                            phone_number: '', // Not in table
+                            dob: '' // Not in table
+                        }
+                    });
+                } catch (error) {
+                    console.error("Fetch user error:", error);
+                    return res.status(500).json({ message: "Failed to fetch user data ❌", error: error.message });
                 }
-                orders[row.order_id].items.push({
-                    product_id: row.product_id,
-                    product_name: row.product_name,
-                    product_description: row.product_description,
-                    product_original_price: row.product_original_price,
-                    product_image_url: row.product_image_url,
-                    quantity: row.quantity,
-                    price_at_purchase: row.price_at_purchase
-                });
-            });
+            }
 
-            return res.status(200).json({
-                message: "User data and orders fetched successfully ✅",
-                user: {
-                    id: user.id,
-                    first_name: firstName,
-                    last_name: lastName || '',
-                    email: user.email,
-                    phone_number: '', // Not in table, consider adding to users table if needed
-                    dob: '' // Not in table, consider adding to users table if needed
-                },
-                orders: Object.values(orders) // Convert object back to array
-            });
-        } catch (error) {
-            console.error("Fetch user data and orders error:", error);
-            return res.status(500).json({ message: "Failed to fetch user data and orders ❌", error: error.message });
+            // PUT /api/user/profile - Update profile
+            if (pathname === '/api/user/profile' && req.method === 'PUT') {
+                const { first_name, last_name, phone_number, email, dob } = req.body;
+                const fullName = `${first_name || ''} ${last_name || ''}`.trim();
+                if (!fullName || !email) {
+                    return res.status(400).json({ message: "Name and email are required ❌" });
+                }
+                try {
+                    const [result] = await pool.default.query(
+                        "UPDATE users SET name = ?, email = ? WHERE id = ?",
+                        [fullName, email, userId]
+                    );
+                    if (result.affectedRows === 0) {
+                        return res.status(404).json({ message: "User not found ❌" });
+                    }
+                    return res.status(200).json({ message: "Profile updated successfully ✅" });
+                } catch (error) {
+                    console.error("Update profile error:", error);
+                    return res.status(500).json({ message: "Failed to update profile ❌", error: error.message });
+                }
+            }
+
+            // PUT /api/user/password - Change password
+            if (pathname === '/api/user/password' && req.method === 'PUT') {
+                const { current_password, new_password, confirm_new_password } = req.body;
+                if (!current_password || !new_password || new_password !== confirm_new_password) {
+                    return res.status(400).json({ message: "Passwords are required and must match ❌" });
+                }
+                try {
+                    const [rows] = await pool.default.query(
+                        "SELECT password_hash FROM users WHERE id = ?",
+                        [userId]
+                    );
+                    if (rows.length === 0) {
+                        return res.status(404).json({ message: "User not found ❌" });
+                    }
+                    const isMatch = await bcrypt.default.compare(current_password, rows[0].password_hash);
+                    if (!isMatch) {
+                        return res.status(401).json({ message: "Current password is incorrect ❌" });
+                    }
+                    const newHash = await bcrypt.default.hash(new_password, 10);
+                    await pool.default.query(
+                        "UPDATE users SET password_hash = ? WHERE id = ?",
+                        [newHash, userId]
+                    );
+                    return res.status(200).json({ message: "Password changed successfully ✅" });
+                } catch (error) {
+                    console.error("Change password error:", error);
+                    return res.status(500).json({ message: "Failed to change password ❌", error: error.message });
+                }
+            }
+
+            return res.status(404).json({ message: "User endpoint not found" });
         }
+
+        // Add /api/auth/check endpoint before the default response
+        if (pathname === '/api/auth/check' && req.method === 'GET') {
+            try {
+                const { checkAuth } = await import("../backend/controllers/authController.js");
+                const mockReq = {
+                    headers: req.headers,
+                    method: req.method,
+                    url: req.url
+                };
+                const mockRes = {
+                    status: (code) => ({
+                        json: (data) => res.status(code).json(data)
+                    }),
+                    json: (data) => res.status(200).json(data)
+                };
+                await checkAuth(mockReq, mockRes);
+                return;
+            } catch (error) {
+                console.error("Auth check error:", error);
+                return res.status(500).json({ message: "Auth check failed ❌", error: error.message });
+            }
+        }
+
+        // Default response for unhandled API paths
+        return res.status(200).json({
+            message: "API function is running",
+            path: pathname,
+            method: req.method,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error("Function error (top-level catch):", error); // Clarified log
+        return res.status(500).json({
+            error: "Internal server error (top-level catch)", // Clarified message
+            message: error.message,
+            timestamp: new Date().toISOString(),
+            details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+        });
     }
-
-    // ... (rest of your existing /api/user routes like PUT /profile, PUT /password) ...
-
-    return res.status(404).json({ message: "User endpoint not found" });
 }
-
-// ... (rest of your existing API routes like /api/auth/check and default response) ...
