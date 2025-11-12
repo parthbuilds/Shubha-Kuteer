@@ -53,7 +53,7 @@ const productList = document.querySelector('.list-product-block .list-product');
 const listPagination = document.querySelector('.list-pagination');
 
 let currentPage = 1;
-window.productsPerPage = productList ? Number(productList.getAttribute('data-item')) : 12; 
+window.productsPerPage = productList ? Number(productList.getAttribute('data-item')) : 12;
 window.productsData = []; // Expose productsData globally
 let allFetchedProducts = []; // Store the initially fetched products
 
@@ -133,14 +133,14 @@ window.transformBackendProduct = function transformBackendProduct(backendProduct
 
     // --- START OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
     let variations = [];
-  
+
     // Assuming backendProduct has an 'attributes' property which is an array
     // and one of its elements is a 'color' attribute with values and hex codes.
     if (backendProduct.attributes && Array.isArray(backendProduct.attributes)) {
         const colorAttribute = backendProduct.attributes.find(
             attr => attr.attribute_name && attr.attribute_name.toLowerCase() === 'color'
         );
-  
+
         if (colorAttribute && colorAttribute.attribute_values) {
             try {
                 const attributeValues = typeof colorAttribute.attribute_values === 'string'
@@ -160,7 +160,7 @@ window.transformBackendProduct = function transformBackendProduct(backendProduct
             }
         }
     }
-  
+
     // Fallback to default variations if none are generated from backend attributes
     if (variations.length === 0) {
         variations = [
@@ -169,8 +169,8 @@ window.transformBackendProduct = function transformBackendProduct(backendProduct
         ];
     }
     // --- END OF MODIFICATION FOR VARIATIONS (UPDATED FOR 'code' KEY) ---
-  
-  
+
+
     return {
         id: String(backendProduct.id), // Ensure ID is a string for consistency
         category: backendProduct.category,
@@ -217,7 +217,7 @@ async function fetchProductsFromBackend() {
         layoutItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
-        
+
                 if (item.classList.contains('style-grid')) {
                     productContainer.classList.remove('style-list');
                     productContainer.classList.add('style-grid');
@@ -225,7 +225,7 @@ async function fetchProductsFromBackend() {
                     if (currentProductList) {
                         currentProductList.classList.remove('flex', 'flex-col');
                         currentProductList.classList.add('grid');
-        
+
                         // Determine the correct productsPerPage for the grid layout
                         // Assuming 'five-col' is the class on the button you described
                         // and it's meant to show 6 products. Adjust to 9 if 3x3.
@@ -249,12 +249,12 @@ async function fetchProductsFromBackend() {
                         currentProductList.setAttribute('data-item', '4'); // Update data-item attribute
                     }
                 }
-        
+
                 // After updating window.productsPerPage, reset currentPage and re-render
                 currentPage = 1; // Always reset to page 1 on layout change
-                window.renderProducts(currentPage, window.productsData); 
-                window.renderPagination(window.productsData); 
-                window.addEventToProductItem(window.productsData); 
+                window.renderProducts(currentPage, window.productsData);
+                window.renderPagination(window.productsData);
+                window.addEventToProductItem(window.productsData);
             });
         });
 
@@ -337,40 +337,40 @@ async function fetchProductsFromBackend() {
                 <div class="list flex items-center gap-3">
                     <div class='w-px h-4 bg-line'></div>
                     ${selectedFilters.type ? ( // Check if type is selected
-                        `
+                    `
                             <div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="type">
                                 <i class='ph ph-x cursor-pointer'></i>
                                 <span>${selectedFilters.type}</span>
                             </div>
                         `
-                    ) : ''}
+                ) : ''}
                     ${selectedFilters.size?.length ? (
-                        `${selectedFilters.size.map(item => (
-                            `<div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="size" data-item="${item}">
+                    `${selectedFilters.size.map(item => (
+                        `<div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="size" data-item="${item}">
                                 <i class='ph ph-x cursor-pointer'></i>
                                 <span>${item}</span>
                             </div>`
-                        )).join('')}`
-                    ) : ''}
+                    )).join('')}`
+                ) : ''}
                     ${selectedFilters.color?.length ? (
-                        `${selectedFilters.color.map(item => (
-                            `<div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="color" data-item="${item}">
+                    `${selectedFilters.color.map(item => (
+                        `<div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="color" data-item="${item}">
                                 <i class='ph ph-x cursor-pointer'></i>
                                 <span>${item}</span>
                             </div>`
-                        )).join('')}`
-                    ) : ''}
+                    )).join('')}`
+                ) : ''}
                     ${selectedFilters.brand?.length ? (
-                        `${selectedFilters.brand.map(item => (
-                            `
+                    `${selectedFilters.brand.map(item => (
+                        `
                                 <div class="item flex items-center px-2 py-1 gap-1 bg-linear rounded-full capitalize" data-type="brand" data-item=${item}>
                                     <i class='ph ph-x cursor-pointer'></i>
                                     <span>${item}</span>
                                 </div>
                             `
-                        )).join('')}
+                    )).join('')}
                     `
-                    ) : ''}
+                ) : ''}
                 </div>
                 <div
                     class="clear-btn flex items-center px-2 py-1 gap-1 rounded-full w-fit border border-red cursor-pointer">
@@ -761,10 +761,10 @@ window.renderProducts = function renderProducts(page, products = []) { // Expose
 </div>
 <div class="product-name text-title duration-300">${product.name}</div>
 ${product.variation.length > 0 && product.action === 'add to cart' ? (
-    `
+                    `
         <div class="list-color py-2 max-md:hidden flex items-center gap-3 flex-wrap duration-500">
             ${product.variation.map((item, index) => (
-        `<div
+                        `<div
                     key="${index}"
                     class="color-item w-8 h-8 rounded-full duration-300 relative"
                     style="background-color:${item.colorCode};"
@@ -772,13 +772,13 @@ ${product.variation.length > 0 && product.action === 'add to cart' ? (
                     <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${item.color}</div>
                 </div>
                 `
-    )).join('')}
+                    )).join('')}
         </div>`
-) : (
-    `
+                ) : (
+                    `
         <div class="list-color list-color-image max-md:hidden flex items-center gap-3 flex-wrap duration-500">
             ${product.variation.map((item, index) => (
-        `
+                        `
                 <div
                     class="color-item w-12 h-12 rounded-xl duration-300 relative"
                     key="${index}"
@@ -791,15 +791,15 @@ ${product.variation.length > 0 && product.action === 'add to cart' ? (
                     <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${item.color}</div>
                 </div>
             `
-    )).join('')}
+                    )).join('')}
         </div>
     `
-)}
+                )}
 <div
     class="product-price-block flex items-center gap-2 flex-wrap mt-1 duration-300 relative z-[1]">
     <div class="product-price text-title">₹${product.price}.00</div>
     ${Math.floor(100 - ((product.price / product.originPrice) * 100)) > 0 ? (
-        `
+                    `
             <div class="product-origin-price caption1 text-secondary2">
                 <del>₹${product.originPrice}.00</del>
             </div>
@@ -808,7 +808,7 @@ ${product.variation.length > 0 && product.action === 'add to cart' ? (
                 -${Math.floor(100 - ((product.price / product.originPrice) * 100))}%
             </div>
     `
-    ) : ('')}
+                ) : ('')}
 </div>
 </div>
 </div>
