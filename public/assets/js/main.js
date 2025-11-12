@@ -1730,7 +1730,7 @@ function renderProductItem(product) {
   `;
 
   return productItem;
-}
+}}
 
 
 function addEventToProductItem(products) {
