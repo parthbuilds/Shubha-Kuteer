@@ -514,7 +514,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text" id="adminName">Admin</a>
+                                                                <a href="/admin/product-list.html" class="body-text"
+                                                                    id="adminName">Admin</a>
                                                             </div>
                                                         </div>
                                                     </li>
@@ -811,8 +812,8 @@
                                                     <img src="/admin/images/avatar/user-1.png" alt="">
                                                 </span>
                                                 <span class="flex flex-column">
-                                                <span id="admin-name" class="body-title mb-2">Loading...</span>
-                                                <span id="admin-role" class="text-tiny">Admin</span>
+                                                    <span id="admin-name" class="body-title mb-2">Loading...</span>
+                                                    <span id="admin-role" class="text-tiny">Admin</span>
                                                 </span>
                                             </span>
                                         </button>
@@ -882,7 +883,8 @@
                             <div class="main-content-wrap">
                                 <div class="tf-section-4 mb-30">
                                     <!-- chart-default -->
-                                    <div class="wg-chart-default">
+                                    <!-- Total Sales -->
+                                    <div class="wg-chart-default" id="totalSales">
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center gap14">
                                                 <div class="image type-white">
@@ -896,21 +898,21 @@
                                                 </div>
                                                 <div>
                                                     <div class="body-text mb-2">Total Sales</div>
-                                                    <h4>34,945</h4>
+                                                    <h4 id="totalSalesValue">34,945</h4>
                                                 </div>
                                             </div>
                                             <div class="box-icon-trending up">
                                                 <i class="icon-trending-up"></i>
-                                                <div class="body-title number">1.56%</div>
+                                                <div class="body-title number" id="salesChange">1.56%</div>
                                             </div>
                                         </div>
                                         <div class="wrap-chart">
                                             <div id="line-chart-1"></div>
                                         </div>
                                     </div>
-                                    <!-- /chart-default -->
-                                    <!-- chart-default -->
-                                    <div class="wg-chart-default">
+
+                                    <!-- Total Income -->
+                                    <div class="wg-chart-default" id="totalIncome">
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center gap14">
                                                 <div class="image type-white">
@@ -924,21 +926,21 @@
                                                 </div>
                                                 <div>
                                                     <div class="body-text mb-2">Total Income</div>
-                                                    <h4>₹37,802</h4>
+                                                    <h4 id="totalIncomeValue">₹37,802</h4>
                                                 </div>
                                             </div>
                                             <div class="box-icon-trending down">
                                                 <i class="icon-trending-down"></i>
-                                                <div class="body-title number">1.56%</div>
+                                                <div class="body-title number" id="incomeChange">1.56%</div>
                                             </div>
                                         </div>
                                         <div class="wrap-chart">
                                             <div id="line-chart-2"></div>
                                         </div>
                                     </div>
-                                    <!-- /chart-default -->
-                                    <!-- chart-default -->
-                                    <div class="wg-chart-default">
+
+                                    <!-- Orders Paid -->
+                                    <div class="wg-chart-default" id="ordersPaid">
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center gap14">
                                                 <div class="image type-white">
@@ -952,21 +954,21 @@
                                                 </div>
                                                 <div>
                                                     <div class="body-text mb-2">Orders Paid</div>
-                                                    <h4>34,945</h4>
+                                                    <h4 id="ordersPaidValue">34,945</h4>
                                                 </div>
                                             </div>
                                             <div class="box-icon-trending">
                                                 <i class="icon-trending-up"></i>
-                                                <div class="body-title number">0.00%</div>
+                                                <div class="body-title number" id="ordersChange">0.00%</div>
                                             </div>
                                         </div>
                                         <div class="wrap-chart">
                                             <div id="line-chart-3"></div>
                                         </div>
                                     </div>
-                                    <!-- /chart-default -->
-                                    <!-- chart-default -->
-                                    <div class="wg-chart-default">
+
+                                    <!-- Total Visitor -->
+                                    <div class="wg-chart-default" id="totalVisitors">
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center gap14">
                                                 <div class="image type-white">
@@ -980,18 +982,19 @@
                                                 </div>
                                                 <div>
                                                     <div class="body-text mb-2">Total Visitor</div>
-                                                    <h4>34,945</h4>
+                                                    <h4 id="totalVisitorsValue">34,945</h4>
                                                 </div>
                                             </div>
                                             <div class="box-icon-trending up">
                                                 <i class="icon-trending-up"></i>
-                                                <div class="body-title number">1.56%</div>
+                                                <div class="body-title number" id="visitorsChange">1.56%</div>
                                             </div>
                                         </div>
                                         <div class="wrap-chart">
                                             <div id="line-chart-4"></div>
                                         </div>
                                     </div>
+
                                     <!-- /chart-default -->
                                 </div>
                                 <div class="tf-section-6 mb-30">
@@ -1687,8 +1690,7 @@
                         <div class="bottom-page">
                             <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
                             <i class="icon-heart"></i>
-                            <div class="body-text">by <a
-                                    href="https://aptmedia.in">APT Media</a> All rights
+                            <div class="body-text">by <a href="https://aptmedia.in">APT Media</a> All rights
                                 reserved.</div>
                         </div>
                         <!-- /bottom-page -->
@@ -1705,25 +1707,52 @@
 
     <!-- Javascript -->
     <script>
-async function loadAdminData() {
-    try {
-        const res = await fetch("/api/admin/users/me");
-        if (!res.ok) throw new Error("Failed to fetch admin");
-        const data = await res.json();
+        async function loadAdminData() {
+            try {
+                const res = await fetch("/api/admin/users/me");
+                if (!res.ok) throw new Error("Failed to fetch admin");
+                const data = await res.json();
 
-        // Insert into DOM
-        document.getElementById("admin-name").textContent = data.admin.name;
-        document.getElementById("admin-role").textContent = data.admin.role;
-    } catch (err) {
-        console.error("Error loading admin:", err);
-    }
-}
+                // Insert into DOM
+                document.getElementById("admin-name").textContent = data.admin.name;
+                document.getElementById("admin-role").textContent = data.admin.role;
+            } catch (err) {
+                console.error("Error loading admin:", err);
+            }
+        }
 
-// Call without ID
-loadAdminData();
-</script>
+        // Call without ID
+        loadAdminData();
+    </script>
 
-<script src="/admin/js/jquery.min.js"></script>
+    <script>
+        async function loadDashboardStats() {
+            try {
+                const res = await fetch('/api/orders/stats');
+                const { success, data } = await res.json();
+                if (!success) throw new Error('Failed to fetch stats');
+
+                // Map data to elements
+                document.querySelector('#totalSales h4').textContent = data.totalSales.toLocaleString();
+                document.querySelector('#totalIncome h4').textContent = '₹' + data.totalIncome.toLocaleString();
+                document.querySelector('#ordersPaid h4').textContent = data.ordersPaid.toLocaleString();
+                document.querySelector('#totalVisitors h4').textContent = data.totalVisitors.toLocaleString();
+
+                // Optional: update trends
+                document.querySelector('#salesChange').textContent = data.change.sales + '%';
+                document.querySelector('#incomeChange').textContent = data.change.income + '%';
+                document.querySelector('#ordersChange').textContent = data.change.orders + '%';
+                document.querySelector('#visitorsChange').textContent = data.change.visitors + '%';
+            } catch (err) {
+                console.error('Dashboard stats error:', err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDashboardStats);
+    </script>
+
+
+    <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>
     <script src="/admin/js/zoom.js"></script>

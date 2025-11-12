@@ -993,7 +993,7 @@ export default async function handler(req, res) {
 
             const userId = decoded.id;
 
-            
+
             // GET /api/user/profile - Fetch user data and their orders
             if (pathname === '/api/user/profile' && req.method === 'GET') {
                 try {
@@ -1036,7 +1036,7 @@ export default async function handler(req, res) {
                                 order.products = []; // Set to empty array on parse error
                             }
                         } else if (!order.products) { // If products column is null/undefined
-                             order.products = [];
+                            order.products = [];
                         }
                         // If it's already an array (mysql2 driver auto-parsed JSON), keep it as is
                         return order;
@@ -1137,6 +1137,50 @@ export default async function handler(req, res) {
             } catch (error) {
                 console.error("Auth check error:", error);
                 return res.status(500).json({ message: "Auth check failed ❌", error: error.message });
+            }
+        }
+
+        // GET /api/orders/stats - Summary of order analytics
+        if (pathname === '/api/orders/stats' && req.method === 'GET') {
+            try {
+                const [rows] = await pool.default.query(`
+        SELECT
+          COUNT(*) AS total_orders,
+          SUM(amount) AS total_income,
+          SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_orders,
+          COUNT(DISTINCT email) AS unique_customers
+        FROM orders
+      `);
+
+                const stats = rows[0] || {};
+                const totalSales = stats.total_orders || 0;
+                const totalIncome = stats.total_income || 0;
+                const ordersPaid = stats.paid_orders || 0;
+                const totalVisitors = stats.unique_customers || 0;
+
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        totalSales,
+                        totalIncome,
+                        ordersPaid,
+                        totalVisitors,
+                        // Simulated trends (you can later compute real %)
+                        change: {
+                            sales: 1.56,
+                            income: -1.56,
+                            orders: 0.00,
+                            visitors: 1.56
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Order stats fetch error:", error);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch order stats',
+                    details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+                });
             }
         }
 
