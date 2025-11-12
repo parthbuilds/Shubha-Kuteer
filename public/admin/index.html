@@ -993,15 +993,12 @@
                                                     <span class="icon-more"><i class="icon-more-horizontal"></i></span>
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li>
-                                                        <a href="javascript:void(0);">This Week</a>
-                                                    </li>
-                                                    <li>
-                                                        <a href="javascript:void(0);">Last Week</a>
-                                                    </li>
+                                                    <li><a href="javascript:void(0);">This Week</a></li>
+                                                    <li><a href="javascript:void(0);">Last Week</a></li>
                                                 </ul>
                                             </div>
                                         </div>
+
                                         <div class="wg-table table-orders">
                                             <ul class="table-title flex gap10 mb-14">
                                                 <li>
@@ -1011,86 +1008,17 @@
                                                     <div class="body-title">Price</div>
                                                 </li>
                                                 <li>
-                                                    <div class="body-title">Delivery date</div>
+                                                    <div class="body-title">Order Date</div>
                                                 </li>
                                             </ul>
-                                            <ul class="flex flex-column gap18">
-                                                <li class="product-item gap14">
-                                                    <div class="image small">
-                                                        <img src="/admin/images/products/11.png" alt="">
-                                                    </div>
-                                                    <div class="flex items-center justify-between flex-grow gap10">
-                                                        <div class="name">
-                                                            <a href="/admin/product-list.html"
-                                                                class="body-text">Prodotti per
-                                                                il tuo cane...</a>
-                                                        </div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                    </div>
-                                                </li>
-                                                <li class="product-item gap14">
-                                                    <div class="image small">
-                                                        <img src="/admin/images/products/12.png" alt="">
-                                                    </div>
-                                                    <div class="flex items-center justify-between flex-grow gap10">
-                                                        <div class="name">
-                                                            <a href="/admin/product-list.html"
-                                                                class="body-text">Wholesome
-                                                                Pride...</a>
-                                                        </div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                    </div>
-                                                </li>
-                                                <li class="product-item gap14">
-                                                    <div class="image small">
-                                                        <img src="/admin/images/products/13.png" alt="">
-                                                    </div>
-                                                    <div class="flex items-center justify-between flex-grow gap10">
-                                                        <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Beneful
-                                                                Baked
-                                                                Delights...</a>
-                                                        </div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                    </div>
-                                                </li>
-                                                <li class="product-item gap14">
-                                                    <div class="image small">
-                                                        <img src="/admin/images/products/14.png" alt="">
-                                                    </div>
-                                                    <div class="flex items-center justify-between flex-grow gap10">
-                                                        <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Taste
-                                                                of the
-                                                                Wild...</a>
-                                                        </div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                    </div>
-                                                </li>
-                                                <li class="product-item gap14">
-                                                    <div class="image small">
-                                                        <img src="/admin/images/products/15.png" alt="">
-                                                    </div>
-                                                    <div class="flex items-center justify-between flex-grow gap10">
-                                                        <div class="name">
-                                                            <a href="/admin/product-list.html" class="body-text">Canagan
-                                                                -
-                                                                Britain's...</a>
-                                                        </div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                        <div class="body-text">20 Nov 2023</div>
-                                                    </div>
-                                                </li>
-                                            </ul>
+                                            <!-- Dynamic order list will be rendered here -->
+                                            <ul id="ordersList" class="flex flex-column gap18"></ul>
                                         </div>
                                     </div>
+
                                     <!-- /orders -->
                                     <!-- earnings -->
-                                    <!-- <div class="wg-box">
+                                    <div class="wg-box">
                                         <div class="flex items-center justify-between">
                                             <h5>Earnings</h5>
                                             <div class="dropdown default">
@@ -1118,7 +1046,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="flex items-center gap10">
-                                                    <h4>₹37,802</h4>
+                                                    <h4 id="totalIncomeValue"></h4>
                                                     <div class="box-icon-trending up">
                                                         <i class="icon-trending-up"></i>
                                                         <div class="body-title number">0.56%</div>
@@ -1133,7 +1061,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="flex items-center gap10">
-                                                    <h4>₹28,305</h4>
+                                                    <h4 id="totalIncomeValue"></h4>
                                                     <div class="box-icon-trending up">
                                                         <i class="icon-trending-up"></i>
                                                         <div class="body-title number">0.56%</div>
@@ -1142,190 +1070,8 @@
                                             </div>
                                         </div>
                                         <div id="line-chart-6"></div>
-                                    </div> -->
-                                    <!-- /earnings -->
-                                    <!-- new-comment -->
-                                    <div class="wg-box">
-                                        <div class="flex items-center justify-between">
-                                            <h5>New Comments</h5>
-                                            <div class="dropdown default">
-                                                <button class="btn btn-secondary dropdown-toggle" type="button"
-                                                    data-bs-toggle="dropdown" aria-haspopup="true"
-                                                    aria-expanded="false">
-                                                    <span class="icon-more"><i class="icon-more-horizontal"></i></span>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li>
-                                                        <a href="javascript:void(0);">This Week</a>
-                                                    </li>
-                                                    <li>
-                                                        <a href="javascript:void(0);">Last Week</a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <ul class="flex flex-column gap20 overflow-h">
-                                            <li class="comment-item">
-                                                <div class="image">
-                                                    <img src="/admin/images/avatar/user-2.png" alt="">
-                                                </div>
-                                                <div class="">
-                                                    <div class="mb-4 name">
-                                                        <a href="all-user.html" class="body-title-2">Kathryn Murphy</a>
-                                                    </div>
-                                                    <div class="ratings mb-10">
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1"></i>
-                                                    </div>
-                                                    <div class="text-tiny">Lorem ipsum dolor sit amet, consectetur
-                                                        adipiscing elit. Cras nec dolor vel est interdum</div>
-                                                </div>
-                                            </li>
-                                            <li class="comment-item">
-                                                <div class="image">
-                                                    <img src="/admin/images/avatar/user-3.png" alt="">
-                                                </div>
-                                                <div class="">
-                                                    <div class="mb-4 name">
-                                                        <a href="all-user.html" class="body-title-2">Leslie
-                                                            Alexander</a>
-                                                    </div>
-                                                    <div class="ratings mb-10">
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1"></i>
-                                                    </div>
-                                                    <div class="text-tiny">Cras nec viverra justo, a mattis lacus.
-                                                        Vestibulum eleifend, leo sit amet aliquam laoreet, turpis leo
-                                                        vulputate orci</div>
-                                                </div>
-                                            </li>
-                                            <li class="comment-item">
-                                                <div class="image">
-                                                    <img src="/admin/images/avatar/user-4.png" alt="">
-                                                </div>
-                                                <div class="">
-                                                    <div class="mb-4 name">
-                                                        <a href="all-user.html" class="body-title-2">Devon Lane</a>
-                                                    </div>
-                                                    <div class="ratings mb-10">
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1"></i>
-                                                    </div>
-                                                    <div class="text-tiny">Morbi eget commodo diam. Praesent dignissim
-                                                        purus ac turpis porta</div>
-                                                </div>
-                                            </li>
-                                            <li class="comment-item">
-                                                <div class="image">
-                                                    <img src="/admin/images/avatar/user-5.png" alt="">
-                                                </div>
-                                                <div class="">
-                                                    <div class="mb-4 name">
-                                                        <a href="all-user.html" class="body-title-2">Eleanor Pena</a>
-                                                    </div>
-                                                    <div class="ratings mb-10">
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1"></i>
-                                                    </div>
-                                                    <div class="text-tiny">Phasellus et eros ullamcorper, efficitur eros
-                                                        eget, pharetra ante. Sed blandit risus vitae dolor feugiat, eu
-                                                        vulputate elit rhoncus</div>
-                                                </div>
-                                            </li>
-                                            <li class="comment-item">
-                                                <div class="image">
-                                                    <img src="/admin/images/avatar/user-2.png" alt="">
-                                                </div>
-                                                <div class="">
-                                                    <div class="mb-4 name">
-                                                        <a href="all-user.html" class="body-title-2">Kathryn Murphy</a>
-                                                    </div>
-                                                    <div class="ratings mb-10">
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1"></i>
-                                                    </div>
-                                                    <div class="text-tiny">Lorem ipsum dolor sit amet, consectetur
-                                                        adipiscing elit. Cras nec dolor vel est interdum</div>
-                                                </div>
-                                            </li>
-                                            <li class="comment-item">
-                                                <div class="image">
-                                                    <img src="/admin/images/avatar/user-3.png" alt="">
-                                                </div>
-                                                <div class="">
-                                                    <div class="mb-4 name">
-                                                        <a href="all-user.html" class="body-title-2">Leslie
-                                                            Alexander</a>
-                                                    </div>
-                                                    <div class="ratings mb-10">
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1"></i>
-                                                    </div>
-                                                    <div class="text-tiny">Cras nec viverra justo, a mattis lacus.
-                                                        Vestibulum eleifend, leo sit amet aliquam laoreet, turpis leo
-                                                        vulputate orci</div>
-                                                </div>
-                                            </li>
-                                            <li class="comment-item">
-                                                <div class="image">
-                                                    <img src="/admin/images/avatar/user-4.png" alt="">
-                                                </div>
-                                                <div class="">
-                                                    <div class="mb-4 name">
-                                                        <a href="all-user.html" class="body-title-2">Devon Lane</a>
-                                                    </div>
-                                                    <div class="ratings mb-10">
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1"></i>
-                                                    </div>
-                                                    <div class="text-tiny">Morbi eget commodo diam. Praesent dignissim
-                                                        purus ac turpis porta</div>
-                                                </div>
-                                            </li>
-                                            <li class="comment-item">
-                                                <div class="image">
-                                                    <img src="/admin/images/avatar/user-5.png" alt="">
-                                                </div>
-                                                <div class="">
-                                                    <div class="mb-4 name">
-                                                        <a href="all-user.html" class="body-title-2">Eleanor Pena</a>
-                                                    </div>
-                                                    <div class="ratings mb-10">
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1 active"></i>
-                                                        <i class="icon-star1"></i>
-                                                    </div>
-                                                    <div class="text-tiny">Phasellus et eros ullamcorper, efficitur eros
-                                                        eget, pharetra ante. Sed blandit risus vitae dolor feugiat, eu
-                                                        vulputate elit rhoncus</div>
-                                                </div>
-                                            </li>
-                                        </ul>
                                     </div>
-                                    <!-- /new-comment -->
+                                    <!-- /earnings -->
                                 </div>
                             </div>
                             <!-- /main-content-wrap -->
@@ -1396,6 +1142,60 @@
         document.addEventListener('DOMContentLoaded', loadDashboardStats);
     </script>
 
+    <script>
+        async function loadOrders() {
+            try {
+                const res = await fetch('/api/orders');
+                const data = await res.json();
+
+                if (!data.success || !Array.isArray(data.orders)) {
+                    console.error('Invalid orders response:', data);
+                    return;
+                }
+
+                const ordersList = document.getElementById('ordersList');
+                ordersList.innerHTML = ''; // clear old entries
+
+                // Loop through orders
+                data.orders.forEach(order => {
+                    // Skip orders without products
+                    if (!order.products || order.products.length === 0) return;
+
+                    order.products.forEach(product => {
+                        const li = document.createElement('li');
+                        li.className = 'product-item gap14';
+
+                        li.innerHTML = `
+              <div class="image small">
+                <img src="${product.image || '/admin/images/products/default.png'}" alt="${product.name}">
+              </div>
+              <div class="flex items-center justify-between flex-grow gap10">
+                <div class="name">
+                  <span class="body-text">${product.name || 'Unnamed Product'}</span>
+                </div>
+                <div class="body-text">₹${product.price || 0}</div>
+                <div class="body-text">${new Date(order.created_at).toLocaleDateString('en-IN', {
+                            day: '2-digit', month: 'short', year: 'numeric'
+                        })}</div>
+              </div>
+            `;
+
+                        ordersList.appendChild(li);
+                    });
+                });
+
+                // If no orders found
+                if (ordersList.children.length === 0) {
+                    ordersList.innerHTML = `<li class="body-text text-gray-500">No orders found</li>`;
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+            }
+        }
+
+        // Load on page ready
+        document.addEventListener('DOMContentLoaded', loadOrders);
+    </script>
 
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
