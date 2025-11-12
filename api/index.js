@@ -827,21 +827,22 @@ export default async function handler(req, res) {
         SELECT
           COUNT(*) AS total_orders,
           SUM(amount) AS total_income,
-          SUM(CASE WHEN status = 'complete' THEN 1 ELSE 0 END) AS complete_orders,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
           COUNT(DISTINCT email) AS unique_customers
         FROM orders
       `);
 
                         const stats = rows[0] || {};
 
+                        // ✅ Extract and calculate properly
                         const totalOrders = stats.total_orders || 0;
                         const totalIncome = stats.total_income || 0;
-                        const completeOrders = stats.complete_orders || 0;
+                        const completedOrders = stats.completed_orders || 0;
                         const totalVisitors = stats.unique_customers || 0;
 
-                        // Adjusted logic: completed orders count as “paid” and total sales reduced accordingly
-                        const ordersPaid = completeOrders;
-                        const totalSales = totalOrders > 0 ? totalOrders - (totalOrders - completeOrders) : 0;
+                        // ✅ Only count completed orders as both sales and paid
+                        const ordersPaid = completedOrders;
+                        const totalSales = completedOrders;
 
                         return res.status(200).json({
                             success: true,
