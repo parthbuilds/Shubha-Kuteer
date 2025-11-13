@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const logoutBtnAnchor = document.querySelector('.menu-tab a strong:text("Logout")').closest('a');
+    const logoutBtnAnchor = Array.from(document.querySelectorAll('.menu-tab a')).find(a => a.textContent.includes('Logout'));
     const userDisplayName = document.querySelector('.user-infor .name');
     const userDisplayEmail = document.querySelector('.user-infor .mail');
     const userAvatarImg = document.querySelector('.user-infor .avatar img');
