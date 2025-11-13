@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(endpoint, config);
             if (response.status === 401) {
-                console.warn('API: Authentication failed, redirecting to login.');
+                console.warn('Authentication failed, redirecting to login.');
                 alert('Session expired or invalid. Please log in again.');
                 localStorage.removeItem('userToken');
                 window.location.href = '/login.html';
@@ -39,127 +39,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function loadDashboardContent() {
-        if (!dashboardContentDiv) {
-            console.warn('Dashboard content div not found.');
-            return;
-        }
-        dashboardContentDiv.innerHTML = '<p>Loading dashboard...</p>';
-        try {
-            const data = await callApi('/api/dashboard-content');
-            if (data && data.userData) {
-                updateUserInfo(data.userData);
-                dashboardContentDiv.innerHTML = `
-                    <div class="overview grid sm:grid-cols-3 gap-5">
-                        <div class="overview-item flex items-center justify-between p-5 border border-line rounded-lg box-shadow-xs">
-                            <div class="counter">
-                                <span class="text-secondary">Awaiting Pickup</span>
-                                <h5 class="heading5 mt-1">${data.dashboardStats?.awaitingPickup || 0}</h5>
-                            </div>
-                            <span class="ph ph-hourglass-medium text-4xl"></span>
-                        </div>
-                        <div class="overview-item flex items-center justify-between p-5 border border-line rounded-lg box-shadow-xs">
-                            <div class="counter">
-                                <span class="text-secondary">Cancelled Orders</span>
-                                <h5 class="heading5 mt-1">${data.dashboardStats?.cancelledOrders || 0}</h5>
-                            </div>
-                            <span class="ph ph-receipt-x text-4xl"></span>
-                        </div>
-                        <div class="overview-item flex items-center justify-between p-5 border border-line rounded-lg box-shadow-xs">
-                            <div class="counter">
-                                <span class="text-secondary">Total Number of Orders</span>
-                                <h5 class="heading5 mt-1">${data.dashboardStats?.totalOrders || 0}</h5>
-                            </div>
-                            <span class="ph ph-package text-4xl"></span>
-                        </div>
-                    </div>
-                    <div class="recent_order pt-5 px-5 pb-2 mt-7 border border-line rounded-xl">
-                        <h6 class="heading6">Recent Orders</h6>
-                        <div class="list overflow-x-auto w-full mt-5">
-                            <table class="w-full max-[1400px]:w-[700px] max-md:w-[700px]">
-                                <thead class="border-b border-line">
-                                    <tr>
-                                        <th scope="col" class="pb-3 text-left text-sm font-bold uppercase text-secondary whitespace-nowrap">Order</th>
-                                        <th scope="col" class="pb-3 text-left text-sm font-bold uppercase text-secondary whitespace-nowrap">Products</th>
-                                        <th scope="col" class="pb-3 text-left text-sm font-bold uppercase text-secondary whitespace-nowrap">Pricing</th>
-                                        <th scope="col" class="pb-3 text-right text-sm font-bold uppercase text-secondary whitespace-nowrap">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-                renderRecentOrders(data.recentOrders);
-            } else {
-                dashboardContentDiv.innerHTML = `<p class="error text-red-500">Failed to retrieve dashboard data.</p>`;
-            }
-        } catch (error) {
-            dashboardContentDiv.innerHTML = `<p class="error text-red-500">Failed to load dashboard: ${error.message}</p>`;
-        }
-    }
-
-    function handleLogout(event) {
-        event.preventDefault();
-        console.log('User logout initiated.');
-        localStorage.removeItem('userToken');
-        alert('You have been logged out.');
-        window.location.href = '/login.html';
-    }
-
-    async function checkDashboardAccess() {
-        if (!window.location.pathname.startsWith('/dashboard')) return;
-
-        const token = localStorage.getItem('userToken');
-        if (!token) {
-            console.log('No token found. Redirecting to login.');
-            alert('You must be logged in to view the dashboard.');
-            window.location.href = '/login.html';
-            return;
-        }
-
-        try {
-            const authData = await callApi('/api/auth/check');
-            if (authData.message === 'Authorized ✅') {
-                console.log('Token validated. User authenticated.');
-                if (logoutBtnAnchor) {
-                    logoutBtnAnchor.textContent = 'Logout';
-                    logoutBtnAnchor.removeEventListener('click', handleLogout);
-                    logoutBtnAnchor.addEventListener('click', handleLogout);
-                }
-                await loadAllUserData();
-                switchTab('dashboard');
-            } else {
-                console.warn('Backend rejected token:', authData.message);
-                localStorage.removeItem('userToken');
-                alert('Session invalid. Please log in again.');
-                window.location.href = '/login.html';
-            }
-        } catch (error) {
-            if (error.message !== 'Unauthorized') {
-                console.error('Initial auth check failed:', error);
-                localStorage.removeItem('userToken');
-                alert('An error occurred during authentication. Please log in again.');
-                window.location.href = '/login.html';
-            }
-        }
-    }
-
-    async function handleAuthPages() {
-        if (window.location.pathname === '/login.html' || window.location.pathname === '/register.html') {
-            const token = localStorage.getItem('userToken');
-            if (token) {
-                try {
-                    const data = await callApi('/api/auth/check');
-                    if (data.message === 'Authorized ✅') {
-                        console.log('Already logged in, redirecting to dashboard.');
-                        window.location.href = '/dashboard.html';
-                    }
-                } catch (error) {
-                    if (error.message !== 'Unauthorized') console.warn('Auth check failed on login/register page:', error);
-                    localStorage.removeItem('userToken');
-                }
-            }
+    function getStatusColor(status) {
+        switch (status ? status.toLowerCase() : '') {
+            case 'pending': return 'yellow';
+            case 'processing': return 'orange';
+            case 'shipped': return 'blue';
+            case 'delivery': return 'purple';
+            case 'completed': return 'success';
+            case 'cancelled': return 'red';
+            case 'returned': return 'red';
+            default: return 'gray';
         }
     }
 
@@ -169,14 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const avatarSrc = user.avatar_url || '/assets/images/user-avatar.png';
         if (userAvatarImg) userAvatarImg.src = avatarSrc;
         if (uploadImgPreview) uploadImgPreview.src = avatarSrc;
-        console.log('User info updated:', user);
     }
 
     function renderRecentOrders(orders) {
-        if (!recentOrdersTableBody) {
-            console.warn('Recent orders table body not found.');
-            return;
-        }
+        if (!recentOrdersTableBody) return;
         recentOrdersTableBody.innerHTML = '';
         if (orders && orders.length > 0) {
             orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5).forEach(order => {
@@ -203,27 +88,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             recentOrdersTableBody.innerHTML = `<tr><td colspan="4" class="py-3 text-center text-secondary">No recent orders.</td></tr>`;
         }
-        console.log('Recent orders rendered:', orders);
-    }
-
-    function getStatusColor(status) {
-        switch (status ? status.toLowerCase() : '') {
-            case 'pending': return 'yellow';
-            case 'processing': return 'orange';
-            case 'shipped': return 'blue';
-            case 'delivery': return 'purple';
-            case 'completed': return 'success';
-            case 'cancelled': return 'red';
-            case 'returned': return 'red';
-            default: return 'gray';
-        }
     }
 
     async function renderOrderHistory(orders) {
-        if (!listOrderContainer) {
-            console.warn('Order list container not found.');
-            return;
-        }
+        if (!listOrderContainer) return;
         listOrderContainer.innerHTML = '';
         if (!orders || orders.length === 0) {
             listOrderContainer.innerHTML = '<p class="p-4 text-center text-secondary">No orders found.</p>';
@@ -285,7 +153,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-        console.log('Order history rendered:', orders);
+    }
+
+    async function loadDashboardContent() {
+        if (!dashboardContentDiv) return;
+        dashboardContentDiv.innerHTML = '<p>Loading dashboard...</p>';
+        try {
+            const data = await callApi('/api/dashboard-content');
+            if (data && data.userData) {
+                updateUserInfo(data.userData);
+                dashboardContentDiv.innerHTML = `
+                    <div class="overview grid sm:grid-cols-3 gap-5">
+                        <div class="overview-item flex items-center justify-between p-5 border border-line rounded-lg box-shadow-xs">
+                            <div class="counter">
+                                <span class="text-secondary">Awaiting Pickup</span>
+                                <h5 class="heading5 mt-1">${data.dashboardStats?.awaitingPickup || 0}</h5>
+                            </div>
+                            <span class="ph ph-hourglass-medium text-4xl"></span>
+                        </div>
+                        <div class="overview-item flex items-center justify-between p-5 border border-line rounded-lg box-shadow-xs">
+                            <div class="counter">
+                                <span class="text-secondary">Cancelled Orders</span>
+                                <h5 class="heading5 mt-1">${data.dashboardStats?.cancelledOrders || 0}</h5>
+                            </div>
+                            <span class="ph ph-receipt-x text-4xl"></span>
+                        </div>
+                        <div class="overview-item flex items-center justify-between p-5 border border-line rounded-lg box-shadow-xs">
+                            <div class="counter">
+                                <span class="text-secondary">Total Number of Orders</span>
+                                <h5 class="heading5 mt-1">${data.dashboardStats?.totalOrders || 0}</h5>
+                            </div>
+                            <span class="ph ph-package text-4xl"></span>
+                        </div>
+                    </div>
+                    <div class="recent_order pt-5 px-5 pb-2 mt-7 border border-line rounded-xl">
+                        <h6 class="heading6">Recent Orders</h6>
+                        <div class="list overflow-x-auto w-full mt-5">
+                            <table class="w-full max-[1400px]:w-[700px] max-md:w-[700px]">
+                                <thead class="border-b border-line">
+                                    <tr>
+                                        <th scope="col" class="pb-3 text-left text-sm font-bold uppercase text-secondary whitespace-nowrap">Order</th>
+                                        <th scope="col" class="pb-3 text-left text-sm font-bold uppercase text-secondary whitespace-nowrap">Products</th>
+                                        <th scope="col" class="pb-3 text-left text-sm font-bold uppercase text-secondary whitespace-nowrap">Pricing</th>
+                                        <th scope="col" class="pb-3 text-right text-sm font-bold uppercase text-secondary whitespace-nowrap">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                renderRecentOrders(data.recentOrders);
+            } else {
+                dashboardContentDiv.innerHTML = `<p class="error text-red-500">Failed to retrieve dashboard data.</p>`;
+            }
+        } catch (error) {
+            dashboardContentDiv.innerHTML = `<p class="error text-red-500">Failed to load dashboard: ${error.message}</p>`;
+        }
     }
 
     async function filterOrdersByStatus(status) {
@@ -303,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const endpoint = status === 'all' ? '/api/orders' : `/api/orders?status=${status}`;
             const response = await callApi(endpoint);
             renderOrderHistory(response.orders);
-            console.log(`Orders filtered by status "${status}":`, response.orders);
         } catch (error) {
             alert('Failed to load filtered orders.');
             if (listOrderContainer) listOrderContainer.innerHTML = '<p class="p-4 text-center text-red-500">Error loading orders.</p>';
@@ -317,14 +240,12 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadAllUserData();
             const activeStatusTab = document.querySelector('.tab_order .menu-tab .tab-item.active');
             if (activeStatusTab) filterOrdersByStatus(activeStatusTab.dataset.status);
-            console.log(`Order ${orderId} cancelled.`, result);
         } catch (error) {
             alert(error.message || 'Failed to cancel order.');
         }
     }
 
     function loadAddressData(addresses) {
-        console.log('Loading address data:', addresses);
         const setValue = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.value = value || '';
@@ -340,12 +261,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function updateAddress(addressType, formData) {
-        alert(`Updating ${addressType} address is not yet implemented.`);
-        console.warn(`Attempted to update ${addressType} address:`, formData);
+        try {
+            // Assuming an API endpoint like /api/user/address/billing or /api/user/address/shipping
+            const result = await callApi(`/api/user/address/${addressType}`, 'PUT', formData);
+            alert(result.message || `${addressType} address updated successfully!`);
+            // Reload address data to reflect changes
+            const userData = await callApi('/api/user/profile');
+            loadAddressData(userData.user.addresses); // Assuming addresses are nested under user
+        } catch (error) {
+            alert(error.message || `Failed to update ${addressType} address.`);
+        }
     }
 
     function loadProfileData(user) {
-        console.log('Loading profile data:', user);
         updateUserInfo(user);
 
         const setValue = (id, value) => {
@@ -367,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(result.message || 'Profile updated successfully!');
             const profileData = await callApi('/api/user/profile');
             loadProfileData(profileData.user);
-            console.log('Profile updated:', result);
         } catch (error) {
             alert(error.message || 'Failed to update profile.');
         }
@@ -376,8 +303,14 @@ document.addEventListener('DOMContentLoaded', () => {
     async function updateProfileAvatar(file) {
         const formData = new FormData();
         formData.append('avatar', file);
-        alert("Avatar upload is not yet implemented.");
-        console.warn("Attempted avatar upload. Backend endpoint /api/user/avatar is not implemented.");
+        try {
+            const result = await callApi('/api/user/avatar', 'POST', formData, true); // true for FormData
+            alert(result.message || 'Avatar updated successfully!');
+            const profileData = await callApi('/api/user/profile');
+            updateUserInfo(profileData.user); // Update avatar display immediately
+        } catch (error) {
+            alert(error.message || 'Failed to upload avatar.');
+        }
     }
 
     async function changePassword(formData) {
@@ -390,7 +323,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('password').value = '';
             document.getElementById('newPassword').value = '';
             document.getElementById('confirmPassword').value = '';
-            console.log('Password changed:', result);
         } catch (error) {
             alert(error.message || 'Failed to change password.');
         }
@@ -418,30 +350,87 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (tabName === 'dashboard') {
             loadDashboardContent();
         }
-        console.log(`Switched to tab: ${tabName}`);
     }
 
     async function loadAllUserData() {
         try {
-            console.log('Loading all user data...');
             const profileResponse = await callApi('/api/user/profile');
             if (profileResponse.user) loadProfileData(profileResponse.user);
-            else console.warn('Profile data missing from /api/user/profile.');
 
             const ordersResponse = await callApi('/api/orders');
             if (ordersResponse.success && ordersResponse.orders) {
                 renderRecentOrders(ordersResponse.orders);
                 renderOrderHistory(ordersResponse.orders);
-            } else console.warn('Orders data missing from /api/orders.');
+            }
 
-            loadAddressData({});
-            console.log('All user data loaded successfully.');
+            const addressResponse = await callApi('/api/user/addresses'); // Assuming a dedicated addresses endpoint
+            if (addressResponse.success && addressResponse.addresses) {
+                loadAddressData(addressResponse.addresses);
+            }
         } catch (error) {
-            console.error('Error loading all user data:', error);
             if (error.message !== 'Unauthorized') alert('Failed to load user data. Please refresh.');
         }
     }
 
+    function handleLogout(event) {
+        event.preventDefault();
+        localStorage.removeItem('userToken');
+        alert('You have been logged out.');
+        window.location.href = '/login.html';
+    }
+
+    async function checkDashboardAccess() {
+        if (!window.location.pathname.startsWith('/dashboard')) return;
+
+        const token = localStorage.getItem('userToken');
+        if (!token) {
+            alert('You must be logged in to view the dashboard.');
+            window.location.href = '/login.html';
+            return;
+        }
+
+        try {
+            const authData = await callApi('/api/auth/check');
+            if (authData.message === 'Authorized ✅') {
+                if (logoutBtnAnchor) {
+                    logoutBtnAnchor.textContent = 'Logout';
+                    logoutBtnAnchor.removeEventListener('click', handleLogout);
+                    logoutBtnAnchor.addEventListener('click', handleLogout);
+                }
+                await loadAllUserData();
+                switchTab('dashboard');
+            } else {
+                localStorage.removeItem('userToken');
+                alert('Session invalid. Please log in again.');
+                window.location.href = '/login.html';
+            }
+        } catch (error) {
+            if (error.message !== 'Unauthorized') {
+                localStorage.removeItem('userToken');
+                alert('An error occurred during authentication. Please log in again.');
+                window.location.href = '/login.html';
+            }
+        }
+    }
+
+    async function handleAuthPages() {
+        if (window.location.pathname === '/login.html' || window.location.pathname === '/register.html') {
+            const token = localStorage.getItem('userToken');
+            if (token) {
+                try {
+                    const data = await callApi('/api/auth/check');
+                    if (data.message === 'Authorized ✅') {
+                        window.location.href = '/dashboard.html';
+                    }
+                } catch (error) {
+                    if (error.message !== 'Unauthorized') console.warn('Auth check failed on login/register page:', error);
+                    localStorage.removeItem('userToken');
+                }
+            }
+        }
+    }
+
+    // Event Listeners
     if (loginForm) {
         loginForm.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -522,7 +511,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const firstName = document.getElementById('firstName').value;
                 const lastName = document.getElementById('lastName').value;
                 const email = document.getElementById('email').value;
-                await updateProfile({ name: `${firstName} ${lastName}`.trim(), email: email });
+                const phoneNumber = document.getElementById('phoneNumber').value;
+                const gender = document.getElementById('gender').value;
+                const dob = document.getElementById('birth').value;
+                
+                await updateProfile({ 
+                    first_name: firstName, 
+                    last_name: lastName, 
+                    email: email,
+                    phone_number: phoneNumber,
+                    gender: gender !== 'default' ? gender : null,
+                    dob: dob || null
+                });
             }
         });
     }
