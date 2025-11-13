@@ -1,99 +1,295 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Dashboard JS Initialized');
+    console.log('🚀 Dashboard Initialized');
 
-    // ==================== CHECK IF USER IS LOGGED IN ====================
+    // ==================== GLOBAL STATE ====================
     const userToken = localStorage.getItem('userToken');
-    
-    if (!userToken) {
-        console.log('❌ No token found - Redirecting to login');
-        window.location.href = '/login.html';
+    console.log('🔑 Token Check:', userToken ? '✅ Found' : '❌ Not Found');
+
+    // Only redirect if NO token AND on dashboard page
+    if (!userToken && window.location.pathname.includes('dashboard')) {
+        console.log('❌ No token on dashboard - Redirecting to login');
+        setTimeout(() => {
+            window.location.href = '/login.html';
+        }, 500);
         return;
     }
 
-    console.log('✅ Token found');
+    if (!userToken) {
+        console.log('⚠️ No token but not on dashboard');
+        return;
+    }
 
-    // ==================== DOM SELECTORS ====================
+    // ==================== DOM ELEMENTS ====================
     const userName = document.querySelector('.user-infor .name');
     const userEmail = document.querySelector('.user-infor .mail');
     const userAvatar = document.querySelector('.user-infor .avatar img');
+    const logoutBtn = document.querySelector('.menu-tab a.logout-btn');
 
-    // ==================== FETCH USER DATA ====================
-    async function getUserData() {
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
+    const emailInput = document.getElementById('email');
+    const currentPasswordInput = document.getElementById('currentPassword');
+    const newPasswordInput = document.getElementById('newPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+
+    // ==================== API CALL FUNCTION ====================
+    async function apiCall(endpoint, method = 'GET', body = null) {
+        const token = localStorage.getItem('userToken');
+        
+        if (!token) {
+            console.warn('❌ No token available for API call');
+            return null;
+        }
+
+        const config = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        };
+
+        if (body) {
+            config.body = JSON.stringify(body);
+        }
+
         try {
-            console.log('📡 Fetching user data...');
+            console.log(`📡 ${method} ${endpoint}`);
+            const response = await fetch(endpoint, config);
             
-            const response = await fetch('/api/user/profile', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${userToken}`
-                }
-            });
+            console.log(`✅ Status: ${response.status}`);
 
-            console.log('Response Status:', response.status);
-
+            // Handle 401 - Token expired
             if (response.status === 401) {
-                console.log('❌ Token expired - Redirecting to login');
+                console.warn('🔐 Token expired');
                 localStorage.removeItem('userToken');
                 window.location.href = '/login.html';
                 return null;
             }
 
-            const data = await response.json();
-            console.log('📦 User Data:', data);
+            // Handle 204 - No content
+            if (response.status === 204) {
+                return { success: true };
+            }
 
+            const data = await response.json();
+            console.log(`📦 Response:`, data);
             return data;
+
         } catch (error) {
-            console.error('❌ Error fetching user:', error);
+            console.error('❌ API Error:', error);
             return null;
         }
     }
 
-    // ==================== DISPLAY USER INFO ====================
-    async function displayUserInfo() {
-        console.log('👤 Displaying user info...');
+    // ==================== 1. LOAD USER PROFILE ====================
+    async function loadUserProfile() {
+        console.log('👤 Loading user profile...');
 
-        const userData = await getUserData();
+        const response = await apiCall('/api/user/profile');
 
-        if (!userData || !userData.user) {
-            console.error('❌ No user data received');
+        if (!response) {
+            console.error('❌ No response from API');
+            return false;
+        }
+
+        // Handle different response structures
+        const user = response.user || response.data || response;
+
+        if (!user || !user.name) {
+            console.error('❌ No user data in response');
+            console.error('Response structure:', response);
+            return false;
+        }
+
+        console.log('✅ User data:', user);
+
+        // Display in header
+        if (userName) {
+            userName.textContent = user.name;
+            console.log('✅ Name set:', user.name);
+        }
+
+        if (userEmail) {
+            userEmail.textContent = user.email || '';
+            console.log('✅ Email set:', user.email);
+        }
+
+        if (userAvatar && user.avatar_url) {
+            userAvatar.src = user.avatar_url;
+        }
+
+        // Fill form fields
+        if (firstNameInput || lastNameInput) {
+            const nameParts = (user.name || '').split(' ');
+            if (firstNameInput) firstNameInput.value = nameParts[0] || '';
+            if (lastNameInput) lastNameInput.value = nameParts.slice(1).join(' ') || '';
+        }
+
+        if (emailInput) {
+            emailInput.value = user.email || '';
+        }
+
+        return true;
+    }
+
+    // ==================== 2. LOAD DASHBOARD STATS ====================
+    async function loadDashboardStats() {
+        console.log('📊 Loading stats...');
+
+        const response = await apiCall('/api/orders/stats');
+
+        if (!response || !response.data) {
+            console.warn('⚠️ No stats data');
             return;
         }
 
-        const user = userData.user;
+        const stats = response.data;
+        const items = document.querySelectorAll('.overview .overview-item h5');
 
-        // Display Name
-        if (userName && user.name) {
-            userName.textContent = user.name;
-            console.log('✅ Name displayed:', user.name);
-        }
+        if (items[0]) items[0].textContent = (stats.totalOrders - stats.completedOrders) || 0;
+        if (items[1]) items[1].textContent = stats.cancelledOrders || 0;
+        if (items[2]) items[2].textContent = stats.totalOrders || 0;
 
-        // Display Email
-        if (userEmail && user.email) {
-            userEmail.textContent = user.email;
-            console.log('✅ Email displayed:', user.email);
-        }
-
-        // Display Avatar
-        if (userAvatar && user.avatar_url) {
-            userAvatar.src = user.avatar_url;
-            console.log('✅ Avatar displayed');
-        }
-
-        console.log('✅ User info fully displayed');
+        console.log('✅ Stats loaded');
     }
 
-    // ==================== LOGOUT ====================
-    const logoutBtn = document.querySelector('.menu-tab a.logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('👋 Logging out...');
-            localStorage.removeItem('userToken');
-            window.location.href = '/login.html';
+    // ==================== 3. LOAD RECENT ORDERS ====================
+    async function loadRecentOrders() {
+        console.log('📋 Loading recent orders...');
+
+        const response = await apiCall('/api/orders');
+
+        const tbody = document.querySelector('.recent_order .list table tbody');
+        if (!tbody) {
+            console.warn('⚠️ Table tbody not found');
+            return;
+        }
+
+        tbody.innerHTML = '';
+
+        if (!response || !response.orders || response.orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3">No orders</td></tr>';
+            return;
+        }
+
+        const orders = response.orders.slice(0, 5);
+
+        orders.forEach(order => {
+            const productName = order.products && order.products[0] 
+                ? order.products[0].name 
+                : 'Product';
+
+            const row = `
+                <tr class="border-b">
+                    <td class="py-3"><strong>${order.id}</strong></td>
+                    <td class="py-3">${productName}</td>
+                    <td class="py-3">₹${parseFloat(order.amount || 0).toFixed(2)}</td>
+                    <td class="py-3"><span class="tag">${order.status}</span></td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', row);
         });
+
+        console.log('✅ Recent orders loaded');
     }
 
-    // ==================== START ====================
-    displayUserInfo();
-});
+    // ==================== 4. LOAD ALL ORDERS ====================
+    async function loadAllOrders() {
+        console.log('📜 Loading all orders...');
+
+        const response = await apiCall('/api/orders');
+
+        const container = document.querySelector('.list_order');
+        if (!container) {
+            console.warn('⚠️ Order container not found');
+            return;
+        }
+
+        container.innerHTML = '';
+
+        if (!response || !response.orders || response.orders.length === 0) {
+            container.innerHTML = '<p class="text-center py-4">No orders</p>';
+            return;
+        }
+
+        response.orders.forEach(order => {
+            const productsHtml = order.products
+                ? order.products.map(p => `
+                    <div class="py-2 border-b">
+                        <strong>${p.name}</strong> - ${p.quantity}x ₹${parseFloat(p.price || 0).toFixed(2)}
+                    </div>
+                `).join('')
+                : '<p>No products</p>';
+
+            const html = `
+                <div class="border rounded-lg p-5 mb-5">
+                    <div class="flex justify-between mb-3">
+                        <strong>Order #${order.id}</strong>
+                        <span>${order.status}</span>
+                    </div>
+                    <div>${productsHtml}</div>
+                    <div class="text-right mt-3">
+                        <strong>₹${parseFloat(order.amount || 0).toFixed(2)}</strong>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+
+        console.log('✅ All orders loaded');
+    }
+
+    // ==================== 5. UPDATE PROFILE ====================
+    async function updateProfile() {
+        const firstName = firstNameInput?.value.trim() || '';
+        const lastName = lastNameInput?.value.trim() || '';
+        const email = emailInput?.value.trim() || '';
+
+        if (!firstName || !email) {
+            alert('First name and email required');
+            return;
+        }
+
+        const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+
+        const response = await apiCall('/api/user/profile', 'PUT', {
+            name: fullName,
+            email: email
+        });
+
+        if (response) {
+            alert('Profile updated');
+            await loadUserProfile();
+        } else {
+            alert('Failed to update');
+        }
+    }
+
+    // ==================== 6. CHANGE PASSWORD ====================
+    async function changePassword() {
+        const current = currentPasswordInput?.value || '';
+        const newPass = newPasswordInput?.value || '';
+        const confirm = confirmPasswordInput?.value || '';
+
+        if (!current || !newPass || !confirm) {
+            alert('All fields required');
+            return;
+        }
+
+        if (newPass !== confirm) {
+            alert('Passwords do not match');
+            return;
+        }
+
+        if (newPass.length < 6) {
+            alert('Password too short');
+            return;
+        }
+
+        const response = await apiCall('/api/user/password', 'PUT', {
+            current_password: current,
+            new_password: newPass
+        });
+
+        if
