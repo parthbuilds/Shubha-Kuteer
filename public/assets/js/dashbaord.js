@@ -292,4 +292,82 @@ document.addEventListener('DOMContentLoaded', () => {
             new_password: newPass
         });
 
-        if
+        if (response) {
+            alert('Password changed');
+            currentPasswordInput.value = '';
+            newPasswordInput.value = '';
+            confirmPasswordInput.value = '';
+        } else {
+            alert('Failed to change password');
+        }
+    }
+
+    // ==================== 7. LOGOUT ====================
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('userToken');
+            window.location.href = '/login.html';
+        });
+    }
+
+    // ==================== 8. TAB SWITCHING ====================
+    document.querySelectorAll('.menu-tab .category-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            if (!item.classList.contains('logout-btn')) {
+                e.preventDefault();
+                const tab = item.getAttribute('data-item');
+
+                document.querySelectorAll('.menu-tab .category-item').forEach(m => m.classList.remove('active'));
+                item.classList.add('active');
+
+                document.querySelectorAll('.list-filter .filter-item').forEach(f => f.classList.remove('active'));
+                document.querySelector(`.list-filter .filter-item[data-item="${tab}"]`)?.classList.add('active');
+
+                if (tab === 'dashboard') {
+                    loadDashboardStats();
+                    loadRecentOrders();
+                } else if (tab === 'orders') {
+                    loadAllOrders();
+                } else if (tab === 'setting') {
+                    loadUserProfile();
+                }
+            }
+        });
+    });
+
+    // ==================== 9. FORM HANDLERS ====================
+    const profileForm = document.querySelector('.filter-item[data-item="setting"] form:first-of-type');
+    if (profileForm) {
+        profileForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            updateProfile();
+        });
+    }
+
+    const passwordForms = document.querySelectorAll('.filter-item[data-item="setting"] form');
+    if (passwordForms[1]) {
+        passwordForms[1].addEventListener('submit', (e) => {
+            e.preventDefault();
+            changePassword();
+        });
+    }
+
+    // ==================== 10. INITIALIZE ====================
+    async function init() {
+        console.log('⚙️ Initializing dashboard...');
+        
+        const loaded = await loadUserProfile();
+        
+        if (loaded) {
+            await loadDashboardStats();
+            await loadRecentOrders();
+            await loadAllOrders();
+            console.log('✅ Dashboard ready');
+        } else {
+            console.error('❌ Failed to load profile');
+        }
+    }
+
+    init();
+});
