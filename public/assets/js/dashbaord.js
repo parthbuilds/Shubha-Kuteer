@@ -1,35 +1,62 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Selectors
+    console.log('🚀 Dashboard JS Initialized');
+
+    // ==================== GLOBAL VARIABLES ====================
+    let currentUser = null;
+    let allOrders = [];
+
+    // ==================== DOM SELECTORS ====================
     const logoutBtnAnchor = document.querySelector('.menu-tab a.logout-btn');
     const userDisplayName = document.querySelector('.user-infor .name');
     const userDisplayEmail = document.querySelector('.user-infor .mail');
     const userAvatarImg = document.querySelector('.user-infor .avatar img');
     const uploadImgPreview = document.getElementById('uploadImgPreview');
     const dashboardContentDiv = document.getElementById('dashboard-content');
+    
+    // Profile Form Elements
+    const firstName = document.getElementById('firstName');
+    const lastName = document.getElementById('lastName');
+    const email = document.getElementById('email');
+    const currentPassword = document.getElementById('currentPassword');
+    const newPassword = document.getElementById('newPassword');
+    const confirmPassword = document.getElementById('confirmPassword');
+    
+    // Form References
+    const profileForm = document.querySelector('.filter-item[data-item="setting"] form');
+    const passwordForm = document.querySelectorAll('.filter-item[data-item="setting"] form')[1];
 
-    // --- Utility function for API calls ---
+    // ==================== UTILITY: API CALL FUNCTION ====================
     async function callApi(endpoint, method = 'GET', body = null, isFormData = false) {
         const currentToken = localStorage.getItem('userToken');
-        if (!currentToken) {
-            console.warn('No token found');
+        
+        console.log(`📡 API ${method}: ${endpoint}`);
+        
+        if (!currentToken && !endpoint.includes('/login')) {
+            console.warn('❌ No token found - Redirecting to login');
+            localStorage.removeItem('userToken');
+            window.location.href = '/login.html';
             return null;
         }
 
-        const headers = {
-            'Authorization': `Bearer ${currentToken}`
-        };
+        const headers = isFormData 
+            ? { 'Authorization': `Bearer ${currentToken}` }
+            : {
+                'Authorization': `Bearer ${currentToken}`,
+                'Content-Type': 'application/json'
+              };
 
         const config = {
             method,
-            headers: isFormData ? { 'Authorization': `Bearer ${currentToken}` } : { ...headers, 'Content-Type': 'application/json' },
+            headers,
             body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
         };
 
         try {
             const response = await fetch(endpoint, config);
+            console.log(`✅ Status: ${response.status}`);
 
             if (response.status === 401) {
-                console.warn('Authentication failed. Redirecting to login.');
+                console.warn('🔐 Unauthorized - Token expired');
                 localStorage.removeItem('userToken');
                 window.location.href = '/login.html';
                 return null;
@@ -40,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json().catch(() => {
-                console.error(`Failed to parse JSON for ${endpoint}`);
+                console.error('Failed to parse JSON response');
                 return null;
             });
 
@@ -48,114 +75,137 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data?.message || `API call failed with status ${response.status}`);
             }
 
+            console.log('📦 Response:', data);
             return data;
         } catch (error) {
-            console.error(`API Error for ${endpoint}:`, error);
-            throw error;
-        }
-    }
-
-    // --- Logout Handler ---
-    function handleLogout(event) {
-        event.preventDefault();
-        console.log('User logging out...');
-        localStorage.removeItem('userToken');
-        alert('You have been logged out.');
-        window.location.href = '/login.html';
-    }
-
-    // --- 1. Load User Profile Data ---
-    async function loadUserProfile() {
-        try {
-            console.log('Loading user profile...');
-            const profileData = await callApi('/api/user/profile', 'GET');
-
-            if (!profileData || !profileData.user) {
-                console.error('No user data returned from /api/user/profile');
-                return null;
-            }
-
-            const user = profileData.user;
-            console.log('User profile loaded:', user);
-
-            // Update header with user info
-            if (userDisplayName) {
-                userDisplayName.textContent = user.name || user.first_name || 'User';
-            }
-            if (userDisplayEmail) {
-                userDisplayEmail.textContent = user.email || '';
-            }
-
-            // Update avatar
-            const avatarSrc = user.avatar_url || '/assets/images/user-avatar.png';
-            if (userAvatarImg) userAvatarImg.src = avatarSrc;
-            if (uploadImgPreview) uploadImgPreview.src = avatarSrc;
-
-            // Update profile form fields
-            const firstName = user.name ? user.name.split(' ')[0] : '';
-            const lastName = user.name ? user.name.split(' ').slice(1).join(' ') : '';
-
-            document.getElementById('firstName').value = firstName;
-            document.getElementById('lastName').value = lastName;
-            document.getElementById('email').value = user.email || '';
-
-            return user;
-        } catch (error) {
-            console.error('Error loading user profile:', error);
-            alert('Failed to load user profile.');
+            console.error(`❌ API Error: ${error.message}`);
             return null;
         }
     }
 
-    // --- 2. Load Dashboard Overview (Stats) ---
+    // ==================== 1. LOGOUT HANDLER ====================
+    function handleLogout(event) {
+        if (event) event.preventDefault();
+        console.log('👋 User logging out...');
+        localStorage.removeItem('userToken');
+        alert('You have been logged out successfully.');
+        window.location.href = '/login.html';
+    }
+
+    if (logoutBtnAnchor) {
+        logoutBtnAnchor.addEventListener('click', handleLogout);
+    }
+
+    // ==================== 2. LOAD USER PROFILE ====================
+    async function loadUserProfile() {
+        try {
+            console.log('👤 Loading user profile...');
+            const profileData = await callApi('/api/user/profile', 'GET');
+
+            if (!profileData || !profileData.user) {
+                console.error('❌ No user data returned');
+                return null;
+            }
+
+            currentUser = profileData.user;
+            console.log('✅ User Profile Loaded:', currentUser);
+
+            // Update header with user info
+            if (userDisplayName) {
+                userDisplayName.textContent = currentUser.name || currentUser.first_name || 'User';
+            }
+            if (userDisplayEmail) {
+                userDisplayEmail.textContent = currentUser.email || '';
+            }
+
+            // Update avatar
+            const avatarSrc = currentUser.avatar_url || currentUser.avatar || '/assets/images/user-avatar.png';
+            if (userAvatarImg) {
+                userAvatarImg.src = avatarSrc;
+                userAvatarImg.onerror = () => {
+                    userAvatarImg.src = '/assets/images/user-avatar.png';
+                };
+            }
+            if (uploadImgPreview) {
+                uploadImgPreview.src = avatarSrc;
+            }
+
+            // Update profile form fields
+            const fullName = currentUser.name || '';
+            const nameParts = fullName.split(' ');
+            const firstNameValue = nameParts[0] || '';
+            const lastNameValue = nameParts.slice(1).join(' ') || '';
+
+            if (firstName) firstName.value = firstNameValue;
+            if (lastName) lastName.value = lastNameValue;
+            if (email) email.value = currentUser.email || '';
+
+            return currentUser;
+        } catch (error) {
+            console.error('❌ Error loading user profile:', error);
+            alert('Failed to load user profile. Please try again.');
+            return null;
+        }
+    }
+
+    // ==================== 3. LOAD DASHBOARD OVERVIEW (STATS) ====================
     async function loadDashboardOverview() {
         try {
-            console.log('Loading dashboard overview...');
+            console.log('📊 Loading dashboard overview...');
             const statsData = await callApi('/api/orders/stats', 'GET');
 
             if (!statsData || !statsData.data) {
-                console.warn('No stats data returned');
+                console.warn('⚠️ No stats data returned');
                 return;
             }
 
             const stats = statsData.data;
-            console.log('Dashboard stats:', stats);
+            console.log('📈 Dashboard Stats:', stats);
 
             // Update overview cards
-            const awaitingPickupEl = document.querySelector('.overview-item:nth-child(1) h5');
-            const cancelledOrdersEl = document.querySelector('.overview-item:nth-child(2) h5');
-            const totalOrdersEl = document.querySelector('.overview-item:nth-child(3) h5');
+            const overviewItems = document.querySelectorAll('.overview .overview-item h5');
+            
+            if (overviewItems[0]) {
+                const awaitingPickup = (stats.totalOrders || 0) - (stats.completedOrders || 0);
+                overviewItems[0].textContent = Math.max(0, awaitingPickup);
+            }
+            if (overviewItems[1]) {
+                overviewItems[1].textContent = stats.cancelledOrders || 0;
+            }
+            if (overviewItems[2]) {
+                overviewItems[2].textContent = stats.totalOrders || 0;
+            }
 
-            if (awaitingPickupEl) {
-                awaitingPickupEl.textContent = stats.totalOrders - stats.completedOrders || 0;
-            }
-            if (cancelledOrdersEl) {
-                cancelledOrdersEl.textContent = stats.cancelledOrders || 0;
-            }
-            if (totalOrdersEl) {
-                totalOrdersEl.textContent = stats.totalOrders || 0;
-            }
+            console.log('✅ Dashboard overview updated');
         } catch (error) {
-            console.error('Error loading dashboard overview:', error);
+            console.error('❌ Error loading dashboard overview:', error);
         }
     }
 
-    // --- 3. Load Recent Orders ---
+    // ==================== 4. LOAD RECENT ORDERS ====================
     async function loadRecentOrders() {
         try {
-            console.log('Loading recent orders...');
+            console.log('📋 Loading recent orders...');
             const ordersData = await callApi('/api/orders', 'GET');
 
             if (!ordersData || !ordersData.orders) {
-                console.warn('No orders data returned');
+                console.warn('⚠️ No orders data returned');
+                const tbody = document.querySelector('.recent_order .list table tbody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="py-3 text-center text-secondary">No orders found.</td></tr>';
+                }
                 return;
             }
 
             const orders = ordersData.orders.slice(0, 5); // Get first 5 orders
-            console.log('Recent orders:', orders);
+            allOrders = ordersData.orders; // Store all orders
+            console.log('🛒 Recent Orders:', orders);
 
             const recentOrdersTableBody = document.querySelector('.recent_order .list table tbody');
-            if (!recentOrdersTableBody) return;
+            if (!recentOrdersTableBody) {
+                console.warn('⚠️ Recent orders table body not found');
+                return;
+            }
 
             recentOrdersTableBody.innerHTML = '';
 
@@ -165,54 +215,75 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             orders.forEach(order => {
-                const productsHtml = order.products && order.products.length > 0 ?
-                    order.products.map(product => `
-                        <a href="product-default.html?id=${product.id}" class="product flex items-center gap-3">
-                            <img src="${product.image || '/assets/images/product/productDefault.png'}"
-                                alt="${product.name}" class="flex-shrink-0 w-12 h-12 rounded object-cover" />
+                // Build product HTML
+                let productsHtml = '';
+                if (order.products && order.products.length > 0) {
+                    productsHtml = order.products.map(product => `
+                        <a href="product-default.html?id=${product.id || ''}" class="product flex items-center gap-3">
+                            <img src="${product.image || product.thumbImage?.[0] || '/assets/images/product/productDefault.png'}"
+                                alt="${product.name || 'Product'}" 
+                                class="flex-shrink-0 w-12 h-12 rounded object-cover"
+                                onerror="this.src='/assets/images/product/productDefault.png'" />
                             <div class="info">
-                                <strong class="product_name text-button">${product.name}</strong>
+                                <strong class="product_name text-button">${product.name || 'Unknown Product'}</strong>
                                 <span class="product_tag caption1 text-secondary">${product.category || 'N/A'}</span>
                             </div>
                         </a>
-                    `).join('') : '<p class="text-secondary">No products</p>';
+                    `).join('');
+                } else {
+                    productsHtml = '<span class="text-secondary">No products</span>';
+                }
 
                 const statusColor = getStatusColor(order.status);
                 const row = `
-                    <tr class="item border-b border-line">
+                    <tr class="item border-b border-line hover:bg-gray-50">
                         <th class="py-3 text-left">
                             <strong class="text-title">${order.id || 'N/A'}</strong>
                         </th>
                         <td class="py-3">${productsHtml}</td>
-                        <td class="py-3 price">₹${(order.amount || 0).toFixed(2)}</td>
+                        <td class="py-3 price">
+                            <strong>₹${parseFloat(order.amount || 0).toFixed(2)}</strong>
+                        </td>
                         <td class="py-3 text-right">
-                            <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 bg-${statusColor} text-${statusColor} caption1 font-semibold">${order.status || 'Unknown'}</span>
+                            <span class="tag px-4 py-1.5 rounded-full bg-${statusColor}-100 text-${statusColor}-600 caption1 font-semibold">
+                                ${order.status || 'Unknown'}
+                            </span>
                         </td>
                     </tr>
                 `;
                 recentOrdersTableBody.insertAdjacentHTML('beforeend', row);
             });
+
+            console.log('✅ Recent orders loaded');
         } catch (error) {
-            console.error('Error loading recent orders:', error);
+            console.error('❌ Error loading recent orders:', error);
         }
     }
 
-    // --- 4. Load All Orders for Order History ---
+    // ==================== 5. LOAD ALL ORDERS FOR ORDER HISTORY ====================
     async function loadOrderHistory() {
         try {
-            console.log('Loading order history...');
+            console.log('📜 Loading order history...');
             const ordersData = await callApi('/api/orders', 'GET');
 
             if (!ordersData || !ordersData.orders) {
-                console.warn('No orders data returned');
+                console.warn('⚠️ No orders data returned');
+                const listOrderContainer = document.querySelector('.list_order');
+                if (listOrderContainer) {
+                    listOrderContainer.innerHTML = '<p class="p-4 text-center text-secondary">No orders found.</p>';
+                }
                 return;
             }
 
             const orders = ordersData.orders;
-            console.log('All orders:', orders);
+            allOrders = orders;
+            console.log('📦 All Orders:', orders);
 
             const listOrderContainer = document.querySelector('.list_order');
-            if (!listOrderContainer) return;
+            if (!listOrderContainer) {
+                console.warn('⚠️ Order container not found');
+                return;
+            }
 
             listOrderContainer.innerHTML = '';
 
@@ -222,50 +293,59 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             orders.forEach(order => {
-                const productsHtml = order.products && order.products.length > 0 ?
-                    order.products.map(product => `
+                // Build products list HTML
+                let productsHtml = '';
+                if (order.products && order.products.length > 0) {
+                    productsHtml = order.products.map(product => `
                         <div class="prd_item flex flex-wrap items-center justify-between gap-3 py-5 border-b border-line">
-                            <a href="product-default.html?id=${product.id}" class="flex items-center gap-5">
+                            <a href="product-default.html?id=${product.id || ''}" class="flex items-center gap-5 flex-1">
                                 <div class="bg-img flex-shrink-0 md:w-[100px] w-20 aspect-square rounded-lg overflow-hidden">
-                                    <img src="${product.image || '/assets/images/product/productDefault.png'}"
-                                        alt="${product.name}" class="w-full h-full object-cover" />
+                                    <img src="${product.image || product.thumbImage?.[0] || '/assets/images/product/productDefault.png'}"
+                                        alt="${product.name || 'Product'}"
+                                        class="w-full h-full object-cover"
+                                        onerror="this.src='/assets/images/product/productDefault.png'" />
                                 </div>
                                 <div>
-                                    <div class="prd_name text-title">${product.name}</div>
+                                    <div class="prd_name text-title">${product.name || 'Unknown Product'}</div>
                                     <div class="caption1 text-secondary mt-2">
                                         <span class="prd_quantity">${product.quantity || 1}</span>
                                         <span> x </span>
-                                        <span class="prd_price">₹${(product.price || 0).toFixed(2)}</span>
+                                        <span class="prd_price">₹${parseFloat(product.price || 0).toFixed(2)}</span>
                                     </div>
                                 </div>
                             </a>
-                            <div class="text-title">
-                                ₹${((product.quantity || 1) * (product.price || 0)).toFixed(2)}
+                            <div class="text-title font-semibold">
+                                ₹${(parseFloat(product.quantity || 1) * parseFloat(product.price || 0)).toFixed(2)}
                             </div>
                         </div>
-                    `).join('') : '<div class="p-3 text-secondary">No products in this order.</div>';
+                    `).join('');
+                } else {
+                    productsHtml = '<div class="p-3 text-secondary">No products in this order.</div>';
+                }
 
                 const statusColor = getStatusColor(order.status);
                 const orderItemHTML = `
-                    <div class="order_item mt-5 border border-line rounded-lg box-shadow-xs" data-order-id="${order.id}">
-                        <div class="flex flex-wrap items-center justify-between gap-4 p-5 border-b border-line">
+                    <div class="order_item mt-5 border border-line rounded-lg box-shadow-xs overflow-hidden" data-order-id="${order.id}">
+                        <div class="flex flex-wrap items-center justify-between gap-4 p-5 border-b border-line bg-gray-50">
                             <div class="flex items-center gap-2">
                                 <strong class="text-title">Order:</strong>
-                                <strong class="order_number text-button uppercase">${order.id || 'N/A'}</strong>
+                                <strong class="order_number text-button uppercase">#${order.id || 'N/A'}</strong>
                             </div>
                             <div class="flex items-center gap-2">
                                 <strong class="text-title">Status:</strong>
-                                <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 bg-${statusColor} text-${statusColor} caption1 font-semibold">${order.status || 'Unknown'}</span>
+                                <span class="tag px-4 py-1.5 rounded-full bg-${statusColor}-100 text-${statusColor}-600 caption1 font-semibold">
+                                    ${order.status || 'Unknown'}
+                                </span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <strong class="text-title">Total:</strong>
-                                <strong class="text-button">₹${(order.amount || 0).toFixed(2)}</strong>
+                                <strong class="text-button">₹${parseFloat(order.amount || 0).toFixed(2)}</strong>
                             </div>
                         </div>
                         <div class="list_prd px-5">${productsHtml}</div>
-                        <div class="flex flex-wrap gap-4 p-5">
-                            <button class="button-main btn_order_detail">Order Details</button>
-                            ${(order.status || '').toLowerCase() === 'pending' || (order.status || '').toLowerCase() === 'processing' ?
+                        <div class="flex flex-wrap gap-4 p-5 bg-gray-50">
+                            <button class="button-main btn_order_detail" data-order-id="${order.id}">View Details</button>
+                            ${(['pending', 'processing'].includes((order.status || '').toLowerCase())) ?
                             `<button class="button-main bg-surface border border-line btn_cancel_order" data-order-id="${order.id}">Cancel Order</button>`
                             : ''}
                         </div>
@@ -274,47 +354,151 @@ document.addEventListener('DOMContentLoaded', () => {
                 listOrderContainer.insertAdjacentHTML('beforeend', orderItemHTML);
             });
 
-            // Attach cancel order listeners
+            // Attach event listeners
             listOrderContainer.querySelectorAll('.btn_cancel_order').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
-                    const orderId = e.target.dataset.orderId;
-                    if (confirm('Cancel this order?')) {
+                    const orderId = e.target.getAttribute('data-order-id');
+                    if (confirm('Are you sure you want to cancel this order?')) {
                         await cancelOrder(orderId);
                     }
                 });
             });
+
+            listOrderContainer.querySelectorAll('.btn_order_detail').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const orderId = e.target.getAttribute('data-order-id');
+                    showOrderDetail(orderId);
+                });
+            });
+
+            console.log('✅ Order history loaded');
         } catch (error) {
-            console.error('Error loading order history:', error);
+            console.error('❌ Error loading order history:', error);
         }
     }
 
-    // --- 5. Cancel Order ---
+    // ==================== 6. CANCEL ORDER ====================
     async function cancelOrder(orderId) {
         try {
+            console.log(`🗑️ Cancelling order ${orderId}...`);
             const result = await callApi(`/api/orders/${orderId}/cancel`, 'PUT', { status: 'cancelled' });
-            alert(result.message || 'Order cancelled successfully!');
-            await loadOrderHistory();
+
+            if (result && result.message) {
+                alert(result.message || 'Order cancelled successfully!');
+                await loadOrderHistory();
+                await loadDashboardOverview();
+                await loadRecentOrders();
+            } else {
+                throw new Error('Failed to cancel order');
+            }
         } catch (error) {
-            console.error('Error cancelling order:', error);
+            console.error('❌ Error cancelling order:', error);
             alert(error.message || 'Failed to cancel order.');
         }
     }
 
-    // --- 6. Update Profile ---
+    // ==================== 7. SHOW ORDER DETAIL MODAL ====================
+    function showOrderDetail(orderId) {
+        const order = allOrders.find(o => o.id === orderId);
+        if (!order) {
+            alert('Order not found');
+            return;
+        }
+
+        console.log('📄 Showing order detail:', order);
+
+        const modalHTML = `
+            <div class="modal-overlay" id="orderDetailModal">
+                <div class="modal-content rounded-lg p-6 max-w-2xl bg-white">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-title">Order Details</h2>
+                        <button class="close-btn text-2xl">&times;</button>
+                    </div>
+                    
+                    <div class="order-details space-y-4">
+                        <div class="flex justify-between">
+                            <span class="text-secondary">Order ID:</span>
+                            <strong>${order.id}</strong>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-secondary">Status:</span>
+                            <strong>${order.status}</strong>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-secondary">Order Date:</span>
+                            <strong>${order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A'}</strong>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-secondary">Total Amount:</span>
+                            <strong class="text-lg">₹${parseFloat(order.amount || 0).toFixed(2)}</strong>
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <h3 class="text-button mb-3">Products:</h3>
+                        <div class="space-y-2">
+                            ${order.products && order.products.length > 0 ?
+                                order.products.map(p => `
+                                    <div class="flex justify-between p-3 bg-gray-50 rounded">
+                                        <div>
+                                            <strong>${p.name}</strong>
+                                            <p class="text-secondary text-sm">Qty: ${p.quantity || 1}</p>
+                                        </div>
+                                        <strong>₹${(parseFloat(p.quantity || 1) * parseFloat(p.price || 0)).toFixed(2)}</strong>
+                                    </div>
+                                `).join('')
+                                : '<p class="text-secondary">No products</p>'}
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex gap-3">
+                        <button class="button-main flex-1 close-btn-modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('orderDetailModal');
+        if (existingModal) existingModal.remove();
+
+        // Add new modal
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Add event listeners to close buttons
+        const modal = document.getElementById('orderDetailModal');
+        modal.querySelector('.close-btn').addEventListener('click', () => modal.remove());
+        modal.querySelector('.close-btn-modal').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    }
+
+    // ==================== 8. UPDATE PROFILE ====================
     async function updateProfile(formData) {
         try {
+            console.log('✏️ Updating profile...');
             const result = await callApi('/api/user/profile', 'PUT', formData);
-            alert(result.message || 'Profile updated successfully!');
-            await loadUserProfile();
+
+            if (result && result.message) {
+                alert(result.message || 'Profile updated successfully!');
+                await loadUserProfile();
+            } else {
+                throw new Error('Failed to update profile');
+            }
         } catch (error) {
-            console.error('Error updating profile:', error);
+            console.error('❌ Error updating profile:', error);
             alert(error.message || 'Failed to update profile.');
         }
     }
 
-    // --- 7. Change Password ---
+    // ==================== 9. CHANGE PASSWORD ====================
     async function changePassword(formData) {
         try {
+            // Validation
+            if (!formData.current_password || !formData.new_password) {
+                throw new Error('All fields are required');
+            }
             if (formData.new_password !== formData.confirm_new_password) {
                 throw new Error('Passwords do not match.');
             }
@@ -322,21 +506,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Password must be at least 6 characters.');
             }
 
+            console.log('🔐 Changing password...');
             const result = await callApi('/api/user/password', 'PUT', {
                 current_password: formData.current_password,
                 new_password: formData.new_password
             });
-            alert(result.message || 'Password changed successfully!');
-            document.getElementById('password').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
+
+            if (result && result.message) {
+                alert(result.message || 'Password changed successfully!');
+                if (currentPassword) currentPassword.value = '';
+                if (newPassword) newPassword.value = '';
+                if (confirmPassword) confirmPassword.value = '';
+            } else {
+                throw new Error('Failed to change password');
+            }
         } catch (error) {
-            console.error('Error changing password:', error);
+            console.error('❌ Error changing password:', error);
             alert(error.message || 'Failed to change password.');
         }
     }
 
-    // --- 8. Get Status Color ---
+    // ==================== 10. GET STATUS COLOR ====================
     function getStatusColor(status) {
         const statusLower = (status || '').toLowerCase();
         const colors = {
@@ -344,6 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'processing': 'orange',
             'shipped': 'blue',
             'delivery': 'purple',
+            'delivered': 'green',
             'completed': 'green',
             'cancelled': 'red',
             'returned': 'red'
@@ -351,136 +542,128 @@ document.addEventListener('DOMContentLoaded', () => {
         return colors[statusLower] || 'gray';
     }
 
-    // --- 9. Switch Tabs ---
+    // ==================== 11. SWITCH TABS ====================
     function switchTab(tabName) {
-        document.querySelectorAll('.menu-tab .category-item').forEach(item => item.classList.remove('active'));
+        console.log(`📑 Switching to tab: ${tabName}`);
+
+        // Update menu items
+        const menuItems = document.querySelectorAll('.menu-tab .category-item');
+        menuItems.forEach(item => item.classList.remove('active'));
         const activeMenuItem = document.querySelector(`.menu-tab .category-item[data-item="${tabName}"]`);
         if (activeMenuItem) activeMenuItem.classList.add('active');
 
-        document.querySelectorAll('.list-filter .filter-item').forEach(item => item.classList.remove('active'));
+        // Update content tabs
+        const filterItems = document.querySelectorAll('.list-filter .filter-item');
+        filterItems.forEach(item => item.classList.remove('active'));
         const activeContentBlock = document.querySelector(`.list-filter .filter-item[data-item="${tabName}"]`);
         if (activeContentBlock) activeContentBlock.classList.add('active');
 
+        // Load data for specific tabs
         if (tabName === 'orders') {
             loadOrderHistory();
         } else if (tabName === 'dashboard') {
             loadDashboardOverview();
             loadRecentOrders();
+        } else if (tabName === 'setting') {
+            loadUserProfile();
         }
     }
 
-    // --- 10. Check Dashboard Access ---
-    async function checkDashboardAccess() {
-        if (!window.location.pathname.includes('dashboard')) {
-            return;
-        }
+    // ==================== 12. FORM HANDLERS ====================
+    
+    // Profile Form Handler
+    if (profileForm) {
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const firstNameVal = firstName?.value || '';
+            const lastNameVal = lastName?.value || '';
+            const emailVal = email?.value || '';
 
+            if (!firstNameVal || !emailVal) {
+                alert('First name and email are required');
+                return;
+            }
+
+            await updateProfile({
+                name: `${firstNameVal} ${lastNameVal}`.trim(),
+                email: emailVal
+            });
+        });
+    }
+
+    // Password Form Handler
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const currentPasswordVal = currentPassword?.value || '';
+            const newPasswordVal = newPassword?.value || '';
+            const confirmPasswordVal = confirmPassword?.value || '';
+
+            await changePassword({
+                current_password: currentPasswordVal,
+                new_password: newPasswordVal,
+                confirm_new_password: confirmPasswordVal
+            });
+        });
+    }
+
+    // ==================== 13. MENU NAVIGATION ====================
+    const menuItems = document.querySelectorAll('.menu-tab .category-item');
+    menuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            if (!item.classList.contains('logout-btn')) {
+                e.preventDefault();
+                const tabName = item.getAttribute('data-item');
+                if (tabName) {
+                    switchTab(tabName);
+                }
+            }
+        });
+    });
+
+    // ==================== 14. CHECK DASHBOARD ACCESS & INITIALIZE ====================
+    async function checkDashboardAccess() {
         const currentToken = localStorage.getItem('userToken');
+
         if (!currentToken) {
-            console.log('No token found. Redirecting to login.');
+            console.log('🔐 No token found. Redirecting to login.');
             window.location.href = '/login.html';
             return;
         }
 
         try {
-            console.log('Checking dashboard access...');
+            console.log('✅ Token found. Initializing dashboard...');
+            
+            // Verify token by checking auth
             const authData = await callApi('/api/auth/check', 'GET');
 
-            if (authData && authData.message === 'Authorized ✅') {
-                console.log('User is authenticated. Loading dashboard...');
+            if (authData && (authData.message === 'Authorized ✅' || authData.authorized === true)) {
+                console.log('✅ User is authenticated. Loading dashboard data...');
                 
-                // Load all user data
+                // Load all initial data
                 await loadUserProfile();
                 await loadDashboardOverview();
                 await loadRecentOrders();
                 await loadOrderHistory();
                 
-                // Set logout button
-                if (logoutBtnAnchor) {
-                    logoutBtnAnchor.addEventListener('click', handleLogout);
-                }
-                
+                // Initialize with dashboard tab
                 switchTab('dashboard');
+                
             } else {
-                console.warn('Auth check failed');
+                console.warn('⚠️ Auth check failed');
                 localStorage.removeItem('userToken');
                 window.location.href = '/login.html';
             }
         } catch (error) {
-            console.error('Dashboard access check failed:', error);
+            console.error('❌ Dashboard access check failed:', error);
             localStorage.removeItem('userToken');
             window.location.href = '/login.html';
         }
     }
 
-    // --- 11. Login Form Handler ---
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const email = loginForm.elements.email.value;
-            const password = loginForm.elements.password.value;
-
-            try {
-                const response = await callApi('/api/auth/login', 'POST', { email, password });
-                if (response && response.token) {
-                    localStorage.setItem('userToken', response.token);
-                    alert('Login successful!');
-                    window.location.href = '/dashboard.html';
-                } else {
-                    alert(response?.message || 'Login failed.');
-                }
-            } catch (error) {
-                alert(error.message || 'Login error.');
-            }
-        });
-    }
-
-    // --- 12. Profile Settings Form Handler ---
-    const profileSettingsForm = document.querySelector('.filter-item[data-item="setting"] form');
-    if (profileSettingsForm) {
-        profileSettingsForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const currentPassword = document.getElementById('password')?.value || '';
-            const newPassword = document.getElementById('newPassword')?.value || '';
-            const confirmPassword = document.getElementById('confirmPassword')?.value || '';
-            const firstName = document.getElementById('firstName')?.value || '';
-            const lastName = document.getElementById('lastName')?.value || '';
-            const email = document.getElementById('email')?.value || '';
-
-            if (newPassword) {
-                await changePassword({
-                    current_password: currentPassword,
-                    new_password: newPassword,
-                    confirm_new_password: confirmPassword
-                });
-            } else {
-                const fullName = `${firstName} ${lastName}`.trim();
-                await updateProfile({
-                    name: fullName,
-                    email: email
-                });
-            }
-        });
-    }
-
-    // --- 13. Menu Navigation ---
-    document.querySelectorAll('.menu-tab .category-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tabName = e.currentTarget.dataset.item;
-            if (tabName) switchTab(tabName);
-        });
-    });
-
-    // --- 14. Initialize ---
+    // ==================== 15. PAGE DETECTION & INITIALIZATION ====================
     if (window.location.pathname.includes('dashboard')) {
+        console.log('📍 Dashboard page detected - Checking access...');
         checkDashboardAccess();
-    } else if (window.location.pathname.includes('login')) {
-        const token = localStorage.getItem('userToken');
-        if (token) {
-            window.location.href = '/dashboard.html';
-        }
     }
 });
