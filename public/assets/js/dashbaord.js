@@ -745,6 +745,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initial call to check authentication and load data
-    checkAuthAndLoadUserData();
 });
