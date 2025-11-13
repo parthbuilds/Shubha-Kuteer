@@ -131,51 +131,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Core Dashboard Access Logic ---
-    async function checkDashboardAccess() {
-        if (!window.location.pathname.startsWith('/dashboard')) {
-            return; // Only run this logic on the dashboard page
-        }
+async function checkDashboardAccess() {
+    if (!window.location.pathname.startsWith('/dashboard')) {
+        return;
+    }
 
-        const currentToken = localStorage.getItem('userToken');
+    const currentToken = localStorage.getItem('userToken');
 
-        if (currentToken) {
-            try {
-                // Call the /api/auth/check endpoint from your serverless function
-                const authData = await callApi('/api/auth/check'); // This should return { message: "Authorized ✅", user: { ... } }
-                if (authData.message === 'Authorized ✅') {
-                    console.log('Token validated. User is authenticated.');
-                    if (logoutBtnAnchor) {
-                        logoutBtnAnchor.textContent = 'Logout';
-                        logoutBtnAnchor.removeEventListener('click', handleLogout); // Prevent duplicate listeners
-                        logoutBtnAnchor.addEventListener('click', handleLogout);
-                    }
-                    await loadAndRenderAllUserData(); // Load all specific dashboard data
-                    switchTab('dashboard'); // Ensure dashboard overview is the default active tab
-                    return;
-                } else {
-                    console.warn('Backend rejected token without 401:', authData.message);
-                    localStorage.removeItem('userToken');
-                    alert('Session invalid. Please log in again.');
-                    window.location.href = '/login.html';
-                    return;
+    if (currentToken) {
+        try {
+            const authData = await callApi('/api/auth/check');
+            if (authData.message === 'Authorized ✅') {
+                console.log('Token validated. User is authenticated.');
+                if (logoutBtnAnchor) {
+                    logoutBtnAnchor.textContent = 'Logout';
+                    logoutBtnAnchor.removeEventListener('click', handleLogout);
+                    logoutBtnAnchor.addEventListener('click', handleLogout);
                 }
-            } catch (error) {
-                // `callApi`'s 401 handler already redirects. This catches other errors.
-                if (error.message !== 'Unauthorized') { // Avoid double alerts/redirects
-                    console.error('Error during initial auth check for dashboard:', error);
-                    localStorage.removeItem('userToken');
-                    alert('An error occurred during authentication. Please log in again.');
-                    window.location.href = '/login.html';
-                }
+                
+                // ===== ADD THIS PART =====
+                await loadUserNameToHeader();
+                
+                await loadAndRenderAllUserData();
+                switchTab('dashboard');
+                return;
+            } else {
+                console.warn('Backend rejected token without 401:', authData.message);
+                localStorage.removeItem('userToken');
+                alert('Session invalid. Please log in again.');
+                window.location.href = '/login.html';
                 return;
             }
+        } catch (error) {
+            if (error.message !== 'Unauthorized') {
+                console.error('Error during initial auth check for dashboard:', error);
+                localStorage.removeItem('userToken');
+                alert('An error occurred during authentication. Please log in again.');
+                window.location.href = '/login.html';
+            }
+            return;
         }
-
-        console.log('No valid token found. Redirecting to login.');
-        alert('You must be logged in to view the dashboard.');
-        localStorage.removeItem('userToken');
-        window.location.href = '/login.html';
     }
+
+    console.log('No valid token found. Redirecting to login.');
+    alert('You must be logged in to view the dashboard.');
+    localStorage.removeItem('userToken');
+    window.location.href = '/login.html';
+}
 
     // --- Form Submission Handlers (Login and Register) ---
     const loginForm = document.getElementById('loginForm');
@@ -685,6 +687,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ===== NEW FUNCTION TO LOAD USER NAME TO HEADER =====
+    async function loadUserNameToHeader() {
+        try {
+            console.log('📥 Loading user name to header...');
+            
+            const profileData = await callApi('/api/user/profile');
+            
+            if (profileData && profileData.user) {
+                const user = profileData.user;
+                const fullName = user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User';
+                const email = user.email || '';
+                
+                // Update header name
+                if (userDisplayName) {
+                    userDisplayName.textContent = fullName;
+                    console.log('✅ User name displayed:', fullName);
+                }
+                
+                // Update header email
+                if (userDisplayEmail) {
+                    userDisplayEmail.textContent = email;
+                    console.log('✅ User email displayed:', email);
+                }
+                
+                // Update avatar
+                if (userAvatarImg && user.avatar_url) {
+                    userAvatarImg.src = user.avatar_url;
+                }
+                
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error loading user name:', error);
+            return false;
+        }
+    }
 
     // --- Event Listeners ---
 
