@@ -1,9 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Selectors
-    const logoutBtnAnchor = document.querySelector('.menu-tab a.logout-btn'); // Select by class for more robustness
+    const logoutBtnAnchor = document.querySelector('.menu-tab a.logout-btn');
     const userDisplayName = document.querySelector('.user-infor .name');
     const userDisplayEmail = document.querySelector('.user-infor .mail');
-    const dashboardContentDiv = document.getElementById('dashboard-content'); // In dashboard.html
+    const userAvatarImg = document.querySelector('.user-infor .avatar img'); // New selector for avatar in user-infor
+    const uploadImgPreview = document.getElementById('uploadImgPreview'); // Selector for avatar preview in settings
+    const dashboardContentDiv = document.getElementById('dashboard-content');
 
     // --- Utility function for API calls ---
     async function callApi(endpoint, method = 'GET', body = null) {
@@ -26,15 +28,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Session expired or invalid. Please log in again.');
                 localStorage.removeItem('userToken');
                 window.location.href = '/login.html';
-                return Promise.reject(new Error('Unauthorized'));
+                return Promise.reject(new Error('Unauthorized')); // Reject the promise
             }
 
-            const data = await response.json().catch(() => {
+            // Attempt to parse JSON only if the response is not 204 No Content
+            const data = (response.status !== 204) ? await response.json().catch(() => {
                 console.error(`Failed to parse JSON for ${endpoint}. Status: ${response.status}`);
                 return { message: `Server error (${response.status})` };
-            });
+            }) : { message: 'Success', status: 204 }; // Handle 204 for successful deletions/updates without content
 
             if (!response.ok) {
+                // If data.message is present, use it; otherwise, provide a generic error
                 throw new Error(data.message || `API call to ${endpoint} failed with status ${response.status}`);
             }
             return data;
@@ -54,26 +58,57 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboardContentDiv.innerHTML = '<p>Loading your dashboard data...</p>';
 
         try {
-            const dashboardData = await callApi('/api/dashboard-content', 'GET');
+            // Note: The original `loadDashboardContent` fetches `/api/dashboard-content`
+            // and `loadAndRenderAllUserData` fetches individual endpoints.
+            // For a single dashboard page, `loadAndRenderAllUserData` is more comprehensive.
+            // This function here might be redundant if `loadAndRenderAllUserData` is used on dashboard.html
+            // Let's adapt it to use individual calls for clarity, or deprecate if `loadAndRenderAllUserData` is sufficient.
 
-            if (dashboardData) {
-                if (userDisplayName) userDisplayName.textContent = dashboardData.userData.first_name + (dashboardData.userData.last_name ? ' ' + dashboardData.userData.last_name : '');
-                if (userDisplayEmail) userDisplayEmail.textContent = dashboardData.userData.email;
+            // Fetch general dashboard content (assuming it gives user data and a message)
+            const dashboardMessageData = await callApi('/api/dashboard-message', 'GET'); // Example endpoint for a welcome message
+            const userData = await callApi('/api/user/profile');
+            const dashboardSummary = await callApi('/api/user/dashboard-summary');
+            const recentOrders = await callApi('/api/orders/recent');
 
-                dashboardContentDiv.innerHTML = `
-                    <h2>${dashboardData.message}</h2>
-                    <p>Welcome, ${dashboardData.userData.first_name}!</p>
-                    <h3>Your Dashboard Stats:</h3>
-                    <p>${dashboardData.dashboardStats}</p>
-                    <h3>Recent Activity:</h3>
-                    <ul>
-                        ${dashboardData.recentActivity.map(item => `<li>${item}</li>`).join('')}
-                    </ul>
-                `;
+            if (userData && userData.user) {
+                if (userDisplayName) userDisplayName.textContent = `${userData.user.first_name || ''} ${userData.user.last_name || ''}`.trim();
+                if (userDisplayEmail) userDisplayEmail.textContent = userData.user.email || '';
+                if (userAvatarImg) userAvatarImg.src = userData.user.avatar_url || '/assets/images/user-avatar.png';
             }
+
+            dashboardContentDiv.innerHTML = `
+                <h2>${dashboardMessageData.message || 'Welcome to your Dashboard!'}</h2>
+                <p>Hello, ${userData.user.first_name || 'User'}!</p>
+                <h3>Your Dashboard Overview:</h3>
+                <div class="overview-grid grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div class="overview-item p-4 border rounded shadow-sm">
+                        <h4>Awaiting Pickup</h4>
+                        <h5>${dashboardSummary.awaitingPickup || 0}</h5>
+                    </div>
+                    <div class="overview-item p-4 border rounded shadow-sm">
+                        <h4>Cancelled Orders</h4>
+                        <h5>${dashboardSummary.cancelledOrders || 0}</h5>
+                    </div>
+                    <div class="overview-item p-4 border rounded shadow-sm">
+                        <h4>Total Orders</h4>
+                        <h5>${dashboardSummary.totalOrders || 0}</h5>
+                    </div>
+                </div>
+                <h3 class="mt-8">Recent Activity:</h3>
+                <ul>
+                    ${recentOrders.orders && recentOrders.orders.length > 0 ?
+                        recentOrders.orders.map(item => `<li>Order #${item.order_number} - ${item.status}</li>`).join('') :
+                        '<li>No recent activity.</li>'
+                    }
+                </ul>
+            `;
+            // Also call specific rendering functions for detailed sections if they exist on the dashboard overview tab
+            renderDashboardOverview(dashboardSummary);
+            renderRecentOrders(recentOrders.orders);
+
         } catch (error) {
             console.error('Error loading dashboard content:', error);
-            dashboardContentDiv.innerHTML = `<p class="error">Failed to load dashboard. ${error.message}</p>`;
+            dashboardContentDiv.innerHTML = `<p class="error text-red-500">Failed to load dashboard. ${error.message}</p>`;
         }
     }
 
@@ -88,54 +123,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Core Dashboard Access Logic ---
     async function checkDashboardAccess() {
-        if (window.location.pathname !== '/dashboard.html') {
+        if (!window.location.pathname.startsWith('/dashboard')) {
             return; // Only run this logic on the dashboard page
         }
 
         const currentToken = localStorage.getItem('userToken');
 
-        // Check for token and if it can be validated.
-        // This is a client-side interpretation of "logged in".
-        // The server will still verify the token for actual data.
         if (currentToken) {
             try {
-                // Perform a quick check with the backend to validate the token
-                // This makes the "logout button active" state more reliable than just localstorage presence
                 const authData = await callApi('/api/auth/check');
                 if (authData.message === 'Authorized ✅') {
                     console.log('Token validated. User is authenticated.');
-                    // Set logout button text and attach handler
                     if (logoutBtnAnchor) {
                         logoutBtnAnchor.textContent = 'Logout';
-                        logoutBtnAnchor.removeEventListener('click', handleLogout); // Avoid duplicate listeners
+                        // Ensure listener is added only once
+                        logoutBtnAnchor.removeEventListener('click', handleLogout);
                         logoutBtnAnchor.addEventListener('click', handleLogout);
                     }
-                    // Load dashboard content as user is authenticated
-                    loadDashboardContent();
-                    return; // Stop here, user is in.
+                    await loadAndRenderAllUserData(); // Load all specific dashboard data
+                    // If a specific tab should be active on load, set it here, e.g., 'dashboard' for the overview
+                    switchTab('dashboard');
+                    return;
                 } else {
-                    // Backend said not authorized, but not a 401
                     console.warn('Backend rejected token without 401:', authData.message);
-                    localStorage.removeItem('userToken'); // Clear bad token
+                    localStorage.removeItem('userToken');
                     alert('Session invalid. Please log in again.');
                     window.location.href = '/login.html';
                     return;
                 }
             } catch (error) {
-                // callApi's 401 handler already redirects.
-                // This catches other errors during auth/check.
-                console.error('Error during initial auth check for dashboard:', error);
-                localStorage.removeItem('userToken'); // Clear potentially problematic token
-                alert('An error occurred during authentication. Please log in again.');
-                window.location.href = '/login.html';
+                // `callApi`'s 401 handler already redirects. This catches other errors.
+                if (error.message !== 'Unauthorized') { // Avoid double alerts/redirects
+                    console.error('Error during initial auth check for dashboard:', error);
+                    localStorage.removeItem('userToken');
+                    alert('An error occurred during authentication. Please log in again.');
+                    window.location.href = '/login.html';
+                }
                 return;
             }
         }
 
-        // If no token, or token failed validation above, redirect to login
         console.log('No valid token found. Redirecting to login.');
         alert('You must be logged in to view the dashboard.');
-        localStorage.removeItem('userToken'); // Just in case a partial token was there
+        localStorage.removeItem('userToken');
         window.location.href = '/login.html';
     }
 
@@ -152,13 +182,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response && response.token) {
                     localStorage.setItem('userToken', response.token);
                     alert(response.message);
-                    window.location.href = '/dashboard.html'; // Redirect to dashboard
+                    window.location.href = '/dashboard.html';
                 } else {
-                    alert(response.message || 'Login failed.');
+                    alert(response.message || 'Login failed. Please check your credentials.');
                 }
             } catch (error) {
                 console.error('Login form submission error:', error);
-                alert(error.message || 'An error occurred during login.');
+                alert(error.message || 'An error occurred during login. Please try again.');
             }
         });
     }
@@ -170,41 +200,47 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = registerForm.elements.name.value;
             const email = registerForm.elements.email.value;
             const password = registerForm.elements.password.value;
+            const confirmPassword = registerForm.elements.confirmPassword.value; // Assuming you have this field
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match.');
+                return;
+            }
 
             try {
                 const response = await callApi('/api/auth/register', 'POST', { name, email, password });
                 alert(response.message);
                 if (response.message.includes("successful")) {
-                    window.location.href = '/login.html'; // Redirect to login after successful registration
+                    window.location.href = '/login.html';
                 }
             } catch (error) {
                 console.error('Registration form submission error:', error);
-                alert(error.message || 'An error occurred during registration.');
+                alert(error.message || 'An error occurred during registration. Please try again.');
             }
         });
     }
 
-    // --- Initial page load logic ---
-    if (window.location.pathname.startsWith('/dashboard')) {
-        checkDashboardAccess(); // This will handle all authentication/redirection for dashboard
-    } else if (window.location.pathname === '/login.html' || window.location.pathname === '/register.html') {
-        // If on login/register page, check if already logged in and redirect to dashboard
-        const currentToken = localStorage.getItem('userToken');
-        if (currentToken) {
-            callApi('/api/auth/check')
-                .then(data => {
+    // --- Initial page load logic for login/register pages ---
+    async function handleAuthPages() {
+        if (window.location.pathname === '/login.html' || window.location.pathname === '/register.html') {
+            const currentToken = localStorage.getItem('userToken');
+            if (currentToken) {
+                try {
+                    const data = await callApi('/api/auth/check');
                     if (data.message === 'Authorized ✅') {
                         console.log('Already logged in on login/register page, redirecting to dashboard.');
                         window.location.href = '/dashboard.html';
                     }
-                })
-                .catch(error => {
-                    // Token invalid, clear it. callApi's 401 handler might already do this.
-                    console.warn('Failed auth check on login/register page, clearing token.');
+                } catch (error) {
+                    if (error.message !== 'Unauthorized') { // Avoid double alerts/redirects
+                        console.warn('Failed auth check on login/register page, clearing token:', error);
+                    }
                     localStorage.removeItem('userToken');
-                });
+                }
+            }
         }
     }
+
 
     // --- 2. Dashboard Overview Functions ---
     function renderDashboardOverview(data) {
@@ -212,9 +248,14 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('No dashboard overview data provided.');
             return;
         }
-        document.querySelector('.overview-item:nth-child(1) h5').textContent = data.awaitingPickup || 0;
-        document.querySelector('.overview-item:nth-child(2) h5').textContent = data.cancelledOrders || 0;
-        document.querySelector('.overview-item:nth-child(3) h5').textContent = data.totalOrders || 0;
+        // Ensure selectors are robust or handled gracefully if not present on all dashboard tabs
+        const awaitingPickupEl = document.querySelector('.overview-item:nth-child(1) h5');
+        const cancelledOrdersEl = document.querySelector('.overview-item:nth-child(2) h5');
+        const totalOrdersEl = document.querySelector('.overview-item:nth-child(3) h5');
+
+        if (awaitingPickupEl) awaitingPickupEl.textContent = data.awaitingPickup || 0;
+        if (cancelledOrdersEl) cancelledOrdersEl.textContent = data.cancelledOrders || 0;
+        if (totalOrdersEl) totalOrdersEl.textContent = data.totalOrders || 0;
     }
 
     function renderRecentOrders(orders) {
@@ -226,43 +267,49 @@ document.addEventListener('DOMContentLoaded', () => {
         recentOrdersTableBody.innerHTML = ''; // Clear existing
 
         if (orders && orders.length > 0) {
+            // Sort by a date or ID if available, to ensure "recent" is actually recent
+            orders.sort((a, b) => new Date(b.order_date) - new Date(a.order_date)); // Assuming 'order_date' field
             orders.slice(0, 5).forEach(order => { // Show up to 5 recent orders
-                const productsHtml = order.products.map(product => `
-                    <a href="product-default.html?id=${product.id}" class="product flex items-center gap-3">
-                        <img src="${product.image || '/assets/images/product/productDefault.png'}"
-                            alt="${product.name}" class="flex-shrink-0 w-12 h-12 rounded" />
-                        <div class="info flex flex-col">
-                            <strong class="product_name text-button">${product.name}</strong>
-                            <span class="product_tag caption1 text-secondary">${product.category || ''}, ${product.gender || ''}</span>
-                        </div>
-                    </a>
-                `).join('');
+                const productsHtml = order.products && order.products.length > 0 ?
+                    order.products.map(product => `
+                        <a href="product-default.html?id=${product.id}" class="product flex items-center gap-3">
+                            <img src="${product.image || '/assets/images/product/productDefault.png'}"
+                                alt="${product.name}" class="flex-shrink-0 w-12 h-12 rounded object-cover" />
+                            <div class="info flex flex-col">
+                                <strong class="product_name text-button">${product.name}</strong>
+                                <span class="product_tag caption1 text-secondary">${product.category || 'N/A'}, ${product.gender || 'N/A'}</span>
+                            </div>
+                        </a>
+                    `).join('') : '<p>No products in this order</p>'; // Handle orders with no products
 
                 const row = `
                     <tr class="item duration-300 border-b border-line">
                         <th scope="row" class="py-3 text-left">
-                            <strong class="text-title">${order.order_number}</strong>
+                            <strong class="text-title">${order.order_number || 'N/A'}</strong>
                         </th>
                         <td class="py-3">${productsHtml}</td>
                         <td class="py-3 price">₹${(order.total_amount || 0).toFixed(2)}</td>
                         <td class="py-3 text-right">
-                            <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 bg-${getStatusColor(order.status)} text-${getStatusColor(order.status)} caption1 font-semibold">${order.status}</span>
+                            <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 bg-${getStatusColor(order.status)} text-${getStatusColor(order.status)} caption1 font-semibold">${order.status || 'Unknown'}</span>
                         </td>
                     </tr>
                 `;
                 recentOrdersTableBody.insertAdjacentHTML('beforeend', row);
             });
         } else {
-            recentOrdersTableBody.innerHTML = `<tr><td colspan="4" class="py-3 text-center">No recent orders found.</td></tr>`;
+            recentOrdersTableBody.innerHTML = `<tr><td colspan="4" class="py-3 text-center text-secondary">No recent orders found.</td></tr>`;
         }
     }
 
     function getStatusColor(status) {
         switch (status ? status.toLowerCase() : '') { // Handle potential null/undefined status
             case 'pending': return 'yellow';
+            case 'processing': return 'orange'; // Added 'processing'
+            case 'shipped': return 'blue'; // Added 'shipped'
             case 'delivery': return 'purple';
             case 'completed': return 'success';
-            case 'canceled': return 'red';
+            case 'cancelled': return 'red';
+            case 'returned': return 'red'; // Added 'returned'
             default: return 'gray';
         }
     }
@@ -277,51 +324,56 @@ document.addEventListener('DOMContentLoaded', () => {
         listOrderContainer.innerHTML = ''; // Clear existing orders
 
         if (!orders || orders.length === 0) {
-            listOrderContainer.innerHTML = '<p class="p-4 text-center">No orders found.</p>';
+            listOrderContainer.innerHTML = '<p class="p-4 text-center text-secondary">No orders found.</p>';
             return;
         }
 
         orders.forEach(order => {
-            const productsHtml = order.products.map(product => `
-                <div class="prd_item flex flex-wrap items-center justify-between gap-3 py-5 border-b border-line">
-                    <a href="product-default.html?id=${product.id}" class="flex items-center gap-5">
-                        <div class="bg-img flex-shrink-0 md:w-[100px] w-20 aspect-square rounded-lg overflow-hidden">
-                            <img src="${product.image || '/assets/images/product/productDefault.png'}"
-                                alt="${product.name}" class="w-full h-full object-cover" />
-                        </div>
-                        <div>
-                            <div class="prd_name text-title">${product.name}</div>
-                            <div class="caption1 text-secondary mt-2">
-                                <span class="prd_size uppercase">${product.size || ''}</span>
-                                <span>/</span>
-                                <span class="prd_color capitalize">${product.color || ''}</span>
+            const productsHtml = order.products && order.products.length > 0 ?
+                order.products.map(product => `
+                    <div class="prd_item flex flex-wrap items-center justify-between gap-3 py-5 border-b border-line">
+                        <a href="product-default.html?id=${product.id}" class="flex items-center gap-5">
+                            <div class="bg-img flex-shrink-0 md:w-[100px] w-20 aspect-square rounded-lg overflow-hidden">
+                                <img src="${product.image || '/assets/images/product/productDefault.png'}"
+                                    alt="${product.name}" class="w-full h-full object-cover" />
                             </div>
+                            <div>
+                                <div class="prd_name text-title">${product.name}</div>
+                                <div class="caption1 text-secondary mt-2">
+                                    <span class="prd_quantity">${product.quantity || 1}</span>
+                                    <span> x </span>
+                                    <span class="prd_price">₹${(product.price || 0).toFixed(2)}</span>
+                                    ${product.size ? `<span class="prd_size uppercase ml-2">${product.size}</span>` : ''}
+                                    ${product.color ? `<span>/</span><span class="prd_color capitalize">${product.color}</span>` : ''}
+                                </div>
+                            </div>
+                        </a>
+                        <div class="text-title">
+                            Subtotal: ₹${((product.quantity || 1) * (product.price || 0)).toFixed(2)}
                         </div>
-                    </a>
-                    <div class="text-title">
-                        <span class="prd_quantity">${product.quantity || 1}</span>
-                        <span> X </span>
-                        <span class="prd_price">₹${(product.price || 0).toFixed(2)}</span>
                     </div>
-                </div>
-            `).join('');
+                `).join('') : '<div class="p-3 text-secondary">No products found for this order.</div>';
 
             const orderItemHTML = `
-                <div class="order_item mt-5 border border-line rounded-lg box-shadow-xs" data-order-id="${order.id}" data-order-status="${order.status.toLowerCase()}">
+                <div class="order_item mt-5 border border-line rounded-lg box-shadow-xs" data-order-id="${order.id}" data-order-status="${(order.status || '').toLowerCase()}">
                     <div class="flex flex-wrap items-center justify-between gap-4 p-5 border-b border-line">
                         <div class="flex items-center gap-2">
                             <strong class="text-title">Order Number:</strong>
-                            <strong class="order_number text-button uppercase">${order.order_number}</strong>
+                            <strong class="order_number text-button uppercase">${order.order_number || 'N/A'}</strong>
                         </div>
                         <div class="flex items-center gap-2">
                             <strong class="text-title">Order status:</strong>
-                            <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 bg-${getStatusColor(order.status)} text-${getStatusColor(order.status)} caption1 font-semibold">${order.status}</span>
+                            <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 bg-${getStatusColor(order.status)} text-${getStatusColor(order.status)} caption1 font-semibold">${order.status || 'Unknown'}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <strong class="text-title">Total:</strong>
+                            <strong class="text-button">₹${(order.total_amount || 0).toFixed(2)}</strong>
                         </div>
                     </div>
                     <div class="list_prd px-5">${productsHtml}</div>
                     <div class="flex flex-wrap gap-4 p-5">
                         <button class="button-main btn_order_detail">Order Details</button>
-                        ${order.status.toLowerCase() === 'pending' || order.status.toLowerCase() === 'delivery' ?
+                        ${(order.status || '').toLowerCase() === 'pending' || (order.status || '').toLowerCase() === 'processing' ?
                         `<button class="button-main bg-surface border border-line hover:bg-black text-black hover:text-white btn_cancel_order" data-order-id="${order.id}">Cancel Order</button>`
                         : ''}
                     </div>
@@ -353,32 +405,37 @@ document.addEventListener('DOMContentLoaded', () => {
             indicator.style.left = activeTab.offsetLeft + 'px';
         }
 
-        const allOrders = document.querySelectorAll('.list_order .order_item');
-        allOrders.forEach(orderItem => {
-            if (status === 'all' || orderItem.dataset.orderStatus === status) {
-                orderItem.style.display = 'block';
-            } else {
-                orderItem.style.display = 'none';
+        const allOrderItems = document.querySelectorAll('.list_order .order_item');
+        if (allOrderItems.length > 0) {
+            allOrderItems.forEach(orderItem => {
+                if (status === 'all' || (orderItem.dataset.orderStatus && orderItem.dataset.orderStatus === status)) {
+                    orderItem.style.display = 'block';
+                } else {
+                    orderItem.style.display = 'none';
+                }
+            });
+        } else {
+            // If orders are fetched dynamically per filter, uncomment this
+            try {
+                const endpoint = status === 'all' ? '/api/orders' : `/api/orders?status=${status}`;
+                const filteredOrders = await callApi(endpoint);
+                renderOrderHistory(filteredOrders.orders);
+            } catch (error) {
+                console.error('Error filtering orders:', error);
+                // The `callApi` function already handles 401 and throws.
+                // For other errors, you might want a more specific message.
+                alert('Failed to load filtered orders.');
+                const listOrderContainer = document.querySelector('.list_order');
+                if (listOrderContainer) listOrderContainer.innerHTML = '<p class="p-4 text-center text-red-500">Error loading orders.</p>';
             }
-        });
-
-        // If you want server-side filtering (recommended for large datasets):
-        // try {
-        //     const endpoint = status === 'all' ? '/api/orders' : `/api/orders?status=${status}`;
-        //     const filteredOrders = await callApi(endpoint);
-        //     renderOrderHistory(filteredOrders.orders);
-        // } catch (error) {
-        //     console.error('Error filtering orders:', error);
-        //     alert('Failed to filter orders.');
-        // }
+        }
     }
 
     async function cancelOrder(orderId) {
         try {
-            const result = await callApi(`/api/orders/cancel/${orderId}`, 'PUT');
+            const result = await callApi(`/api/orders/${orderId}/cancel`, 'PUT'); // Consistent endpoint convention
             alert(result.message || 'Order cancelled successfully!');
-            // After successful cancellation, re-fetch and re-render all relevant data
-            await loadAndRenderAllUserData();
+            await loadAndRenderAllUserData(); // Re-fetch all data to refresh all relevant sections
             // Re-apply current filter if any
             const activeStatusTab = document.querySelector('.tab_order .menu-tab .tab-item.active');
             if (activeStatusTab) {
@@ -386,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Cancel order error:', error);
-            alert(error.message || 'Failed to cancel order.');
+            alert(error.message || 'Failed to cancel order. Please try again.');
         }
     }
 
@@ -400,29 +457,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const billingAddress = addresses.billing || {};
         const shippingAddress = addresses.shipping || {};
 
+        // Helper to safely set value
+        const setValue = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.value = value || '';
+        };
+
         // Billing
-        document.getElementById('billingFirstName').value = billingAddress.first_name || '';
-        document.getElementById('billingLastName').value = billingAddress.last_name || '';
-        document.getElementById('billingCompany').value = billingAddress.company || '';
-        document.getElementById('billingCountry').value = billingAddress.country || '';
-        document.getElementById('billingStreet').value = billingAddress.street || '';
-        document.getElementById('billingCity').value = billingAddress.city || '';
-        document.getElementById('billingState').value = billingAddress.state || '';
-        document.getElementById('billingZip').value = billingAddress.zip || '';
-        document.getElementById('billingPhone').value = billingAddress.phone || '';
-        document.getElementById('billingEmail').value = billingAddress.email || '';
+        setValue('billingFirstName', billingAddress.first_name);
+        setValue('billingLastName', billingAddress.last_name);
+        setValue('billingCompany', billingAddress.company);
+        setValue('billingCountry', billingAddress.country);
+        setValue('billingStreet', billingAddress.street);
+        setValue('billingCity', billingAddress.city);
+        setValue('billingState', billingAddress.state);
+        setValue('billingZip', billingAddress.zip);
+        setValue('billingPhone', billingAddress.phone);
+        setValue('billingEmail', billingAddress.email);
 
         // Shipping
-        document.getElementById('shippingFirstName').value = shippingAddress.first_name || '';
-        document.getElementById('shippingLastName').value = shippingAddress.last_name || '';
-        document.getElementById('shippingCompany').value = shippingAddress.company || '';
-        document.getElementById('shippingCountry').value = shippingAddress.country || '';
-        document.getElementById('shippingStreet').value = shippingAddress.street || '';
-        document.getElementById('shippingCity').value = shippingAddress.city || '';
-        document.getElementById('shippingState').value = shippingAddress.state || '';
-        document.getElementById('shippingZip').value = shippingAddress.zip || '';
-        document.getElementById('shippingPhone').value = shippingAddress.phone || '';
-        document.getElementById('shippingEmail').value = shippingAddress.email || '';
+        setValue('shippingFirstName', shippingAddress.first_name);
+        setValue('shippingLastName', shippingAddress.last_name);
+        setValue('shippingCompany', shippingAddress.company);
+        setValue('shippingCountry', shippingAddress.country);
+        setValue('shippingStreet', shippingAddress.street);
+        setValue('shippingCity', shippingAddress.city);
+        setValue('shippingState', shippingAddress.state);
+        setValue('shippingZip', shippingAddress.zip);
+        setValue('shippingPhone', shippingAddress.phone);
+        setValue('shippingEmail', shippingAddress.email);
     }
 
     async function updateAddress(addressType, formData) {
@@ -434,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadAddressData(userAddresses.addresses);
         } catch (error) {
             console.error(`Update ${addressType} address error:`, error);
-            alert(error.message || `Failed to update ${addressType} address.`);
+            alert(error.message || `Failed to update ${addressType} address. Please try again.`);
         }
     }
 
@@ -444,24 +507,25 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('No user profile data provided.');
             return;
         }
-        userDisplayName.textContent = `${user.first_name || ''} ${user.last_name || ''}`;
-        userDisplayEmail.textContent = user.email || '';
-        if (user.avatar_url) {
-            if (userAvatarImg) userAvatarImg.src = user.avatar_url;
-            if (uploadImgPreview) uploadImgPreview.src = user.avatar_url;
-        } else {
-            // Set default avatar if none exists
-            if (userAvatarImg) userAvatarImg.src = '/assets/images/user-avatar.png'; // Or your default avatar path
-            if (uploadImgPreview) uploadImgPreview.src = '/assets/images/user-avatar.png';
-        }
+        if (userDisplayName) userDisplayName.textContent = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+        if (userDisplayEmail) userDisplayEmail.textContent = user.email || '';
+
+        const avatarSrc = user.avatar_url || '/assets/images/user-avatar.png';
+        if (userAvatarImg) userAvatarImg.src = avatarSrc;
+        if (uploadImgPreview) uploadImgPreview.src = avatarSrc;
 
         // Profile Update fields
-        document.getElementById('firstName').value = user.first_name || '';
-        document.getElementById('lastName').value = user.last_name || '';
-        document.getElementById('phoneNumber').value = user.phone_number || '';
-        document.getElementById('email').value = user.email || '';
-        document.getElementById('gender').value = user.gender || 'default';
-        document.getElementById('birth').value = user.dob ? new Date(user.dob).toISOString().split('T')[0] : '';
+        const setValue = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.value = value || '';
+        };
+
+        setValue('firstName', user.first_name);
+        setValue('lastName', user.last_name);
+        setValue('phoneNumber', user.phone_number);
+        setValue('email', user.email);
+        setValue('gender', user.gender || 'default');
+        setValue('birth', user.dob ? new Date(user.dob).toISOString().split('T')[0] : '');
     }
 
     async function updateProfile(formData) {
@@ -473,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadProfileData(profileData.user);
         } catch (error) {
             console.error('Update profile error:', error);
-            alert(error.message || 'Failed to update profile.');
+            alert(error.message || 'Failed to update profile. Please try again.');
         }
     }
 
@@ -482,7 +546,6 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('avatar', file);
 
         try {
-            // Direct fetch (like your original) is fine, but needs to retrieve token correctly
             const currentToken = localStorage.getItem('userToken');
             if (!currentToken) {
                 throw new Error('No authentication token found for avatar upload.');
@@ -491,14 +554,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/user/avatar', {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${currentToken}` // Use the latest token here
-                    // 'Content-Type': 'multipart/form-data' is usually set automatically by browser for FormData
+                    'Authorization': `Bearer ${currentToken}`
                 },
                 body: formData
             });
+
             const result = await response.json();
+
             if (!response.ok) {
-                // Specific handling for 401 Unauthorized errors in direct fetch
                 if (response.status === 401) {
                     alert('Session expired or invalid. Please log in again.');
                     localStorage.removeItem('userToken');
@@ -507,15 +570,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 throw new Error(result.message || `Avatar upload failed with status ${response.status}`);
             }
+
             alert(result.message || 'Avatar updated successfully!');
-            // Update avatar images in UI
             if (result.avatar_url) {
                 if (userAvatarImg) userAvatarImg.src = result.avatar_url;
                 if (uploadImgPreview) uploadImgPreview.src = result.avatar_url;
             }
         } catch (error) {
             console.error('Avatar upload error:', error);
-            alert(error.message || 'Failed to upload avatar.');
+            alert(error.message || 'Failed to upload avatar. Please try again.');
         }
     }
 
@@ -524,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (formData.new_password !== formData.confirm_new_password) {
                 throw new Error('New password and confirm password do not match.');
             }
-            if (!formData.new_password || formData.new_password.length < 6) { // Basic validation
+            if (!formData.new_password || formData.new_password.length < 6) {
                 throw new Error('New password must be at least 6 characters long.');
             }
 
@@ -539,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('confirmPassword').value = '';
         } catch (error) {
             console.error('Change password error:', error);
-            alert(error.message || 'Failed to change password.');
+            alert(error.message || 'Failed to change password. Please try again.');
         }
     }
 
@@ -557,21 +620,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Special handling for order history sub-tabs
         if (tabName === 'orders') {
-            // Re-initialize order tab indicator and filter if needed
             const orderTabIndicator = document.querySelector('.tab_order .menu-tab .indicator');
-            const firstOrderTabItem = document.querySelector('.tab_order .menu-tab .tab-item'); // Assumes first tab is 'all'
+            const firstOrderTabItem = document.querySelector('.tab_order .menu-tab .tab-item[data-status="all"]');
             if (orderTabIndicator && firstOrderTabItem) {
-                // Reset indicator to 'all' tab
                 orderTabIndicator.style.width = firstOrderTabItem.offsetWidth + 'px';
                 orderTabIndicator.style.left = firstOrderTabItem.offsetLeft + 'px';
                 document.querySelectorAll('.tab_order .menu-tab .tab-item').forEach(btn => btn.classList.remove('active'));
                 firstOrderTabItem.classList.add('active');
             }
             filterOrdersByStatus('all'); // Always show 'all' orders when entering the orders tab
+        } else if (tabName === 'dashboard') {
+            // Re-render dashboard overview if it's the active tab and data might have changed
+            // This is handled by loadAndRenderAllUserData initially, but good to have a refresh option
+            // loadDashboardContent(); // This would re-fetch and render just the dashboard section
         }
     }
 
-    // --- Data Loading function to call multiple APIs ---
+    // --- Data Loading function to call multiple APIs for dashboard ---
     async function loadAndRenderAllUserData() {
         try {
             console.log('Loading all user data...');
@@ -583,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dashboardSummary = await callApi('/api/user/dashboard-summary');
             renderDashboardOverview(dashboardSummary);
 
-            // Fetch and display recent orders for dashboard
+            // Fetch and display recent orders for dashboard (if recent_order div exists)
             const recentOrders = await callApi('/api/orders/recent');
             renderRecentOrders(recentOrders.orders);
 
@@ -598,10 +663,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error('Error loading all user data:', error);
-            // This alert will be shown if any of the above API calls fail
-            // It might be redundant if callApi already redirected for 401s.
-            // Consider if you need a separate alert for other errors here.
-            alert('Failed to load user data. Please try again.');
+            // `callApi` already handles 401 redirects. This catches other errors.
+            if (error.message !== 'Unauthorized') {
+                alert('Failed to load user data. Please refresh the page.');
+            }
         }
     }
 
@@ -623,7 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.tab_order .menu-tab .tab-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            const status = e.currentTarget.dataset.status; // Use data-status for consistency
+            const status = e.currentTarget.dataset.status;
             filterOrdersByStatus(status);
         });
     });
@@ -634,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const targetItem = e.currentTarget.dataset.item;
             const targetForm = document.querySelector(`.tab_address .form_address[data-item="${targetItem}"]`);
-            const icon = e.currentTarget.querySelector('.ic_down'); // Assuming this class is on the icon
+            const icon = e.currentTarget.querySelector('.ic_down');
 
             if (targetForm && icon) {
                 e.currentTarget.classList.toggle('active');
@@ -646,15 +711,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Profile update and Password change form submission (Setting tab)
-    const profileSettingsForm = document.querySelector('.filter-item[data-item="setting"] form'); // Target the form directly
+    const profileSettingsForm = document.querySelector('.filter-item[data-item="setting"] form');
     if (profileSettingsForm) {
         profileSettingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             // Password fields
-            const currentPassword = document.getElementById('password').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
+            const currentPasswordEl = document.getElementById('password');
+            const newPasswordEl = document.getElementById('newPassword');
+            const confirmPasswordEl = document.getElementById('confirmPassword');
+
+            const currentPassword = currentPasswordEl ? currentPasswordEl.value : '';
+            const newPassword = newPasswordEl ? newPasswordEl.value : '';
+            const confirmPassword = confirmPasswordEl ? confirmPasswordEl.value : '';
 
             // Profile fields
             const firstName = document.getElementById('firstName').value;
@@ -664,22 +733,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const gender = document.getElementById('gender').value;
             const dob = document.getElementById('birth').value;
 
-            if (currentPassword || newPassword || confirmPassword) {
-                // If any password field is filled, assume password change
+            // Determine if it's a password change or profile update
+            if (newPassword || currentPassword || confirmPassword) {
                 await changePassword({
                     current_password: currentPassword,
                     new_password: newPassword,
                     confirm_new_password: confirmPassword
                 });
             } else {
-                // Otherwise, assume profile update
                 await updateProfile({
                     first_name: firstName,
                     last_name: lastName,
                     phone_number: phoneNumber,
                     email: email,
-                    gender: gender === 'default' ? null : gender, // Send null if default selected
-                    dob: dob || null // Send null if empty
+                    gender: gender === 'default' ? null : gender,
+                    dob: dob || null
                 });
             }
         });
@@ -693,9 +761,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
-                    // Update preview immediately
                     if (uploadImgPreview) uploadImgPreview.src = event.target.result;
-                    if (userAvatarImg) userAvatarImg.src = event.target.result;
+                    if (userAvatarImg) userAvatarImg.src = event.target.result; // Update main avatar too
                 };
                 reader.readAsDataURL(file);
                 await updateProfileAvatar(file);
@@ -704,19 +771,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Address update form submission
-    const addressForms = document.querySelectorAll('.tab_address form'); // Get all address forms
+    const addressForms = document.querySelectorAll('.tab_address form');
     addressForms.forEach(form => {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const formElement = e.target;
-            const addressType = formElement.dataset.item; // Assumes form has data-item="billing" or "shipping"
+            const addressType = formElement.dataset.item;
 
             if (!addressType) {
-                alert("Address form type not identified.");
+                alert("Address form type not identified. Missing data-item attribute.");
                 return;
             }
 
+            // Using consistent `id$` selectors for robustness
             const formData = {
                 first_name: formElement.querySelector('[id$="FirstName"]').value,
                 last_name: formElement.querySelector('[id$="LastName"]').value,
@@ -734,15 +802,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-
-    // Handle logout button click
-    if (logoutBtnAnchor) {
-        logoutBtnAnchor.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent default link behavior
-            localStorage.removeItem('userToken');
-            alert('Logged out successfully.');
-            window.location.href = '/login.html';
-        });
+    // Initial load logic based on path
+    if (window.location.pathname.startsWith('/dashboard')) {
+        checkDashboardAccess();
+    } else {
+        handleAuthPages();
     }
-
 });
