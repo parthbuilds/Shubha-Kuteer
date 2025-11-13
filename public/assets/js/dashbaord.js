@@ -8,17 +8,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardContentDiv = document.getElementById('dashboard-content');
 
     // --- Utility function for API calls ---
-    async function callApi(endpoint, method = 'GET', body = null) {
+    async function callApi(endpoint, method = 'GET', body = null, isFormData = false) {
         const currentToken = localStorage.getItem('userToken');
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = {};
+
         if (currentToken) {
             headers['Authorization'] = `Bearer ${currentToken}`;
         }
+
         const config = {
             method,
-            headers,
-            body: body ? JSON.stringify(body) : undefined,
+            headers: isFormData ? {} : { 'Content-Type': 'application/json', ...headers }, // FormData sets its own Content-Type
+            body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
         };
+
+        if (isFormData) {
+             // For FormData, explicitly set Authorization header, but let browser set Content-Type
+             if (currentToken) {
+                config.headers['Authorization'] = `Bearer ${currentToken}`;
+             }
+        }
+
+
         try {
             const response = await fetch(endpoint, config);
 
@@ -34,8 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Attempt to parse JSON only if the response is not 204 No Content
             const data = (response.status !== 204) ? await response.json().catch(() => {
                 console.error(`Failed to parse JSON for ${endpoint}. Status: ${response.status}`);
-                return { message: `Server error (${response.status})` };
-            }) : { message: 'Success', status: 204 }; // Handle 204 for successful deletions/updates without content
+                // If JSON parsing fails, but status is OK, might be an empty successful response
+                return { message: `Server responded with status ${response.status}`, success: response.ok };
+            }) : { message: 'Success', status: 204, success: true }; // Handle 204 for successful deletions/updates without content
 
             if (!response.ok) {
                 // If data.message is present, use it; otherwise, provide a generic error
@@ -49,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Function to load and render dashboard content from API ---
+    // This function will fetch comprehensive user data to populate all dashboard sections
     async function loadDashboardContent() {
         if (!dashboardContentDiv) {
             console.warn('Dashboard content div not found. Skipping content load.');
@@ -58,54 +71,50 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboardContentDiv.innerHTML = '<p>Loading your dashboard data...</p>';
 
         try {
-            // Note: The original `loadDashboardContent` fetches `/api/dashboard-content`
-            // and `loadAndRenderAllUserData` fetches individual endpoints.
-            // For a single dashboard page, `loadAndRenderAllUserData` is more comprehensive.
-            // This function here might be redundant if `loadAndRenderAllUserData` is used on dashboard.html
-            // Let's adapt it to use individual calls for clarity, or deprecate if `loadAndRenderAllUserData` is sufficient.
+            // Your serverless function for '/api/dashboard-content' returns:
+            // { message, userData, dashboardStats, recentActivity }
+            const dashboardData = await callApi('/api/dashboard-content', 'GET');
 
-            // Fetch general dashboard content (assuming it gives user data and a message)
-            const dashboardMessageData = await callApi('/api/dashboard-message', 'GET'); // Example endpoint for a welcome message
-            const userData = await callApi('/api/user/profile');
-            const dashboardSummary = await callApi('/api/user/dashboard-summary');
-            const recentOrders = await callApi('/api/orders/recent');
+            if (dashboardData && dashboardData.userData) {
+                // Populate user-info section (if present)
+                if (userDisplayName) userDisplayName.textContent = `${dashboardData.userData.first_name || ''} ${dashboardData.userData.last_name || ''}`.trim();
+                if (userDisplayEmail) userDisplayEmail.textContent = dashboardData.userData.email || '';
+                if (userAvatarImg) userAvatarImg.src = dashboardData.userData.avatar_url || '/assets/images/user-avatar.png';
+                if (uploadImgPreview) uploadImgPreview.src = dashboardData.userData.avatar_url || '/assets/images/user-avatar.png';
 
-            if (userData && userData.user) {
-                if (userDisplayName) userDisplayName.textContent = `${userData.user.first_name || ''} ${userData.user.last_name || ''}`.trim();
-                if (userDisplayEmail) userDisplayEmail.textContent = userData.user.email || '';
-                if (userAvatarImg) userAvatarImg.src = userData.user.avatar_url || '/assets/images/user-avatar.png';
+
+                // Populate the main dashboard content area
+                dashboardContentDiv.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-4">${dashboardData.message || 'Welcome to your Dashboard!'}</h2>
+                    <p class="text-lg text-secondary mb-6">Hello, ${dashboardData.userData.first_name || 'User'}!</p>
+
+                    <h3 class="text-xl font-semibold mb-3">Your Dashboard Overview:</h3>
+                    <div class="overview-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="overview-item p-6 bg-white rounded-lg shadow-md flex flex-col items-center">
+                            <h4 class="text-gray-600 text-sm uppercase">Awaiting Pickup</h4>
+                            <h5 class="text-3xl font-bold text-indigo-600 mt-2">${dashboardData.dashboardStats?.awaitingPickup || 0}</h5>
+                        </div>
+                        <div class="overview-item p-6 bg-white rounded-lg shadow-md flex flex-col items-center">
+                            <h4 class="text-gray-600 text-sm uppercase">Cancelled Orders</h4>
+                            <h5 class="text-3xl font-bold text-red-600 mt-2">${dashboardData.dashboardStats?.cancelledOrders || 0}</h5>
+                        </div>
+                        <div class="overview-item p-6 bg-white rounded-lg shadow-md flex flex-col items-center">
+                            <h4 class="text-gray-600 text-sm uppercase">Total Orders</h4>
+                            <h5 class="text-3xl font-bold text-green-600 mt-2">${dashboardData.dashboardStats?.totalOrders || 0}</h5>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-semibold mb-3">Recent Activity:</h3>
+                    <ul class="list-disc list-inside bg-white p-6 rounded-lg shadow-md">
+                        ${dashboardData.recentActivity && dashboardData.recentActivity.length > 0 ?
+                            dashboardData.recentActivity.map(item => `<li class="py-1 border-b last:border-b-0 border-gray-100">${item}</li>`).join('') :
+                            '<li class="text-secondary">No recent activity.</li>'
+                        }
+                    </ul>
+                `;
+            } else {
+                dashboardContentDiv.innerHTML = `<p class="error text-red-500">Failed to retrieve dashboard data. No user data found.</p>`;
             }
-
-            dashboardContentDiv.innerHTML = `
-                <h2>${dashboardMessageData.message || 'Welcome to your Dashboard!'}</h2>
-                <p>Hello, ${userData.user.first_name || 'User'}!</p>
-                <h3>Your Dashboard Overview:</h3>
-                <div class="overview-grid grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div class="overview-item p-4 border rounded shadow-sm">
-                        <h4>Awaiting Pickup</h4>
-                        <h5>${dashboardSummary.awaitingPickup || 0}</h5>
-                    </div>
-                    <div class="overview-item p-4 border rounded shadow-sm">
-                        <h4>Cancelled Orders</h4>
-                        <h5>${dashboardSummary.cancelledOrders || 0}</h5>
-                    </div>
-                    <div class="overview-item p-4 border rounded shadow-sm">
-                        <h4>Total Orders</h4>
-                        <h5>${dashboardSummary.totalOrders || 0}</h5>
-                    </div>
-                </div>
-                <h3 class="mt-8">Recent Activity:</h3>
-                <ul>
-                    ${recentOrders.orders && recentOrders.orders.length > 0 ?
-                        recentOrders.orders.map(item => `<li>Order #${item.order_number} - ${item.status}</li>`).join('') :
-                        '<li>No recent activity.</li>'
-                    }
-                </ul>
-            `;
-            // Also call specific rendering functions for detailed sections if they exist on the dashboard overview tab
-            renderDashboardOverview(dashboardSummary);
-            renderRecentOrders(recentOrders.orders);
-
         } catch (error) {
             console.error('Error loading dashboard content:', error);
             dashboardContentDiv.innerHTML = `<p class="error text-red-500">Failed to load dashboard. ${error.message}</p>`;
@@ -131,18 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (currentToken) {
             try {
-                const authData = await callApi('/api/auth/check');
+                // Call the /api/auth/check endpoint from your serverless function
+                const authData = await callApi('/api/auth/check'); // This should return { message: "Authorized ✅", user: { ... } }
                 if (authData.message === 'Authorized ✅') {
                     console.log('Token validated. User is authenticated.');
                     if (logoutBtnAnchor) {
                         logoutBtnAnchor.textContent = 'Logout';
-                        // Ensure listener is added only once
-                        logoutBtnAnchor.removeEventListener('click', handleLogout);
+                        logoutBtnAnchor.removeEventListener('click', handleLogout); // Prevent duplicate listeners
                         logoutBtnAnchor.addEventListener('click', handleLogout);
                     }
                     await loadAndRenderAllUserData(); // Load all specific dashboard data
-                    // If a specific tab should be active on load, set it here, e.g., 'dashboard' for the overview
-                    switchTab('dashboard');
+                    switchTab('dashboard'); // Ensure dashboard overview is the default active tab
                     return;
                 } else {
                     console.warn('Backend rejected token without 401:', authData.message);
@@ -178,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = loginForm.elements.password.value;
 
             try {
+                // Call the /api/auth/login endpoint from your serverless function
                 const response = await callApi('/api/auth/login', 'POST', { email, password });
                 if (response && response.token) {
                     localStorage.setItem('userToken', response.token);
@@ -200,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = registerForm.elements.name.value;
             const email = registerForm.elements.email.value;
             const password = registerForm.elements.password.value;
-            const confirmPassword = registerForm.elements.confirmPassword.value; // Assuming you have this field
+            const confirmPassword = registerForm.elements.confirmPassword.value;
 
             if (password !== confirmPassword) {
                 alert('Passwords do not match.');
@@ -208,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
+                // Call the /api/auth/register endpoint from your serverless function
                 const response = await callApi('/api/auth/register', 'POST', { name, email, password });
                 alert(response.message);
                 if (response.message.includes("successful")) {
@@ -232,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.location.href = '/dashboard.html';
                     }
                 } catch (error) {
-                    if (error.message !== 'Unauthorized') { // Avoid double alerts/redirects
+                    if (error.message !== 'Unauthorized') {
                         console.warn('Failed auth check on login/register page, clearing token:', error);
                     }
                     localStorage.removeItem('userToken');
@@ -248,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('No dashboard overview data provided.');
             return;
         }
-        // Ensure selectors are robust or handled gracefully if not present on all dashboard tabs
         const awaitingPickupEl = document.querySelector('.overview-item:nth-child(1) h5');
         const cancelledOrdersEl = document.querySelector('.overview-item:nth-child(2) h5');
         const totalOrdersEl = document.querySelector('.overview-item:nth-child(3) h5');
@@ -267,9 +276,8 @@ document.addEventListener('DOMContentLoaded', () => {
         recentOrdersTableBody.innerHTML = ''; // Clear existing
 
         if (orders && orders.length > 0) {
-            // Sort by a date or ID if available, to ensure "recent" is actually recent
-            orders.sort((a, b) => new Date(b.order_date) - new Date(a.order_date)); // Assuming 'order_date' field
-            orders.slice(0, 5).forEach(order => { // Show up to 5 recent orders
+            orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Use created_at for sorting
+            orders.slice(0, 5).forEach(order => {
                 const productsHtml = order.products && order.products.length > 0 ?
                     order.products.map(product => `
                         <a href="product-default.html?id=${product.id}" class="product flex items-center gap-3">
@@ -280,15 +288,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="product_tag caption1 text-secondary">${product.category || 'N/A'}, ${product.gender || 'N/A'}</span>
                             </div>
                         </a>
-                    `).join('') : '<p>No products in this order</p>'; // Handle orders with no products
+                    `).join('') : '<p class="text-secondary">No products in this order</p>';
 
                 const row = `
                     <tr class="item duration-300 border-b border-line">
                         <th scope="row" class="py-3 text-left">
-                            <strong class="text-title">${order.order_number || 'N/A'}</strong>
+                            <strong class="text-title">${order.id || 'N/A'}</strong>
                         </th>
                         <td class="py-3">${productsHtml}</td>
-                        <td class="py-3 price">₹${(order.total_amount || 0).toFixed(2)}</td>
+                        <td class="py-3 price">₹${(order.amount || 0).toFixed(2)}</td>
                         <td class="py-3 text-right">
                             <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 bg-${getStatusColor(order.status)} text-${getStatusColor(order.status)} caption1 font-semibold">${order.status || 'Unknown'}</span>
                         </td>
@@ -302,14 +310,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getStatusColor(status) {
-        switch (status ? status.toLowerCase() : '') { // Handle potential null/undefined status
+        switch (status ? status.toLowerCase() : '') {
             case 'pending': return 'yellow';
-            case 'processing': return 'orange'; // Added 'processing'
-            case 'shipped': return 'blue'; // Added 'shipped'
+            case 'processing': return 'orange';
+            case 'shipped': return 'blue';
             case 'delivery': return 'purple';
             case 'completed': return 'success';
             case 'cancelled': return 'red';
-            case 'returned': return 'red'; // Added 'returned'
+            case 'returned': return 'red';
             default: return 'gray';
         }
     }
@@ -359,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="flex flex-wrap items-center justify-between gap-4 p-5 border-b border-line">
                         <div class="flex items-center gap-2">
                             <strong class="text-title">Order Number:</strong>
-                            <strong class="order_number text-button uppercase">${order.order_number || 'N/A'}</strong>
+                            <strong class="order_number text-button uppercase">${order.id || 'N/A'}</strong>
                         </div>
                         <div class="flex items-center gap-2">
                             <strong class="text-title">Order status:</strong>
@@ -367,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="flex items-center gap-2">
                             <strong class="text-title">Total:</strong>
-                            <strong class="text-button">₹${(order.total_amount || 0).toFixed(2)}</strong>
+                            <strong class="text-button">₹${(order.amount || 0).toFixed(2)}</strong>
                         </div>
                     </div>
                     <div class="list_prd px-5">${productsHtml}</div>
@@ -393,50 +401,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Function to filter orders, either client-side or by re-fetching from API
     async function filterOrdersByStatus(status) {
         document.querySelectorAll('.tab_order .menu-tab .tab-item').forEach(item => item.classList.remove('active'));
         const activeTab = document.querySelector(`.tab_order .menu-tab .tab-item[data-status="${status}"]`);
         if (activeTab) activeTab.classList.add('active');
 
-        // Move indicator
         const indicator = document.querySelector('.tab_order .menu-tab .indicator');
         if (indicator && activeTab) {
             indicator.style.width = activeTab.offsetWidth + 'px';
             indicator.style.left = activeTab.offsetLeft + 'px';
         }
 
-        const allOrderItems = document.querySelectorAll('.list_order .order_item');
-        if (allOrderItems.length > 0) {
-            allOrderItems.forEach(orderItem => {
-                if (status === 'all' || (orderItem.dataset.orderStatus && orderItem.dataset.orderStatus === status)) {
-                    orderItem.style.display = 'block';
-                } else {
-                    orderItem.style.display = 'none';
-                }
-            });
-        } else {
-            // If orders are fetched dynamically per filter, uncomment this
-            try {
-                const endpoint = status === 'all' ? '/api/orders' : `/api/orders?status=${status}`;
-                const filteredOrders = await callApi(endpoint);
-                renderOrderHistory(filteredOrders.orders);
-            } catch (error) {
-                console.error('Error filtering orders:', error);
-                // The `callApi` function already handles 401 and throws.
-                // For other errors, you might want a more specific message.
-                alert('Failed to load filtered orders.');
-                const listOrderContainer = document.querySelector('.list_order');
-                if (listOrderContainer) listOrderContainer.innerHTML = '<p class="p-4 text-center text-red-500">Error loading orders.</p>';
-            }
+        try {
+            // Your serverless function /api/orders now handles a `status` query parameter.
+            const endpoint = status === 'all' ? '/api/orders' : `/api/orders?status=${status}`;
+            const filteredOrdersResponse = await callApi(endpoint); // Assume your API can filter
+            renderOrderHistory(filteredOrdersResponse.orders);
+        } catch (error) {
+            console.error('Error filtering orders:', error);
+            alert('Failed to load filtered orders.');
+            const listOrderContainer = document.querySelector('.list_order');
+            if (listOrderContainer) listOrderContainer.innerHTML = '<p class="p-4 text-center text-red-500">Error loading orders.</p>';
         }
     }
 
     async function cancelOrder(orderId) {
         try {
-            const result = await callApi(`/api/orders/${orderId}/cancel`, 'PUT'); // Consistent endpoint convention
+            // Use the specific DELETE /api/orders/:id endpoint for cancellation or PUT for status update
+            const result = await callApi(`/api/orders/${orderId}/cancel`, 'PUT', { status: 'cancelled' }); // Assuming PUT to update status to cancelled
             alert(result.message || 'Order cancelled successfully!');
-            await loadAndRenderAllUserData(); // Re-fetch all data to refresh all relevant sections
-            // Re-apply current filter if any
+            await loadAndRenderAllUserData();
             const activeStatusTab = document.querySelector('.tab_order .menu-tab .tab-item.active');
             if (activeStatusTab) {
                 filterOrdersByStatus(activeStatusTab.dataset.status);
@@ -454,16 +449,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const billingAddress = addresses.billing || {};
-        const shippingAddress = addresses.shipping || {};
+        // Your serverless function does not currently provide '/api/user/addresses'.
+        // This function assumes a structure like: { billing: {}, shipping: {} }
+        // For now, it will load empty data or assume the data structure from `profileData.user`
+        // If your backend adds an address endpoint, this needs to be updated.
+        // For demonstration, using placeholder data or `user` object if it contains address fields
+        const billingAddress = addresses.billing || {}; // Placeholder if you add /api/user/addresses
+        const shippingAddress = addresses.shipping || {}; // Placeholder if you add /api/user/addresses
 
-        // Helper to safely set value
         const setValue = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.value = value || '';
         };
 
-        // Billing
+        // Billing - these fields likely don't exist in your `users` table directly
         setValue('billingFirstName', billingAddress.first_name);
         setValue('billingLastName', billingAddress.last_name);
         setValue('billingCompany', billingAddress.company);
@@ -475,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setValue('billingPhone', billingAddress.phone);
         setValue('billingEmail', billingAddress.email);
 
-        // Shipping
+        // Shipping - same as billing
         setValue('shippingFirstName', shippingAddress.first_name);
         setValue('shippingLastName', shippingAddress.last_name);
         setValue('shippingCompany', shippingAddress.company);
@@ -486,19 +485,26 @@ document.addEventListener('DOMContentLoaded', () => {
         setValue('shippingZip', shippingAddress.zip);
         setValue('shippingPhone', shippingAddress.phone);
         setValue('shippingEmail', shippingAddress.email);
+
+        // Placeholder for address data if your API doesn't have a dedicated /api/user/addresses
+        // If the backend `profile` endpoint provides address fields, use those here.
     }
 
     async function updateAddress(addressType, formData) {
-        try {
-            const result = await callApi(`/api/user/addresses/${addressType}`, 'PUT', formData);
-            alert(result.message || `${addressType} address updated successfully!`);
-            // Re-fetch and load all address data to ensure UI is consistent
-            const userAddresses = await callApi('/api/user/addresses');
-            loadAddressData(userAddresses.addresses);
-        } catch (error) {
-            console.error(`Update ${addressType} address error:`, error);
-            alert(error.message || `Failed to update ${addressType} address. Please try again.`);
-        }
+        // Your serverless function does not currently provide an endpoint for '/api/user/addresses/{type}'
+        // This function is a placeholder. If you implement such an endpoint, update this.
+        alert(`Updating ${addressType} address is not yet implemented on the backend.`);
+        console.warn(`Attempted to update ${addressType} address with data:`, formData);
+        // If you implement:
+        // try {
+        //     const result = await callApi(`/api/user/addresses/${addressType}`, 'PUT', formData);
+        //     alert(result.message || `${addressType} address updated successfully!`);
+        //     const userAddresses = await callApi('/api/user/addresses'); // Re-fetch
+        //     loadAddressData(userAddresses.addresses);
+        // } catch (error) {
+        //     console.error(`Update ${addressType} address error:`, error);
+        //     alert(error.message || `Failed to update ${addressType} address. Please try again.`);
+        // }
     }
 
     // --- 5. Settings (Profile Update & Password Change) Functions ---
@@ -507,10 +513,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('No user profile data provided.');
             return;
         }
+
+        // Update top-bar user info
         if (userDisplayName) userDisplayName.textContent = `${user.first_name || ''} ${user.last_name || ''}`.trim();
         if (userDisplayEmail) userDisplayEmail.textContent = user.email || '';
 
-        const avatarSrc = user.avatar_url || '/assets/images/user-avatar.png';
+        // Update avatar images
+        const avatarSrc = user.avatar_url || '/assets/images/user-avatar.png'; // Assuming `avatar_url` is part of your user object
         if (userAvatarImg) userAvatarImg.src = avatarSrc;
         if (uploadImgPreview) uploadImgPreview.src = avatarSrc;
 
@@ -520,20 +529,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) el.value = value || '';
         };
 
+        // Your serverless function's '/api/user/profile' GET currently returns `name` as a single field
+        // and you split it to first_name/last_name. Make sure these are reflected accurately.
         setValue('firstName', user.first_name);
         setValue('lastName', user.last_name);
-        setValue('phoneNumber', user.phone_number);
+        setValue('phoneNumber', user.phone_number); // This field is not currently in your backend user query
         setValue('email', user.email);
-        setValue('gender', user.gender || 'default');
-        setValue('birth', user.dob ? new Date(user.dob).toISOString().split('T')[0] : '');
+        setValue('gender', user.gender || 'default'); // This field is not currently in your backend user query
+        setValue('birth', user.dob ? new Date(user.dob).toISOString().split('T')[0] : ''); // This field is not currently in your backend user query
     }
 
     async function updateProfile(formData) {
         try {
+            // Call the PUT /api/user/profile endpoint from your serverless function
             const result = await callApi('/api/user/profile', 'PUT', formData);
             alert(result.message || 'Profile updated successfully!');
             // Re-fetch and display updated profile to refresh the UI
-            const profileData = await callApi('/api/user/profile');
+            const profileData = await callApi('/api/user/profile'); // This call should get updated data
             loadProfileData(profileData.user);
         } catch (error) {
             console.error('Update profile error:', error);
@@ -546,36 +558,22 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('avatar', file);
 
         try {
-            const currentToken = localStorage.getItem('userToken');
-            if (!currentToken) {
-                throw new Error('No authentication token found for avatar upload.');
-            }
+            // Your serverless function does not currently have a /api/user/avatar endpoint.
+            // This will throw an error or hit a default path on the server.
+            // If you implement this, ensure the serverless function handles `multipart/form-data`.
+            // For now, this will alert that it's not implemented.
 
-            const response = await fetch('/api/user/avatar', {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${currentToken}`
-                },
-                body: formData
-            });
+            alert("Avatar upload is not yet implemented on the backend.");
+            console.warn("Attempted avatar upload. Backend endpoint /api/user/avatar is not implemented.");
 
-            const result = await response.json();
+            // Placeholder for if you implement it:
+            // const result = await callApi('/api/user/avatar', 'PUT', formData, true); // `true` for isFormData
+            // alert(result.message || 'Avatar updated successfully!');
+            // if (result.avatar_url) {
+            //     if (userAvatarImg) userAvatarImg.src = result.avatar_url;
+            //     if (uploadImgPreview) uploadImgPreview.src = result.avatar_url;
+            // }
 
-            if (!response.ok) {
-                if (response.status === 401) {
-                    alert('Session expired or invalid. Please log in again.');
-                    localStorage.removeItem('userToken');
-                    window.location.href = '/login.html';
-                    return;
-                }
-                throw new Error(result.message || `Avatar upload failed with status ${response.status}`);
-            }
-
-            alert(result.message || 'Avatar updated successfully!');
-            if (result.avatar_url) {
-                if (userAvatarImg) userAvatarImg.src = result.avatar_url;
-                if (uploadImgPreview) uploadImgPreview.src = result.avatar_url;
-            }
         } catch (error) {
             console.error('Avatar upload error:', error);
             alert(error.message || 'Failed to upload avatar. Please try again.');
@@ -591,6 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('New password must be at least 6 characters long.');
             }
 
+            // Call the PUT /api/user/password endpoint from your serverless function
             const result = await callApi('/api/user/password', 'PUT', {
                 current_password: formData.current_password,
                 new_password: formData.new_password
@@ -630,9 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             filterOrdersByStatus('all'); // Always show 'all' orders when entering the orders tab
         } else if (tabName === 'dashboard') {
-            // Re-render dashboard overview if it's the active tab and data might have changed
-            // This is handled by loadAndRenderAllUserData initially, but good to have a refresh option
-            // loadDashboardContent(); // This would re-fetch and render just the dashboard section
+            loadDashboardContent(); // Re-render dashboard overview if it's the active tab
         }
     }
 
@@ -640,30 +637,48 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadAndRenderAllUserData() {
         try {
             console.log('Loading all user data...');
-            // Fetch and display user profile data
-            const profileData = await callApi('/api/user/profile');
-            loadProfileData(profileData.user);
 
-            // Fetch and display dashboard summary
-            const dashboardSummary = await callApi('/api/user/dashboard-summary');
-            renderDashboardOverview(dashboardSummary);
+            // Fetch and display user profile data (from /api/user/profile)
+            const profileResponse = await callApi('/api/user/profile');
+            if (profileResponse.user) {
+                loadProfileData(profileResponse.user);
+            } else {
+                console.warn('Profile data missing from /api/user/profile response.');
+            }
 
-            // Fetch and display recent orders for dashboard (if recent_order div exists)
-            const recentOrders = await callApi('/api/orders/recent');
-            renderRecentOrders(recentOrders.orders);
+            // Fetch and display dashboard summary (from /api/orders/stats)
+            const dashboardSummaryResponse = await callApi('/api/orders/stats');
+            if (dashboardSummaryResponse.success && dashboardSummaryResponse.data) {
+                // Map API response to expected renderDashboardOverview format
+                const mappedSummary = {
+                    awaitingPickup: dashboardSummaryResponse.data.totalOrders - dashboardSummaryResponse.data.completedOrders, // Example calculation
+                    cancelledOrders: 0, // Your stats API doesn't provide this directly
+                    totalOrders: dashboardSummaryResponse.data.totalOrders
+                };
+                renderDashboardOverview(mappedSummary);
+            } else {
+                console.warn('Dashboard summary data missing from /api/orders/stats response.');
+            }
 
-            // Fetch and display all orders for order history tab
-            const allOrders = await callApi('/api/orders');
-            renderOrderHistory(allOrders.orders);
+            // Fetch and display recent orders for dashboard (from /api/orders?limit=5)
+            // Note: Your /api/orders doesn't have a limit parameter, so we fetch all and slice
+            const allOrdersResponse = await callApi('/api/orders');
+            if (allOrdersResponse.success && allOrdersResponse.orders) {
+                renderRecentOrders(allOrdersResponse.orders);
+                // Also use these orders for the full order history tab
+                renderOrderHistory(allOrdersResponse.orders);
+            } else {
+                console.warn('All orders data missing from /api/orders response.');
+            }
 
-            // Fetch and display user addresses
-            const userAddresses = await callApi('/api/user/addresses');
-            loadAddressData(userAddresses.addresses);
+            // Fetch and display user addresses (currently not available in your backend)
+            // For now, load empty data or assume default from profile if it extends to addresses
+            loadAddressData({}); // Pass empty object as placeholder
+
             console.log('All user data loaded successfully.');
 
         } catch (error) {
             console.error('Error loading all user data:', error);
-            // `callApi` already handles 401 redirects. This catches other errors.
             if (error.message !== 'Unauthorized') {
                 alert('Failed to load user data. Please refresh the page.');
             }
@@ -716,7 +731,6 @@ document.addEventListener('DOMContentLoaded', () => {
         profileSettingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // Password fields
             const currentPasswordEl = document.getElementById('password');
             const newPasswordEl = document.getElementById('newPassword');
             const confirmPasswordEl = document.getElementById('confirmPassword');
@@ -725,13 +739,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const newPassword = newPasswordEl ? newPasswordEl.value : '';
             const confirmPassword = confirmPasswordEl ? confirmPasswordEl.value : '';
 
-            // Profile fields
             const firstName = document.getElementById('firstName').value;
             const lastName = document.getElementById('lastName').value;
-            const phoneNumber = document.getElementById('phoneNumber').value;
+            const phoneNumber = document.getElementById('phoneNumber').value; // Not in backend users table
             const email = document.getElementById('email').value;
-            const gender = document.getElementById('gender').value;
-            const dob = document.getElementById('birth').value;
+            const gender = document.getElementById('gender').value;       // Not in backend users table
+            const dob = document.getElementById('birth').value;          // Not in backend users table
 
             // Determine if it's a password change or profile update
             if (newPassword || currentPassword || confirmPassword) {
@@ -741,13 +754,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     confirm_new_password: confirmPassword
                 });
             } else {
+                // The backend /api/user/profile PUT expects `name` as a single field, not first_name/last_name
+                // For now, concatenate. If your backend is updated to accept first_name/last_name, adjust here.
+                const fullName = `${firstName} ${lastName}`.trim();
+
                 await updateProfile({
-                    first_name: firstName,
-                    last_name: lastName,
-                    phone_number: phoneNumber,
+                    name: fullName, // Backend expects 'name'
                     email: email,
-                    gender: gender === 'default' ? null : gender,
-                    dob: dob || null
+                    // These fields are not currently handled by your backend /api/user/profile PUT
+                    // phone_number: phoneNumber,
+                    // gender: gender === 'default' ? null : gender,
+                    // dob: dob || null
                 });
             }
         });
@@ -762,10 +779,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     if (uploadImgPreview) uploadImgPreview.src = event.target.result;
-                    if (userAvatarImg) userAvatarImg.src = event.target.result; // Update main avatar too
+                    if (userAvatarImg) userAvatarImg.src = event.target.result;
                 };
                 reader.readAsDataURL(file);
-                await updateProfileAvatar(file);
+                await updateProfileAvatar(file); // This will currently show an alert as backend is not ready
             }
         });
     }
@@ -784,7 +801,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Using consistent `id$` selectors for robustness
             const formData = {
                 first_name: formElement.querySelector('[id$="FirstName"]').value,
                 last_name: formElement.querySelector('[id$="LastName"]').value,
@@ -798,9 +814,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 email: formElement.querySelector('[id$="Email"]').value,
             };
 
-            await updateAddress(addressType, formData);
+            await updateAddress(addressType, formData); // This will currently show an alert as backend is not ready
         });
     });
+
+    // Handle logout button click
+    if (logoutBtnAnchor) {
+        logoutBtnAnchor.addEventListener('click', handleLogout); // Already handled by checkDashboardAccess, but good to ensure
+    }
 
     // Initial load logic based on path
     if (window.location.pathname.startsWith('/dashboard')) {
