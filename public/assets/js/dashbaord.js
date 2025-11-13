@@ -1,32 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Selectors
+    const logoutBtnAnchor = document.querySelector('.menu-tab a.logout-btn');
     const userDisplayName = document.querySelector('.user-infor .name');
     const userDisplayEmail = document.querySelector('.user-infor .mail');
-    const userAvatarImg = document.querySelector('.user-infor .avatar img');
-    const uploadImgPreview = document.querySelector('.upload_image .upload_img'); // Corrected selector for avatar preview in settings
-    const logoutBtnAnchor = document.querySelector('.menu-tab a strong.heading6'); // Assuming 'Logout' is the strong tag
+    const userAvatarImg = document.querySelector('.user-infor .avatar img'); // New selector for avatar in user-infor
+    const uploadImgPreview = document.getElementById('uploadImgPreview'); // Selector for avatar preview in settings
+    const dashboardContentDiv = document.getElementById('dashboard-content');
 
-    // Dashboard Overview elements
-    const awaitingPickupEl = document.querySelector('.overview-item:nth-child(1) h5');
-    const cancelledOrdersEl = document.querySelector('.overview-item:nth-child(2) h5');
-    const totalOrdersEl = document.querySelector('.overview-item:nth-child(3) h5');
-    const recentOrdersTableBody = document.querySelector('.recent_order .list table tbody');
-
-    // Order History elements
-    const listOrderContainer = document.querySelector('.list_order');
-    const orderStatusTabs = document.querySelectorAll('.tab_order .menu-tab .tab-item');
-
-    // Address forms and toggles
-    const tabAddressContainer = document.querySelector('.tab_address');
-    const addressTabButtons = document.querySelectorAll('.tab_address .tab_btn');
-    const billingAddressForm = document.querySelector('.form_address[data-item="billing"]');
-    const shippingAddressForm = document.querySelector('.form_address[data-item="shipping"]');
-
-    // Settings (Profile & Password) forms
-    const profileSettingsForm = document.querySelector('.filter-item[data-item="setting"] form');
-    const uploadImageInput = document.getElementById('uploadImage');
-
-    // API Utility function (as provided)
+    // --- Utility function for API calls ---
     async function callApi(endpoint, method = 'GET', body = null, isFormData = false) {
         const currentToken = localStorage.getItem('userToken');
         const headers = {};
@@ -37,39 +18,106 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const config = {
             method,
-            headers: isFormData ? {} : { 'Content-Type': 'application/json', ...headers },
+            headers: isFormData ? {} : { 'Content-Type': 'application/json', ...headers }, // FormData sets its own Content-Type
             body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
         };
 
         if (isFormData) {
-            if (currentToken) {
+             // For FormData, explicitly set Authorization header, but let browser set Content-Type
+             if (currentToken) {
                 config.headers['Authorization'] = `Bearer ${currentToken}`;
-            }
+             }
         }
+
 
         try {
             const response = await fetch(endpoint, config);
 
+            // Centralized 401 handling for ALL API calls
             if (response.status === 401) {
                 console.warn('Authentication failed for API call. Redirecting to login.');
                 alert('Session expired or invalid. Please log in again.');
                 localStorage.removeItem('userToken');
                 window.location.href = '/login.html';
-                return Promise.reject(new Error('Unauthorized'));
+                return Promise.reject(new Error('Unauthorized')); // Reject the promise
             }
 
+            // Attempt to parse JSON only if the response is not 204 No Content
             const data = (response.status !== 204) ? await response.json().catch(() => {
                 console.error(`Failed to parse JSON for ${endpoint}. Status: ${response.status}`);
+                // If JSON parsing fails, but status is OK, might be an empty successful response
                 return { message: `Server responded with status ${response.status}`, success: response.ok };
-            }) : { message: 'Success', status: 204, success: true };
+            }) : { message: 'Success', status: 204, success: true }; // Handle 204 for successful deletions/updates without content
 
             if (!response.ok) {
+                // If data.message is present, use it; otherwise, provide a generic error
                 throw new Error(data.message || `API call to ${endpoint} failed with status ${response.status}`);
             }
             return data;
         } catch (error) {
             console.error(`Network or fetch error for ${endpoint}:`, error);
             throw error;
+        }
+    }
+
+    // --- Function to load and render dashboard content from API ---
+    // This function will fetch comprehensive user data to populate all dashboard sections
+    async function loadDashboardContent() {
+        if (!dashboardContentDiv) {
+            console.warn('Dashboard content div not found. Skipping content load.');
+            return;
+        }
+
+        dashboardContentDiv.innerHTML = '<p>Loading your dashboard data...</p>';
+
+        try {
+            // Your serverless function for '/api/dashboard-content' returns:
+            // { message, userData, dashboardStats, recentActivity }
+            const dashboardData = await callApi('/api/dashboard-content', 'GET');
+
+            if (dashboardData && dashboardData.userData) {
+                // Populate user-info section (if present)
+                if (userDisplayName) userDisplayName.textContent = `${dashboardData.userData.first_name || ''} ${dashboardData.userData.last_name || ''}`.trim();
+                if (userDisplayEmail) userDisplayEmail.textContent = dashboardData.userData.email || '';
+                if (userAvatarImg) userAvatarImg.src = dashboardData.userData.avatar_url || '/assets/images/user-avatar.png';
+                if (uploadImgPreview) uploadImgPreview.src = dashboardData.userData.avatar_url || '/assets/images/user-avatar.png';
+
+
+                // Populate the main dashboard content area
+                dashboardContentDiv.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-4">${dashboardData.message || 'Welcome to your Dashboard!'}</h2>
+                    <p class="text-lg text-secondary mb-6">Hello, ${dashboardData.userData.first_name || 'User'}!</p>
+
+                    <h3 class="text-xl font-semibold mb-3">Your Dashboard Overview:</h3>
+                    <div class="overview-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <div class="overview-item p-6 bg-white rounded-lg shadow-md flex flex-col items-center">
+                            <h4 class="text-gray-600 text-sm uppercase">Awaiting Pickup</h4>
+                            <h5 class="text-3xl font-bold text-indigo-600 mt-2">${dashboardData.dashboardStats?.awaitingPickup || 0}</h5>
+                        </div>
+                        <div class="overview-item p-6 bg-white rounded-lg shadow-md flex flex-col items-center">
+                            <h4 class="text-gray-600 text-sm uppercase">Cancelled Orders</h4>
+                            <h5 class="text-3xl font-bold text-red-600 mt-2">${dashboardData.dashboardStats?.cancelledOrders || 0}</h5>
+                        </div>
+                        <div class="overview-item p-6 bg-white rounded-lg shadow-md flex flex-col items-center">
+                            <h4 class="text-gray-600 text-sm uppercase">Total Orders</h4>
+                            <h5 class="text-3xl font-bold text-green-600 mt-2">${dashboardData.dashboardStats?.totalOrders || 0}</h5>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-semibold mb-3">Recent Activity:</h3>
+                    <ul class="list-disc list-inside bg-white p-6 rounded-lg shadow-md">
+                        ${dashboardData.recentActivity && dashboardData.recentActivity.length > 0 ?
+                            dashboardData.recentActivity.map(item => `<li class="py-1 border-b last:border-b-0 border-gray-100">${item}</li>`).join('') :
+                            '<li class="text-secondary">No recent activity.</li>'
+                        }
+                    </ul>
+                `;
+            } else {
+                dashboardContentDiv.innerHTML = `<p class="error text-red-500">Failed to retrieve dashboard data. No user data found.</p>`;
+            }
+        } catch (error) {
+            console.error('Error loading dashboard content:', error);
+            dashboardContentDiv.innerHTML = `<p class="error text-red-500">Failed to load dashboard. ${error.message}</p>`;
         }
     }
 
@@ -85,26 +133,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Core Dashboard Access Logic ---
     async function checkDashboardAccess() {
         if (!window.location.pathname.startsWith('/dashboard')) {
-            return;
+            return; // Only run this logic on the dashboard page
         }
 
         const currentToken = localStorage.getItem('userToken');
 
         if (currentToken) {
             try {
-                const authData = await callApi('/api/auth/check');
+                // Call the /api/auth/check endpoint from your serverless function
+                const authData = await callApi('/api/auth/check'); // This should return { message: "Authorized ✅", user: { ... } }
                 if (authData.message === 'Authorized ✅') {
                     console.log('Token validated. User is authenticated.');
                     if (logoutBtnAnchor) {
-                        // Ensure the logout link correctly targets 'logout.html' for visual, but use JS for actual logout
-                        const logoutLink = logoutBtnAnchor.closest('a');
-                        if (logoutLink) {
-                            logoutLink.href = '#!'; // Prevent default navigation
-                            logoutLink.removeEventListener('click', handleLogout);
-                            logoutLink.addEventListener('click', handleLogout);
-                        }
+                        logoutBtnAnchor.textContent = 'Logout';
+                        logoutBtnAnchor.removeEventListener('click', handleLogout); // Prevent duplicate listeners
+                        logoutBtnAnchor.addEventListener('click', handleLogout);
                     }
-                    await loadAndRenderAllUserData();
+                    await loadAndRenderAllUserData(); // Load all specific dashboard data
                     switchTab('dashboard'); // Ensure dashboard overview is the default active tab
                     return;
                 } else {
@@ -115,7 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
             } catch (error) {
-                if (error.message !== 'Unauthorized') {
+                // `callApi`'s 401 handler already redirects. This catches other errors.
+                if (error.message !== 'Unauthorized') { // Avoid double alerts/redirects
                     console.error('Error during initial auth check for dashboard:', error);
                     localStorage.removeItem('userToken');
                     alert('An error occurred during authentication. Please log in again.');
@@ -140,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = loginForm.elements.password.value;
 
             try {
+                // Call the /api/auth/login endpoint from your serverless function
                 const response = await callApi('/api/auth/login', 'POST', { email, password });
                 if (response && response.token) {
                     localStorage.setItem('userToken', response.token);
@@ -170,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
+                // Call the /api/auth/register endpoint from your serverless function
                 const response = await callApi('/api/auth/register', 'POST', { name, email, password });
                 alert(response.message);
                 if (response.message.includes("successful")) {
@@ -204,26 +252,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- Helper for status colors ---
-    function getStatusColor(status) {
-        switch (status ? status.toLowerCase() : '') {
-            case 'pending': return 'yellow';
-            case 'processing': return 'orange';
-            case 'shipped': return 'blue';
-            case 'delivery': return 'purple';
-            case 'completed': return 'success';
-            case 'cancelled': return 'red';
-            case 'returned': return 'red';
-            default: return 'gray';
-        }
-    }
-
     // --- 2. Dashboard Overview Functions ---
     function renderDashboardOverview(data) {
         if (!data) {
             console.warn('No dashboard overview data provided.');
             return;
         }
+        const awaitingPickupEl = document.querySelector('.overview-item:nth-child(1) h5');
+        const cancelledOrdersEl = document.querySelector('.overview-item:nth-child(2) h5');
+        const totalOrdersEl = document.querySelector('.overview-item:nth-child(3) h5');
 
         if (awaitingPickupEl) awaitingPickupEl.textContent = data.awaitingPickup || 0;
         if (cancelledOrdersEl) cancelledOrdersEl.textContent = data.cancelledOrders || 0;
@@ -231,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderRecentOrders(orders) {
+        const recentOrdersTableBody = document.querySelector('.recent_order .list table tbody');
         if (!recentOrdersTableBody) {
             console.warn('Recent orders table body not found.');
             return;
@@ -238,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recentOrdersTableBody.innerHTML = ''; // Clear existing
 
         if (orders && orders.length > 0) {
-            orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Use created_at for sorting
             orders.slice(0, 5).forEach(order => {
                 const productsHtml = order.products && order.products.length > 0 ?
                     order.products.map(product => `
@@ -271,8 +309,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function getStatusColor(status) {
+        switch (status ? status.toLowerCase() : '') {
+            case 'pending': return 'yellow';
+            case 'processing': return 'orange';
+            case 'shipped': return 'blue';
+            case 'delivery': return 'purple';
+            case 'completed': return 'success';
+            case 'cancelled': return 'red';
+            case 'returned': return 'red';
+            default: return 'gray';
+        }
+    }
+
     // --- 3. Order History Functions ---
     async function renderOrderHistory(orders) {
+        const listOrderContainer = document.querySelector('.list_order');
         if (!listOrderContainer) {
             console.warn('Order list container not found.');
             return;
@@ -338,6 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             listOrderContainer.insertAdjacentHTML('beforeend', orderItemHTML);
         });
 
+        // Attach event listeners to cancel buttons
         listOrderContainer.querySelectorAll('.btn_cancel_order').forEach(button => {
             button.addEventListener('click', async (e) => {
                 const orderId = e.target.dataset.orderId;
@@ -348,8 +401,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Function to filter orders, either client-side or by re-fetching from API
     async function filterOrdersByStatus(status) {
-        orderStatusTabs.forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.tab_order .menu-tab .tab-item').forEach(item => item.classList.remove('active'));
         const activeTab = document.querySelector(`.tab_order .menu-tab .tab-item[data-status="${status}"]`);
         if (activeTab) activeTab.classList.add('active');
 
@@ -360,26 +414,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const endpoint = status === 'all' ? '/api/user/profile' : `/api/user/profile?status=${status}`; // Assuming API handles status filter on profile
-            const profileData = await callApi(endpoint);
-            const filteredOrders = status === 'all' ? profileData.orders : profileData.orders.filter(order => order.status.toLowerCase() === status);
-            renderOrderHistory(filteredOrders);
+            // Your serverless function /api/orders now handles a `status` query parameter.
+            const endpoint = status === 'all' ? '/api/orders' : `/api/orders?status=${status}`;
+            const filteredOrdersResponse = await callApi(endpoint); // Assume your API can filter
+            renderOrderHistory(filteredOrdersResponse.orders);
         } catch (error) {
             console.error('Error filtering orders:', error);
             alert('Failed to load filtered orders.');
+            const listOrderContainer = document.querySelector('.list_order');
             if (listOrderContainer) listOrderContainer.innerHTML = '<p class="p-4 text-center text-red-500">Error loading orders.</p>';
         }
     }
 
     async function cancelOrder(orderId) {
         try {
-            // Assuming a PUT /api/orders/:id/cancel endpoint exists to update status
-            const result = await callApi(`/api/orders/${orderId}/cancel`, 'PUT', { status: 'cancelled' });
+            // Use the specific DELETE /api/orders/:id endpoint for cancellation or PUT for status update
+            const result = await callApi(`/api/orders/${orderId}/cancel`, 'PUT', { status: 'cancelled' }); // Assuming PUT to update status to cancelled
             alert(result.message || 'Order cancelled successfully!');
-            await loadAndRenderAllUserData(); // Re-load all data
+            await loadAndRenderAllUserData();
             const activeStatusTab = document.querySelector('.tab_order .menu-tab .tab-item.active');
             if (activeStatusTab) {
-                filterOrdersByStatus(activeStatusTab.textContent.toLowerCase()); // Filter again based on active tab
+                filterOrdersByStatus(activeStatusTab.dataset.status);
             }
         } catch (error) {
             console.error('Cancel order error:', error);
@@ -389,58 +444,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 4. My Address Functions ---
     function loadAddressData(addresses) {
-        // Your current backend only provides user profile (name, email).
-        // It does not have dedicated address fields or a /api/user/addresses endpoint.
-        // This function will set default empty values or rely on `profileData.user` if you extend it
-        // For now, it sets empty strings or placeholder values.
+        if (!addresses) {
+            console.warn('No address data provided.');
+            return;
+        }
+
+        // Your serverless function does not currently provide '/api/user/addresses'.
+        // This function assumes a structure like: { billing: {}, shipping: {} }
+        // For now, it will load empty data or assume the data structure from `profileData.user`
+        // If your backend adds an address endpoint, this needs to be updated.
+        // For demonstration, using placeholder data or `user` object if it contains address fields
+        const billingAddress = addresses.billing || {}; // Placeholder if you add /api/user/addresses
+        const shippingAddress = addresses.shipping || {}; // Placeholder if you add /api/user/addresses
 
         const setValue = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.value = value || '';
         };
 
-        // These IDs must match your HTML structure exactly
-        setValue('billingFirstName', addresses.billing?.first_name);
-        setValue('billingLastName', addresses.billing?.last_name);
-        setValue('billingCompany', addresses.billing?.company);
-        setValue('billingCountry', addresses.billing?.country);
-        setValue('billingStreet', addresses.billing?.street);
-        setValue('billingCity', addresses.billing?.city);
-        setValue('billingState', addresses.billing?.state);
-        setValue('billingZip', addresses.billing?.zip);
-        setValue('billingPhone', addresses.billing?.phone);
-        setValue('billingEmail', addresses.billing?.email);
+        // Billing - these fields likely don't exist in your `users` table directly
+        setValue('billingFirstName', billingAddress.first_name);
+        setValue('billingLastName', billingAddress.last_name);
+        setValue('billingCompany', billingAddress.company);
+        setValue('billingCountry', billingAddress.country);
+        setValue('billingStreet', billingAddress.street);
+        setValue('billingCity', billingAddress.city);
+        setValue('billingState', billingAddress.state);
+        setValue('billingZip', billingAddress.zip);
+        setValue('billingPhone', billingAddress.phone);
+        setValue('billingEmail', billingAddress.email);
 
-        setValue('shippingFirstName', addresses.shipping?.first_name);
-        setValue('shippingLastName', addresses.shipping?.last_name);
-        setValue('shippingCompany', addresses.shipping?.company);
-        setValue('shippingCountry', addresses.shipping?.country);
-        setValue('shippingStreet', addresses.shipping?.street);
-        setValue('shippingCity', addresses.shipping?.city);
-        setValue('shippingState', addresses.shipping?.state);
-        setValue('shippingZip', addresses.shipping?.zip);
-        setValue('shippingPhone', addresses.shipping?.phone);
-        setValue('shippingEmail', addresses.shipping?.email);
+        // Shipping - same as billing
+        setValue('shippingFirstName', shippingAddress.first_name);
+        setValue('shippingLastName', shippingAddress.last_name);
+        setValue('shippingCompany', shippingAddress.company);
+        setValue('shippingCountry', shippingAddress.country);
+        setValue('shippingStreet', shippingAddress.street);
+        setValue('shippingCity', shippingAddress.city);
+        setValue('shippingState', shippingAddress.state);
+        setValue('shippingZip', shippingAddress.zip);
+        setValue('shippingPhone', shippingAddress.phone);
+        setValue('shippingEmail', shippingAddress.email);
+
+        // Placeholder for address data if your API doesn't have a dedicated /api/user/addresses
+        // If the backend `profile` endpoint provides address fields, use those here.
     }
 
-
     async function updateAddress(addressType, formData) {
-        // As per the original serverless function, there's no /api/user/addresses endpoint.
-        // This function will currently show an alert indicating it's not implemented.
+        // Your serverless function does not currently provide an endpoint for '/api/user/addresses/{type}'
+        // This function is a placeholder. If you implement such an endpoint, update this.
         alert(`Updating ${addressType} address is not yet implemented on the backend.`);
         console.warn(`Attempted to update ${addressType} address with data:`, formData);
-        // If you implement a PUT /api/user/addresses/{type} endpoint, uncomment and adapt the following:
-        /*
-        try {
-            const result = await callApi(`/api/user/addresses/${addressType}`, 'PUT', formData);
-            alert(result.message || `${addressType} address updated successfully!`);
-            // Re-fetch all user data to refresh addresses
-            await loadAndRenderAllUserData();
-        } catch (error) {
-            console.error(`Update ${addressType} address error:`, error);
-            alert(error.message || `Failed to update ${addressType} address. Please try again.`);
-        }
-        */
+        // If you implement:
+        // try {
+        //     const result = await callApi(`/api/user/addresses/${addressType}`, 'PUT', formData);
+        //     alert(result.message || `${addressType} address updated successfully!`);
+        //     const userAddresses = await callApi('/api/user/addresses'); // Re-fetch
+        //     loadAddressData(userAddresses.addresses);
+        // } catch (error) {
+        //     console.error(`Update ${addressType} address error:`, error);
+        //     alert(error.message || `Failed to update ${addressType} address. Please try again.`);
+        // }
     }
 
     // --- 5. Settings (Profile Update & Password Change) Functions ---
@@ -450,36 +514,38 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Update top-bar user info
         if (userDisplayName) userDisplayName.textContent = `${user.first_name || ''} ${user.last_name || ''}`.trim();
         if (userDisplayEmail) userDisplayEmail.textContent = user.email || '';
 
-        const avatarSrc = user.avatar_url || '/assets/images/user-avatar.png';
+        // Update avatar images
+        const avatarSrc = user.avatar_url || '/assets/images/user-avatar.png'; // Assuming `avatar_url` is part of your user object
         if (userAvatarImg) userAvatarImg.src = avatarSrc;
         if (uploadImgPreview) uploadImgPreview.src = avatarSrc;
 
+        // Profile Update fields
         const setValue = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.value = value || '';
         };
 
+        // Your serverless function's '/api/user/profile' GET currently returns `name` as a single field
+        // and you split it to first_name/last_name. Make sure these are reflected accurately.
         setValue('firstName', user.first_name);
         setValue('lastName', user.last_name);
-        setValue('phoneNumber', user.phone_number);
+        setValue('phoneNumber', user.phone_number); // This field is not currently in your backend user query
         setValue('email', user.email);
-        const genderSelect = document.getElementById('gender');
-        if (genderSelect && user.gender) {
-            genderSelect.value = user.gender;
-        } else if (genderSelect) {
-            genderSelect.value = 'default';
-        }
-        setValue('birth', user.dob ? new Date(user.dob).toISOString().split('T')[0] : '');
+        setValue('gender', user.gender || 'default'); // This field is not currently in your backend user query
+        setValue('birth', user.dob ? new Date(user.dob).toISOString().split('T')[0] : ''); // This field is not currently in your backend user query
     }
 
     async function updateProfile(formData) {
         try {
+            // Call the PUT /api/user/profile endpoint from your serverless function
             const result = await callApi('/api/user/profile', 'PUT', formData);
             alert(result.message || 'Profile updated successfully!');
-            const profileData = await callApi('/api/user/profile');
+            // Re-fetch and display updated profile to refresh the UI
+            const profileData = await callApi('/api/user/profile'); // This call should get updated data
             loadProfileData(profileData.user);
         } catch (error) {
             console.error('Update profile error:', error);
@@ -488,27 +554,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function updateProfileAvatar(file) {
-        // As per the provided serverless function, there is no /api/user/avatar endpoint.
-        // This will show an alert that it's not implemented.
-        alert("Avatar upload is not yet implemented on the backend.");
-        console.warn("Attempted avatar upload. Backend endpoint /api/user/avatar is not implemented.");
-
-        // If you implement a PUT /api/user/avatar endpoint:
-        /*
         const formData = new FormData();
         formData.append('avatar', file);
+
         try {
-            const result = await callApi('/api/user/avatar', 'PUT', formData, true); // true for isFormData
-            alert(result.message || 'Avatar updated successfully!');
-            if (result.avatar_url) {
-                if (userAvatarImg) userAvatarImg.src = result.avatar_url;
-                if (uploadImgPreview) uploadImgPreview.src = result.avatar_url;
-            }
+            // Your serverless function does not currently have a /api/user/avatar endpoint.
+            // This will throw an error or hit a default path on the server.
+            // If you implement this, ensure the serverless function handles `multipart/form-data`.
+            // For now, this will alert that it's not implemented.
+
+            alert("Avatar upload is not yet implemented on the backend.");
+            console.warn("Attempted avatar upload. Backend endpoint /api/user/avatar is not implemented.");
+
+            // Placeholder for if you implement it:
+            // const result = await callApi('/api/user/avatar', 'PUT', formData, true); // `true` for isFormData
+            // alert(result.message || 'Avatar updated successfully!');
+            // if (result.avatar_url) {
+            //     if (userAvatarImg) userAvatarImg.src = result.avatar_url;
+            //     if (uploadImgPreview) uploadImgPreview.src = result.avatar_url;
+            // }
+
         } catch (error) {
             console.error('Avatar upload error:', error);
             alert(error.message || 'Failed to upload avatar. Please try again.');
         }
-        */
     }
 
     async function changePassword(formData) {
@@ -520,11 +589,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('New password must be at least 6 characters long.');
             }
 
+            // Call the PUT /api/user/password endpoint from your serverless function
             const result = await callApi('/api/user/password', 'PUT', {
                 current_password: formData.current_password,
                 new_password: formData.new_password
             });
             alert(result.message || 'Password changed successfully!');
+            // Clear password fields
             document.getElementById('password').value = '';
             document.getElementById('newPassword').value = '';
             document.getElementById('confirmPassword').value = '';
@@ -536,26 +607,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 6. Navigation and Tab Switching ---
     function switchTab(tabName) {
+        // Update menu tab active state
         document.querySelectorAll('.menu-tab .category-item').forEach(item => item.classList.remove('active'));
         const activeMenuItem = document.querySelector(`.menu-tab .category-item[data-item="${tabName}"]`);
         if (activeMenuItem) activeMenuItem.classList.add('active');
 
+        // Show/hide content blocks
         document.querySelectorAll('.list-filter .filter-item').forEach(item => item.classList.remove('active'));
         const activeContentBlock = document.querySelector(`.list-filter .filter-item[data-item="${tabName}"]`);
         if (activeContentBlock) activeContentBlock.classList.add('active');
 
+        // Special handling for order history sub-tabs
         if (tabName === 'orders') {
             const orderTabIndicator = document.querySelector('.tab_order .menu-tab .indicator');
             const firstOrderTabItem = document.querySelector('.tab_order .menu-tab .tab-item[data-status="all"]');
             if (orderTabIndicator && firstOrderTabItem) {
                 orderTabIndicator.style.width = firstOrderTabItem.offsetWidth + 'px';
                 orderTabIndicator.style.left = firstOrderTabItem.offsetLeft + 'px';
-                orderStatusTabs.forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab_order .menu-tab .tab-item').forEach(btn => btn.classList.remove('active'));
                 firstOrderTabItem.classList.add('active');
             }
-            filterOrdersByStatus('all');
+            filterOrdersByStatus('all'); // Always show 'all' orders when entering the orders tab
         } else if (tabName === 'dashboard') {
-            loadDashboardContent();
+            loadDashboardContent(); // Re-render dashboard overview if it's the active tab
         }
     }
 
@@ -568,19 +642,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const profileResponse = await callApi('/api/user/profile');
             if (profileResponse.user) {
                 loadProfileData(profileResponse.user);
-
-                // Populate user-info section in the sidebar
-                if (userDisplayName) userDisplayName.textContent = `${profileResponse.user.first_name || ''} ${profileResponse.user.last_name || ''}`.trim();
-                if (userDisplayEmail) userDisplayEmail.textContent = profileResponse.user.email || '';
-                if (userAvatarImg) userAvatarImg.src = profileResponse.user.avatar_url || '/assets/images/user-avatar.png';
-                if (uploadImgPreview) uploadImgPreview.src = profileResponse.user.avatar_url || '/assets/images/user-avatar.png';
-
-
-                // Load orders for recent orders and full order history
-                if (profileResponse.orders) {
-                    renderRecentOrders(profileResponse.orders);
-                    renderOrderHistory(profileResponse.orders);
-                }
             } else {
                 console.warn('Profile data missing from /api/user/profile response.');
             }
@@ -588,8 +649,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Fetch and display dashboard summary (from /api/orders/stats)
             const dashboardSummaryResponse = await callApi('/api/orders/stats');
             if (dashboardSummaryResponse.success && dashboardSummaryResponse.data) {
+                // Map API response to expected renderDashboardOverview format
                 const mappedSummary = {
-                    awaitingPickup: dashboardSummaryResponse.data.totalOrders - dashboardSummaryResponse.data.completedOrders,
+                    awaitingPickup: dashboardSummaryResponse.data.totalOrders - dashboardSummaryResponse.data.completedOrders, // Example calculation
                     cancelledOrders: 0, // Your stats API doesn't provide this directly
                     totalOrders: dashboardSummaryResponse.data.totalOrders
                 };
@@ -598,9 +660,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn('Dashboard summary data missing from /api/orders/stats response.');
             }
 
-            // Load address data (currently not available from your backend explicitly)
-            // Passing an empty object, assuming loadAddressData handles defaults
-            loadAddressData({});
+            // Fetch and display recent orders for dashboard (from /api/orders?limit=5)
+            // Note: Your /api/orders doesn't have a limit parameter, so we fetch all and slice
+            const allOrdersResponse = await callApi('/api/orders');
+            if (allOrdersResponse.success && allOrdersResponse.orders) {
+                renderRecentOrders(allOrdersResponse.orders);
+                // Also use these orders for the full order history tab
+                renderOrderHistory(allOrdersResponse.orders);
+            } else {
+                console.warn('All orders data missing from /api/orders response.');
+            }
+
+            // Fetch and display user addresses (currently not available in your backend)
+            // For now, load empty data or assume default from profile if it extends to addresses
+            loadAddressData({}); // Pass empty object as placeholder
 
             console.log('All user data loaded successfully.');
 
@@ -609,37 +682,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error.message !== 'Unauthorized') {
                 alert('Failed to load user data. Please refresh the page.');
             }
-        }
-    }
-
-    // Simplified loadDashboardContent for the main dashboard view
-    async function loadDashboardContent() {
-        try {
-            const profileResponse = await callApi('/api/user/profile');
-            const dashboardSummaryResponse = await callApi('/api/orders/stats');
-
-            if (profileResponse.user) {
-                if (userDisplayName) userDisplayName.textContent = `${profileResponse.user.first_name || ''} ${profileResponse.user.last_name || ''}`.trim();
-                if (userDisplayEmail) userDisplayEmail.textContent = profileResponse.user.email || '';
-                if (userAvatarImg) userAvatarImg.src = profileResponse.user.avatar_url || '/assets/images/user-avatar.png';
-            }
-
-            if (dashboardSummaryResponse.success && dashboardSummaryResponse.data) {
-                const mappedSummary = {
-                    awaitingPickup: dashboardSummaryResponse.data.totalOrders - dashboardSummaryResponse.data.completedOrders,
-                    cancelledOrders: 0,
-                    totalOrders: dashboardSummaryResponse.data.totalOrders
-                };
-                renderDashboardOverview(mappedSummary);
-            }
-
-            if (profileResponse.orders) {
-                renderRecentOrders(profileResponse.orders);
-            }
-
-        } catch (error) {
-            console.error('Error loading dashboard content:', error);
-            alert('Failed to load dashboard content.');
         }
     }
 
@@ -658,20 +700,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Order history sub-tabs
-    orderStatusTabs.forEach(item => {
+    document.querySelectorAll('.tab_order .menu-tab .tab-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            const status = e.currentTarget.textContent.toLowerCase(); // Use textContent for status
+            const status = e.currentTarget.dataset.status;
             filterOrdersByStatus(status);
         });
     });
 
     // Address tab toggles
-    addressTabButtons.forEach(btn => {
+    document.querySelectorAll('.tab_address .tab_btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             const targetItem = e.currentTarget.dataset.item;
-            const targetForm = tabAddressContainer.querySelector(`.form_address[data-item="${targetItem}"]`);
+            const targetForm = document.querySelector(`.tab_address .form_address[data-item="${targetItem}"]`);
             const icon = e.currentTarget.querySelector('.ic_down');
 
             if (targetForm && icon) {
@@ -684,20 +726,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Profile update and Password change form submission (Setting tab)
+    const profileSettingsForm = document.querySelector('.filter-item[data-item="setting"] form');
     if (profileSettingsForm) {
         profileSettingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const currentPassword = document.getElementById('password').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
+            const currentPasswordEl = document.getElementById('password');
+            const newPasswordEl = document.getElementById('newPassword');
+            const confirmPasswordEl = document.getElementById('confirmPassword');
+
+            const currentPassword = currentPasswordEl ? currentPasswordEl.value : '';
+            const newPassword = newPasswordEl ? newPasswordEl.value : '';
+            const confirmPassword = confirmPasswordEl ? confirmPasswordEl.value : '';
 
             const firstName = document.getElementById('firstName').value;
             const lastName = document.getElementById('lastName').value;
-            const phoneNumber = document.getElementById('phoneNumber').value;
+            const phoneNumber = document.getElementById('phoneNumber').value; // Not in backend users table
             const email = document.getElementById('email').value;
-            const gender = document.getElementById('gender').value;
-            const dob = document.getElementById('birth').value;
+            const gender = document.getElementById('gender').value;       // Not in backend users table
+            const dob = document.getElementById('birth').value;          // Not in backend users table
 
             // Determine if it's a password change or profile update
             if (newPassword || currentPassword || confirmPassword) {
@@ -707,13 +754,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     confirm_new_password: confirmPassword
                 });
             } else {
+                // The backend /api/user/profile PUT expects `name` as a single field, not first_name/last_name
+                // For now, concatenate. If your backend is updated to accept first_name/last_name, adjust here.
                 const fullName = `${firstName} ${lastName}`.trim();
+
                 await updateProfile({
-                    first_name: firstName,
-                    last_name: lastName,
-                    // The backend '/api/user/profile' PUT expects `name` as a single field
-                    // You might need to adjust the backend or send `name` instead of `first_name`/`last_name`
-                    name: fullName, // Sending `name` as required by backend
+                    name: fullName, // Backend expects 'name'
                     email: email,
                     // These fields are not currently handled by your backend /api/user/profile PUT
                     // phone_number: phoneNumber,
@@ -725,6 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Avatar upload handling
+    const uploadImageInput = document.getElementById('uploadImage');
     if (uploadImageInput) {
         uploadImageInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -735,53 +782,46 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (userAvatarImg) userAvatarImg.src = event.target.result;
                 };
                 reader.readAsDataURL(file);
-                await updateProfileAvatar(file);
+                await updateProfileAvatar(file); // This will currently show an alert as backend is not ready
             }
         });
     }
 
     // Address update form submission
-    // Modified to correctly target the form directly, not its closest parent for submission
-    if (billingAddressForm) {
-        billingAddressForm.addEventListener('submit', async (e) => {
+    const addressForms = document.querySelectorAll('.tab_address form');
+    addressForms.forEach(form => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const addressType = billingAddressForm.dataset.item;
-            const formData = {
-                first_name: document.getElementById('billingFirstName').value,
-                last_name: document.getElementById('billingLastName').value,
-                company: document.getElementById('billingCompany').value,
-                country: document.getElementById('billingCountry').value,
-                street: document.getElementById('billingStreet').value,
-                city: document.getElementById('billingCity').value,
-                state: document.getElementById('billingState').value,
-                zip: document.getElementById('billingZip').value,
-                phone: document.getElementById('billingPhone').value,
-                email: document.getElementById('billingEmail').value,
-            };
-            await updateAddress(addressType, formData);
-        });
-    }
 
-    if (shippingAddressForm) {
-        shippingAddressForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const addressType = shippingAddressForm.dataset.item;
-            const formData = {
-                first_name: document.getElementById('shippingFirstName').value,
-                last_name: document.getElementById('shippingLastName').value,
-                company: document.getElementById('shippingCompany').value,
-                country: document.getElementById('shippingCountry').value,
-                street: document.getElementById('shippingStreet').value,
-                city: document.getElementById('shippingCity').value,
-                state: document.getElementById('shippingState').value,
-                zip: document.getElementById('shippingZip').value,
-                phone: document.getElementById('shippingPhone').value,
-                email: document.getElementById('shippingEmail').value,
-            };
-            await updateAddress(addressType, formData);
-        });
-    }
+            const formElement = e.target;
+            const addressType = formElement.dataset.item;
 
+            if (!addressType) {
+                alert("Address form type not identified. Missing data-item attribute.");
+                return;
+            }
+
+            const formData = {
+                first_name: formElement.querySelector('[id$="FirstName"]').value,
+                last_name: formElement.querySelector('[id$="LastName"]').value,
+                company: formElement.querySelector('[id$="Company"]').value,
+                country: formElement.querySelector('[id$="Country"]').value,
+                street: formElement.querySelector('[id$="Street"]').value,
+                city: formElement.querySelector('[id$="City"]').value,
+                state: formElement.querySelector('[id$="State"]').value,
+                zip: formElement.querySelector('[id$="Zip"]').value,
+                phone: formElement.querySelector('[id$="Phone"]').value,
+                email: formElement.querySelector('[id$="Email"]').value,
+            };
+
+            await updateAddress(addressType, formData); // This will currently show an alert as backend is not ready
+        });
+    });
+
+    // Handle logout button click
+    if (logoutBtnAnchor) {
+        logoutBtnAnchor.addEventListener('click', handleLogout); // Already handled by checkDashboardAccess, but good to ensure
+    }
 
     // Initial load logic based on path
     if (window.location.pathname.startsWith('/dashboard')) {
