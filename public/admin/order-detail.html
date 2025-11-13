@@ -257,14 +257,14 @@
                             <div class="center-item">
                                 <div class="center-heading">Setting</div>
                                 <ul class="menu-list">
-                                    
+
                                     <li class="menu-item">
                                         <a href="/admin/setting.html" class="">
                                             <div class="icon"><i class="icon-settings"></i></div>
                                             <div class="text">Setting</div>
                                         </a>
                                     </li>
-                                    
+
                                 </ul>
                             </div>
 
@@ -409,7 +409,8 @@
                                                         </div>
                                                         <div class="flex items-center justify-between gap20 flex-grow">
                                                             <div class="name">
-                                                                <a href="/admin/product-list.html" class="body-text" id="adminName">Admin</a>
+                                                                <a href="/admin/product-list.html" class="body-text"
+                                                                    id="adminName">Admin</a>
                                                             </div>
                                                         </div>
                                                     </li>
@@ -604,7 +605,7 @@
                                         <i class="icon-maximize"></i>
                                     </div>
                                 </div>
-                                
+
                                 <div class="popup-wrap user type-header">
                                     <div class="dropdown">
                                         <button class="btn btn-secondary dropdown-toggle" type="button"
@@ -614,8 +615,8 @@
                                                     <img src="/admin/images/avatar/user-1.png" alt="">
                                                 </span>
                                                 <span class="flex flex-column">
-                                                <span id="admin-name" class="body-title mb-2">Loading...</span>
-                                                <span id="admin-role" class="text-tiny">Admin</span>
+                                                    <span id="admin-name" class="body-title mb-2">Loading...</span>
+                                                    <span id="admin-role" class="text-tiny">Admin</span>
                                                 </span>
                                             </span>
                                         </button>
@@ -891,8 +892,7 @@
                         <div class="bottom-page">
                             <div class="body-text">Copyright © 2024 Shubha Kuteer Design with</div>
                             <i class="icon-heart"></i>
-                            <div class="body-text">by <a
-                                    href="https://aptmedia.in">APT Media</a> All rights
+                            <div class="body-text">by <a href="https://aptmedia.in">APT Media</a> All rights
                                 reserved.</div>
                         </div>
                         <!-- /bottom-page -->
@@ -912,7 +912,7 @@
         async function loadOrderDetails(orderId) {
             try {
                 console.log('Loading order details for ID:', orderId);
-                
+
                 // Check admin authentication first
                 const authRes = await fetch("/api/admin/auth/check");
                 if (!authRes.ok) {
@@ -920,11 +920,11 @@
                     window.location.href = "/admin/login.html";
                     return;
                 }
-    
+
                 // Fetch order details from backend
                 const res = await fetch(`/api/orders/${orderId}`);
                 console.log('API Response status:', res.status);
-                
+
                 if (!res.ok) {
                     // Handle specific HTTP errors
                     if (res.status === 404) {
@@ -935,10 +935,10 @@
                         throw new Error(`Failed to fetch order details (status ${res.status}).`);
                     }
                 }
-                
+
                 const response = await res.json();
                 console.log('API Raw Response data:', response);
-    
+
                 // Handle API response format: assuming 'success' field or direct order object
                 let order;
                 if (response.success && response.order) {
@@ -948,9 +948,9 @@
                 } else {
                     throw new Error("Invalid API response format for order details.");
                 }
-                
+
                 console.log('Parsed order data before product parsing:', order);
-    
+
                 // *** CRITICAL FIX: Parse the products string into a JavaScript array ***
                 if (typeof order.products === 'string') {
                     try {
@@ -963,21 +963,21 @@
                 } else if (!Array.isArray(order.products)) {
                     order.products = []; // Ensure products is an array
                 }
-    
-    
+
+
                 // Update page title and heading
                 document.title = `Order #${order.id} - Shubha Kuteer Admin`;
                 const orderHeading = document.querySelector("h3");
                 if (orderHeading) {
                     orderHeading.innerHTML = `Order <span class="highlight">#${order.id}</span>`;
                 }
-    
+
                 // Update breadcrumb
                 const breadcrumbEl = document.querySelector(".breadcrumbs li:last-child .text-tiny");
                 if (breadcrumbEl) {
                     breadcrumbEl.textContent = `Order #${order.id}`;
                 }
-    
+
                 // ADD CUSTOMER DETAILS ABOVE THE "ALL ITEM" SECTION
                 const allItemSection = document.querySelector(".table-order-detail");
                 if (allItemSection) {
@@ -1013,51 +1013,72 @@
                     `;
                     allItemSection.parentNode.insertBefore(customerSection, allItemSection);
                 }
-    
+
                 // Update order items section - show ONLY product data
                 const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
                 if (itemsContainer) {
                     itemsContainer.innerHTML = ''; // Clear existing items
-    
+
                     if (order.products && order.products.length > 0) {
                         console.log('Rendering products:', order.products);
-                        
+
                         order.products.forEach((product, index) => {
                             const productLi = document.createElement('li');
-                            productLi.className = 'product-item gap14';
+                            productLi.className = 'product-item p-4 border-b border-gray-200 rounded-lg bg-white shadow-sm';
+
                             productLi.innerHTML = `
-                                <div class="image no-bg">
-                                    <img src="${product.image || '/admin/images/products/default-order.png'}" alt="${product.name || 'Product'}">
-                                </div>
-                                <div class="flex items-center justify-between gap40 flex-grow flex-wrap"> <!-- Added flex-wrap -->
-                                    <div class="name">
-                                        <div class="text-tiny mb-1">Product ${index + 1}</div>
-                                        <a href="#!" class="body-title-2">${product.name || 'N/A'}</a>
-                                        <div class="text-tiny mt-1" style="color: #666;">
-                                            ${product.category ? `Category: ${product.category}` : ''}
-                                            ${product.brand ? ` | Brand: ${product.brand}` : ''}
-                                        </div>
-                                    </div>
-                                    <div class="name">
-                                        <div class="text-tiny mb-1">Size/Color</div>
-                                        <div class="body-title-2">
-                                            ${product.size || 'N/A'} / ${product.color || 'N/A'}
-                                        </div>
-                                    </div>
-                                    <div class="name">
-                                        <div class="text-tiny mb-1">Quantity</div>
-                                        <div class="body-title-2">${product.quantity || 0}</div>
-                                    </div>
-                                    <div class="name">
-                                        <div class="text-tiny mb-1">Unit Price</div>
-                                        <div class="body-title-2">₹${(product.price || 0).toFixed(2)}</div>
-                                    </div>
-                                    <div class="name">
-                                        <div class="text-tiny mb-1">Total</div>
-                                        <div class="body-title-2">₹${((product.price || 0) * (product.quantity || 0)).toFixed(2)}</div>
-                                    </div>
-                                </div>
-                            `;
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 flex-grow flex-wrap">
+
+                <!-- Product Image -->
+                <div class="image no-bg w-full sm:w-20 h-20 flex-shrink-0">
+                    <img src="${product.image || '/admin/images/products/default-order.png'}"
+                         alt="${product.name || 'Product'}"
+                         class="w-full h-full object-cover rounded-md border">
+                </div>
+
+                <!-- Product Info -->
+                <div class="flex flex-col flex-1 min-w-[150px]">
+                    <div class="text-xs text-gray-500 mb-1">Product ${index + 1}</div>
+                    <a href="#!" class="text-base font-semibold text-gray-800">${product.name || 'N/A'}</a>
+                    <div class="text-sm text-gray-500 mt-1">
+                        ${product.category ? `Category: ${product.category}` : ''}
+                        ${product.brand ? ` | Brand: ${product.brand}` : ''}
+                    </div>
+                </div>
+
+                <!-- Size/Color -->
+                <div class="flex flex-col min-w-[120px]">
+                    <div class="text-xs text-gray-500 mb-1">Size / Color</div>
+                    <div class="text-sm font-medium text-gray-700">
+                        ${product.size || 'N/A'} / ${product.color || 'N/A'}
+                    </div>
+                </div>
+
+                <!-- Quantity -->
+                <div class="flex flex-col min-w-[80px]">
+                    <div class="text-xs text-gray-500 mb-1">Quantity</div>
+                    <div class="text-sm font-medium text-gray-700">
+                        ${product.quantity || 0}
+                    </div>
+                </div>
+
+                <!-- Unit Price -->
+                <div class="flex flex-col min-w-[100px]">
+                    <div class="text-xs text-gray-500 mb-1">Unit Price</div>
+                    <div class="text-sm font-medium text-gray-700">
+                        ₹${(product.price || 0).toFixed(2)}
+                    </div>
+                </div>
+
+                <!-- Total -->
+                <div class="flex flex-col min-w-[100px]">
+                    <div class="text-xs text-gray-500 mb-1">Total</div>
+                    <div class="text-sm font-semibold text-gray-800">
+                        ₹${((product.price || 0) * (product.quantity || 0)).toFixed(2)}
+                    </div>
+                </div>
+            </div>
+        `;
                             itemsContainer.appendChild(productLi);
                         });
                     } else {
@@ -1078,11 +1099,11 @@
                         itemsContainer.appendChild(noProductsLi);
                     }
                 }
-    
+
                 // Calculate totals from products
                 let calculatedSubtotal = 0;
                 let totalItems = 0;
-                
+
                 if (order.products && order.products.length > 0) {
                     order.products.forEach(product => {
                         const productPrice = parseFloat(product.price) || 0;
@@ -1092,42 +1113,42 @@
                         totalItems += productQuantity;
                     });
                 }
-    
+
                 console.log('Calculated subtotal:', calculatedSubtotal.toFixed(2));
-                console.log('Order amount from DB (original):', order.amount); 
+                console.log('Order amount from DB (original):', order.amount);
                 console.log('Total items:', totalItems);
-    
+
                 // Update cart totals section
                 const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
                 const shippingEl = document.querySelector(".cart-totals-item:nth-child(3) .body-title-2");
                 const taxEl = document.querySelector(".cart-totals-item:nth-child(5) .body-title-2");
-                
+
                 if (subtotalEl) subtotalEl.textContent = `₹${calculatedSubtotal.toFixed(2)}`;
                 if (shippingEl) shippingEl.textContent = "₹0.00"; // Assuming shipping is free
                 if (taxEl) taxEl.textContent = "₹0.00"; // Assuming tax is 0
-    
+
                 // FIX TOTAL PRICE - Target the specific element with tf-color-1 class
                 const finalTotal = calculatedSubtotal;
                 const totalPriceEl = document.querySelector('.body-title.tf-color-1');
-                
+
                 if (totalPriceEl) {
                     totalPriceEl.textContent = `₹${finalTotal.toFixed(2)}`;
                     console.log('Updated total price element to:', `₹${finalTotal.toFixed(2)}`);
                 } else {
                     console.error('Could not find .body-title.tf-color-1 element!');
                 }
-                
+
                 console.log('Final total calculated:', finalTotal.toFixed(2));
-    
+
                 // Update summary section (right sidebar)
                 const orderIdSummaryEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
                 const dateSummaryEl = document.querySelector(".summary-item:nth-child(3) .body-title-2");
                 const totalSummaryEl = document.querySelector(".summary-item:nth-child(4) .body-title-2");
-    
+
                 if (orderIdSummaryEl) orderIdSummaryEl.textContent = `#${order.id || 'N/A'}`;
                 if (dateSummaryEl) dateSummaryEl.textContent = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
                 if (totalSummaryEl) totalSummaryEl.textContent = `₹${finalTotal.toFixed(2)}`;
-    
+
                 // Fix shipping address
                 const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
                 if (shippingAddressEl) {
@@ -1139,7 +1160,7 @@
                         <strong>Email:</strong> ${order.email || 'N/A'}
                     `;
                 }
-    
+
                 // Update payment method with more details
                 const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
                 if (paymentMethodEl) {
@@ -1152,42 +1173,42 @@
                         <strong>Note:</strong> ${order.note || 'No additional notes'}
                     `;
                 }
-    
+
                 // Update expected delivery date - CHANGE TO 7-10 DAYS
                 const deliveryDateEl = document.querySelector(".wg-box:nth-child(4) .body-title-2");
                 if (deliveryDateEl && order.created_at) {
                     const orderDate = new Date(order.created_at);
                     const minDeliveryDate = new Date(orderDate);
                     const maxDeliveryDate = new Date(orderDate);
-                    
+
                     minDeliveryDate.setDate(orderDate.getDate() + 7); // 7 days minimum
                     maxDeliveryDate.setDate(orderDate.getDate() + 10); // 10 days maximum
-                    
+
                     deliveryDateEl.textContent = `${minDeliveryDate.toLocaleDateString()} - ${maxDeliveryDate.toLocaleDateString()}`;
                 } else if (deliveryDateEl) {
                     deliveryDateEl.textContent = 'N/A';
                 }
-    
+
                 console.log('Order details loaded successfully');
-    
+
             } catch (err) {
                 console.error("⚠️ Error loading order details:", err);
                 alert("Failed to load order details: " + err.message);
                 // Consider redirecting to an error page or the order list page on critical errors
                 // window.location.href = "/admin/orders.html"; 
             } finally {
-                 // You might have a loading spinner. Hide it here.
-                 // For example, if you have a loader div:
-                 // document.getElementById('loading-indicator').style.display = 'none';
+                // You might have a loading spinner. Hide it here.
+                // For example, if you have a loader div:
+                // document.getElementById('loading-indicator').style.display = 'none';
             }
         }
-    
+
         // Get orderId from URL (order-detail.html?id=15)
         const urlParams = new URLSearchParams(window.location.search);
         const orderId = urlParams.get("id");
-    
+
         console.log('Order ID from URL:', orderId);
-    
+
         if (orderId) {
             loadOrderDetails(orderId);
         } else {
@@ -1196,37 +1217,37 @@
             // window.location.href = "/admin/orders.html"; 
         }
     </script>
-    
+
     <script>
-    // This script is separate and handles admin data for the header/sidebar
-    async function loadAdminData() {
-        try {
-            const res = await fetch("/api/admin/users/me");
-            if (!res.ok) {
-                // If admin session is invalid, redirect to login
-                window.location.href = "/admin/login.html";
-                throw new Error("Failed to fetch admin data or session expired.");
+        // This script is separate and handles admin data for the header/sidebar
+        async function loadAdminData() {
+            try {
+                const res = await fetch("/api/admin/users/me");
+                if (!res.ok) {
+                    // If admin session is invalid, redirect to login
+                    window.location.href = "/admin/login.html";
+                    throw new Error("Failed to fetch admin data or session expired.");
+                }
+                const data = await res.json();
+
+                // Insert into DOM
+                const adminNameEl = document.getElementById("admin-name");
+                const adminRoleEl = document.getElementById("admin-role");
+
+                if (adminNameEl) adminNameEl.textContent = data.admin.name;
+                if (adminRoleEl) adminRoleEl.textContent = data.admin.role;
+
+            } catch (err) {
+                console.error("Error loading admin data:", err);
+                // Optionally, display a message to the user or log out
             }
-            const data = await res.json();
-    
-            // Insert into DOM
-            const adminNameEl = document.getElementById("admin-name");
-            const adminRoleEl = document.getElementById("admin-role");
-    
-            if (adminNameEl) adminNameEl.textContent = data.admin.name;
-            if (adminRoleEl) adminRoleEl.textContent = data.admin.role;
-    
-        } catch (err) {
-            console.error("Error loading admin data:", err);
-            // Optionally, display a message to the user or log out
         }
-    }
-    
-    // Call without ID
-    loadAdminData();
+
+        // Call without ID
+        loadAdminData();
     </script>
 
-<script src="/admin/js/jquery.min.js"></script>
+    <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>
     <script src="/admin/js/zoom.js"></script>
