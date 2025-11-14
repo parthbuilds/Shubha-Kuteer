@@ -687,20 +687,28 @@ export default async function handler(req, res) {
                 if (pathname === '/api/orders/create-order' && req.method === 'POST') {
                     const {
                         first_name, last_name, email, phone_number,
-                        city, apartment, postal_code, note, amount, products
+                        city, apartment, postal_code, note, amount, products // `products` is already expected as an array/object
                     } = req.body;
 
-                    if (!amount || !first_name || !email) {
+                    if (!amount || !first_name || !email || !products || !Array.isArray(products) || products.length === 0) {
                         return res.status(400).json({
                             success: false,
-                            error: 'Missing required fields: amount, first_name, email'
+                            error: 'Missing required fields: amount, first_name, email, or products array is empty'
                         });
                     }
 
                     try {
+                        // Recalculate amount from the products array for accuracy,
+                        // assuming `amount` from frontend is for initial Razorpay order creation.
+                        const calculatedAmount = products.reduce((sum, p) => {
+                            const price = parseFloat(p.price) || 0;
+                            const quantity = parseInt(p.quantity) || 0;
+                            return sum + (price * quantity);
+                        }, 0);
+
                         // Create Razorpay order
                         const razorpayOrder = await razorpay.orders.create({
-                            amount: amount * 100, // Convert to paise
+                            amount: calculatedAmount * 100, // Convert to paise
                             currency: "INR",
                             receipt: `order_${Date.now()}`,
                         });
@@ -715,8 +723,8 @@ export default async function handler(req, res) {
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                         `, [
                             first_name, last_name, email, phone_number,
-                            city, apartment, postal_code, note, amount,
-                            razorpayOrder.id, 'pending', JSON.stringify(products)
+                            city, apartment, postal_code, note, calculatedAmount, // Use calculated amount
+                            razorpayOrder.id, 'pending', JSON.stringify(products) // Store `products` as JSON string
                         ]);
 
                         console.log("Order saved to database with ID:", result.insertId);
@@ -776,10 +784,10 @@ export default async function handler(req, res) {
                 id, first_name, last_name, email, phone_number,
                 city, apartment, postal_code, note, amount,
                 razorpay_order_id, razorpay_payment_id, status,
-                delivery_status, 
+                delivery_status,
                 out_for_delivery_at,
                 delivered_at,
-                products, created_at, updated_at
+                products, created_at, updated_at, canceled_at
             FROM orders
             ORDER BY created_at DESC
         `);
@@ -787,53 +795,48 @@ export default async function handler(req, res) {
 
                         const ordersWithProducts = orders.map(order => {
                             let parsedProducts = [];
-                            let recalculatedAmount = parseFloat(order.amount) || 0;
+                            let recalculatedAmount = parseFloat(order.amount) || 0; // Initialize with DB amount
 
-                            console.log(`DEBUG (ALL ORDERS): Raw 'products' for order ID ${order.id}:`, order.products, `(Type: ${typeof order.products})`);
-
-                            // --- REVISED PRODUCTS HANDLING FOR JSON TYPE COLUMN ---
-                            if (order.products === null || order.products === undefined) {
-                                console.warn(`Backend: Order ${order.id}: 'products' column was NULL or undefined.`);
-                            } else if (Array.isArray(order.products)) {
-                                // If it's already an array (mysql2 driver likely parsed it)
-                                parsedProducts = order.products;
-                                console.log(`Backend: Order ${order.id}: 'products' already an array.`);
-                            } else if (typeof order.products === 'string' && order.products.trim() !== "") {
-                                // If it's a string, try to parse it (fallback, e.g., if driver doesn't auto-parse or it's an old entry)
-                                const productsString = order.products.trim();
+                            // If products column is of JSON type, mysql2 might auto-parse it.
+                            // If not, it will be a string, and we need to parse it.
+                            if (typeof order.products === 'string') {
                                 try {
-                                    const productsFromDb = JSON.parse(productsString);
-                                    if (Array.isArray(productsFromDb)) {
-                                        parsedProducts = productsFromDb;
-                                        console.log(`Backend: Order ${order.id}: Successfully parsed 'products' from string.`);
-                                    } else {
-                                        console.warn(`Backend: Order ${order.id}: 'products' string parsed to non-array. Raw: "${productsString}". Result:`, productsFromDb);
+                                    parsedProducts = JSON.parse(order.products);
+                                    if (!Array.isArray(parsedProducts)) {
+                                        console.warn(`Backend: Order ${order.id}: Parsed 'products' was not an array. Resetting. Raw: ${order.products}`);
+                                        parsedProducts = [];
                                     }
-                                } catch (jsonParseError) {
-                                    console.error(`Backend: Order ${order.id}: Failed to JSON.parse 'products' from string. Raw string: "${productsString}". Error: ${jsonParseError.message}`);
+                                } catch (e) {
+                                    console.error(`Backend: Order ${order.id}: Error parsing 'products' JSON string: ${e.message}. Raw: ${order.products}`);
+                                    parsedProducts = []; // Fallback to empty array on parse error
                                 }
-                            } else if (typeof order.products === 'object' && order.products !== null) {
-                                // If it's an object but not an array (e.g., if it stored {} instead of [])
-                                console.warn(`Backend: Order ${order.id}: 'products' column was an object but not an array. Raw:`, order.products);
+                            } else if (Array.isArray(order.products)) {
+                                parsedProducts = order.products; // Already parsed by driver
                             } else {
-                                console.warn(`Backend: Order ${order.id}: 'products' column had an unexpected value/type. Raw:`, order.products, `(Type: ${typeof order.products})`);
+                                // Handle null, undefined, or other unexpected types
+                                console.warn(`Backend: Order ${order.id}: 'products' column had unexpected type. Raw:`, order.products, `(Type: ${typeof order.products})`);
+                                parsedProducts = [];
                             }
 
-                            // Recalculate amount from the actual products, if any were parsed
+                            // Recalculate amount from the actual products for display consistency
                             if (parsedProducts.length > 0) {
                                 recalculatedAmount = parsedProducts.reduce((sum, p) => {
                                     const price = parseFloat(p.price) || 0;
                                     const quantity = parseInt(p.quantity) || 0;
                                     return sum + (price * quantity);
                                 }, 0);
-                                // console.log(`Backend: Order ${order.id}: Recalculated amount from products: ${recalculatedAmount.toFixed(2)}.`);
                             }
-                            // --- END REVISED PRODUCTS HANDLING ---
 
                             return {
                                 ...order,
                                 products: parsedProducts,
-                                amount: recalculatedAmount.toFixed(2)
+                                amount: recalculatedAmount.toFixed(2),
+                                // Ensure timestamps are correctly formatted if needed by frontend
+                                created_at: order.created_at ? new Date(order.created_at).toISOString() : null,
+                                updated_at: order.updated_at ? new Date(order.updated_at).toISOString() : null,
+                                delivered_at: order.delivered_at ? new Date(order.delivered_at).toISOString() : null,
+                                out_for_delivery_at: order.out_for_delivery_at ? new Date(order.out_for_delivery_at).toISOString() : null,
+                                canceled_at: order.canceled_at ? new Date(order.canceled_at).toISOString() : null,
                             };
                         });
                         console.log("Successfully processed all orders.");
@@ -854,28 +857,27 @@ export default async function handler(req, res) {
                 }
 
                 // GET /api/orders/stats - Summary of order analytics
+                // (No changes needed here based on your description, assuming 'amount' in DB is reliable for sums)
                 if (pathname === '/api/orders/stats' && req.method === 'GET') {
                     try {
                         const [rows] = await pool.default.query(`
-        SELECT
-          COUNT(*) AS total_orders,
-          SUM(amount) AS total_income,
-          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
-          COUNT(DISTINCT email) AS unique_customers
-        FROM orders
-      `);
+                            SELECT
+                                COUNT(*) AS total_orders,
+                                SUM(amount) AS total_income,
+                                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
+                                COUNT(DISTINCT email) AS unique_customers
+                            FROM orders
+                        `);
 
                         const stats = rows[0] || {};
 
-                        // ✅ Extract and calculate properly
                         const totalOrders = stats.total_orders || 0;
-                        const totalIncome = stats.total_income || 0;
+                        const totalIncome = parseFloat(stats.total_income || 0).toFixed(2); // Ensure income is formatted
                         const completedOrders = stats.completed_orders || 0;
                         const totalVisitors = stats.unique_customers || 0;
 
-                        // ✅ Only count completed orders as both sales and paid
-                        const ordersPaid = completedOrders;
-                        const totalSales = completedOrders;
+                        const ordersPaid = completedOrders; // Assuming 'completed' means paid
+                        const totalSales = completedOrders; // Assuming 'completed' means sales
 
                         return res.status(200).json({
                             success: true,
@@ -912,14 +914,15 @@ export default async function handler(req, res) {
                     try {
                         console.log(`Attempting to fetch specific order ID: ${orderId} from database...`);
                         const [orders] = await pool.default.query(`
-            SELECT
-                id, first_name, last_name, email, phone_number,
-                city, apartment, postal_code, note, amount,
-                razorpay_order_id, razorpay_payment_id, status,
-                products, created_at, updated_at
-            FROM orders
-            WHERE id = ?
-        `, [orderId]);
+                            SELECT
+                                id, first_name, last_name, email, phone_number,
+                                city, apartment, postal_code, note, amount,
+                                razorpay_order_id, razorpay_payment_id, status,
+                                delivery_status, out_for_delivery_at, delivered_at, canceled_at,
+                                products, created_at, updated_at
+                            FROM orders
+                            WHERE id = ?
+                        `, [orderId]);
 
                         if (orders.length === 0) {
                             console.warn(`Order ID: ${orderId} not found.`);
@@ -933,55 +936,49 @@ export default async function handler(req, res) {
                         let parsedProducts = [];
                         let recalculatedAmount = parseFloat(order.amount) || 0;
 
-                        console.log(`DEBUG (SPECIFIC ORDER): Raw 'products' for order ID ${order.id}:`, order.products, `(Type: ${typeof order.products})`);
-
-                        // --- REVISED PRODUCTS HANDLING FOR JSON TYPE COLUMN ---
-                        if (order.products === null || order.products === undefined) {
-                            console.warn(`Backend: Order ${order.id}: 'products' column was NULL or undefined.`);
-                        } else if (Array.isArray(order.products)) {
-                            // If it's already an array (mysql2 driver likely parsed it)
-                            parsedProducts = order.products;
-                            console.log(`Backend: Order ${order.id}: 'products' already an array.`);
-                        } else if (typeof order.products === 'string' && order.products.trim() !== "") {
-                            // If it's a string, try to parse it (fallback)
-                            const productsString = order.products.trim();
+                        // If products column is of JSON type, mysql2 might auto-parse it.
+                        // If not, it will be a string, and we need to parse it.
+                        if (typeof order.products === 'string') {
                             try {
-                                const productsFromDb = JSON.parse(productsString);
-                                if (Array.isArray(productsFromDb)) {
-                                    parsedProducts = productsFromDb;
-                                    console.log(`Backend: Order ${order.id}: Successfully parsed 'products' from string.`);
-                                } else {
-                                    console.warn(`Backend: Order ${order.id}: 'products' string parsed to non-array. Raw: "${productsString}". Result:`, productsFromDb);
+                                parsedProducts = JSON.parse(order.products);
+                                if (!Array.isArray(parsedProducts)) {
+                                    console.warn(`Backend: Order ${order.id}: Parsed 'products' was not an array. Resetting. Raw: ${order.products}`);
+                                    parsedProducts = [];
                                 }
-                            } catch (jsonParseError) {
-                                console.error(`Backend: Order ${order.id}: Failed to JSON.parse 'products' from string. Raw string: "${productsString}". Error: ${jsonParseError.message}`);
+                            } catch (e) {
+                                console.error(`Backend: Order ${order.id}: Error parsing 'products' JSON string: ${e.message}. Raw: ${order.products}`);
+                                parsedProducts = []; // Fallback to empty array on parse error
                             }
-                        } else if (typeof order.products === 'object' && order.products !== null) {
-                            // If it's an object but not an array (e.g., if it stored {} instead of [])
-                            console.warn(`Backend: Order ${order.id}: 'products' column was an object but not an array. Raw:`, order.products);
+                        } else if (Array.isArray(order.products)) {
+                            parsedProducts = order.products; // Already parsed by driver
                         } else {
-                            console.warn(`Backend: Order ${order.id}: 'products' column had an unexpected value/type. Raw:`, order.products, `(Type: ${typeof order.products})`);
+                            // Handle null, undefined, or other unexpected types
+                            console.warn(`Backend: Order ${order.id}: 'products' column had unexpected type. Raw:`, order.products, `(Type: ${typeof order.products})`);
+                            parsedProducts = [];
                         }
 
-                        // Recalculate amount from the actual products, if any were parsed
+                        // Recalculate amount from the actual products for display consistency
                         if (parsedProducts.length > 0) {
                             recalculatedAmount = parsedProducts.reduce((sum, p) => {
                                 const price = parseFloat(p.price) || 0;
                                 const quantity = parseInt(p.quantity) || 0;
                                 return sum + (price * quantity);
                             }, 0);
-                            console.log(`Backend: Order ${order.id}: Recalculated amount from products: ${recalculatedAmount.toFixed(2)}.`);
                         }
-                        // --- END REVISED PRODUCTS HANDLING ---
 
-
-                        order.products = parsedProducts;
-                        order.amount = recalculatedAmount.toFixed(2);
-
-                        console.log(`Successfully fetched and processed order ID: ${order.id}.`);
                         return res.status(200).json({
                             success: true,
-                            order: order
+                            order: {
+                                ...order,
+                                products: parsedProducts,
+                                amount: recalculatedAmount.toFixed(2),
+                                // Ensure timestamps are correctly formatted if needed by frontend
+                                created_at: order.created_at ? new Date(order.created_at).toISOString() : null,
+                                updated_at: order.updated_at ? new Date(order.updated_at).toISOString() : null,
+                                delivered_at: order.delivered_at ? new Date(order.delivered_at).toISOString() : null,
+                                out_for_delivery_at: order.out_for_delivery_at ? new Date(order.out_for_delivery_at).toISOString() : null,
+                                canceled_at: order.canceled_at ? new Date(order.canceled_at).toISOString() : null,
+                            }
                         });
                     } catch (error) {
                         console.error(`Get specific order ID: ${orderId} error:`, error);
@@ -1036,23 +1033,34 @@ export default async function handler(req, res) {
                         return res.status(400).json({ success: false, error: 'A valid delivery_status is required.' });
                     }
 
-                    const validStatuses = ['pending', 'confirmed', 'shipped', 'out for delivery', 'delivered', 'cancelled'];
+                    const validStatuses = ['pending', 'confirmed', 'shipped', 'out for delivery', 'delivered', 'returned', 'cancelled']; // Added 'cancelled' here too for consistency
                     if (!validStatuses.includes(delivery_status.toLowerCase())) {
                         return res.status(400).json({ success: false, error: `Invalid delivery status: ${delivery_status}. Must be one of: ${validStatuses.join(', ')}.` });
                     }
 
                     try {
-                        let updateSql = `UPDATE orders SET delivery_status = ?, updated_at = NOW() WHERE id = ?`;
-                        let updateValues = [delivery_status, orderId];
+                        let updateSql = `UPDATE orders SET delivery_status = ?, updated_at = NOW() `;
+                        let updateValues = [delivery_status];
+                        const setClauses = [];
+
+                        setClauses.push(`delivery_status = ?`);
+                        updateValues.push(delivery_status);
+                        setClauses.push(`updated_at = NOW()`);
+
 
                         // Add specific timestamp updates based on status
                         if (delivery_status.toLowerCase() === 'out for delivery') {
-                            updateSql = `UPDATE orders SET delivery_status = ?, out_for_delivery_at = NOW(), updated_at = NOW() WHERE id = ?`;
+                            setClauses.push(`out_for_delivery_at = NOW()`);
                         } else if (delivery_status.toLowerCase() === 'delivered') {
-                            updateSql = `UPDATE orders SET delivery_status = ?, delivered_at = NOW(), updated_at = NOW() WHERE id = ?`;
+                            setClauses.push(`delivered_at = NOW()`);
+                        } else if (delivery_status.toLowerCase() === 'cancelled') {
+                             setClauses.push(`canceled_at = NOW()`); // Ensure canceled_at is set for cancellations
                         }
-                        // Note: You might want to prevent setting 'out for delivery' if already 'delivered', etc.
-                        // For simplicity, this example just updates. Add more complex logic if needed.
+
+
+                        updateSql = `UPDATE orders SET ${setClauses.join(', ')} WHERE id = ?`;
+                        updateValues.push(orderId);
+
 
                         const [result] = await pool.default.query(updateSql, updateValues);
 
@@ -1091,7 +1099,10 @@ export default async function handler(req, res) {
                     });
                 }
 
-                // POST /api/orders/cancel-order
+                // POST /api/orders/cancel-order - THIS IS A DUPLICATE OF PUT /delivery-status for 'cancelled'
+                // It's generally better to use the PUT /delivery-status endpoint for consistency
+                // and to avoid duplicate logic. I've updated the PUT to handle 'cancelled' status.
+                // You can remove this /api/orders/cancel-order endpoint if you use the PUT for all status updates.
                 if (pathname === '/api/orders/cancel-order' && req.method === 'POST') {
                     const { order_id } = req.body;
 
@@ -1106,8 +1117,8 @@ export default async function handler(req, res) {
                         // Update order status to 'cancelled' and set canceled_at timestamp
                         const [result] = await pool.default.query(`
             UPDATE orders
-            SET status = 'cancelled', canceled_at = NOW(), updated_at = NOW()
-            WHERE id = ? AND status != 'delivered' -- Prevent canceling already delivered orders
+            SET status = 'cancelled', delivery_status = 'cancelled', canceled_at = NOW(), updated_at = NOW()
+            WHERE id = ? AND status != 'delivered' AND delivery_status != 'delivered' -- Prevent canceling already delivered orders
         `, [order_id]);
 
                         if (result.affectedRows === 0) {
@@ -1143,7 +1154,6 @@ export default async function handler(req, res) {
                 });
             }
         }
-
         // User Profile Routes
         if (pathname.startsWith('/api/user')) {
             const jwt = await import("jsonwebtoken");
