@@ -1,19 +1,52 @@
 document.addEventListener("DOMContentLoaded", () => {
     const userNameDisplay = document.getElementById("userName");
     const userEmailDisplay = document.getElementById("userEmail");
-    // Removed userOrdersDisplay as we'll target a more specific container for the orders tab
-    const listOrderContainer = document.querySelector('.filter-item.tab_order .list_order'); // Target the list_order div within the orders tab
 
     // Elements for the Dashboard 'Recent Orders' (optional, will only show a few if implemented)
     const recentOrdersTableBody = document.querySelector('.filter-item[data-item="dashboard"] .recent_order table tbody');
-    const awaitingPickupCount = document.querySelector('.overview-item:nth-child(1) .counter h5');
-    const cancelledOrdersCount = document.querySelector('.overview-item:nth-child(2) .counter h5');
-    const totalOrdersCount = document.querySelector('.overview-item:nth-child(3) .counter h5');
+    const awaitingPickupCount = document.getElementById('awaitingPickupCount');
+    const cancelledOrdersCount = document.getElementById('cancelledOrdersCount');
+    const totalOrdersCount = document.getElementById('totalOrdersCount');
 
+    // Element for the History Orders Tab
+    const listOrderContainer = document.querySelector('.filter-item.tab_order .list_order');
 
     const isLoggedIn = localStorage.getItem("isLoggedIn");
     const storedUserName = localStorage.getItem("userName");
     const storedUserEmail = localStorage.getItem("userEmail");
+
+    // Helper function to determine status text and class
+    const getOrderStatusDisplay = (order) => {
+        let statusText = 'Unknown';
+        let statusClass = 'bg-gray text-gray'; // Default unknown color
+
+        if (order.status === 'canceled') {
+            statusText = 'Canceled';
+            statusClass = 'bg-red text-red';
+        } else if (order.delivery_status === 'delivered_at') {
+            statusText = 'Delivered';
+            statusClass = 'bg-green text-green';
+        } else if (order.delivery_status === 'out_for_delivery_at') {
+            statusText = 'Out for Delivery';
+            statusClass = 'bg-purple text-purple';
+        } else if (order.status === 'pending') {
+            statusText = 'Pending';
+            statusClass = 'bg-blue text-blue'; // Using blue for pending, adjust as needed
+        } else if (order.status === 'completed') {
+            // This case handles your example where 'status' is 'completed' but delivery might be pending
+            // If completed means *shipped and arrived*, then 'delivered' is better.
+            // If completed means *payment received and being processed*, then 'pending' or 'processing' is better.
+            // For now, if no specific delivery status, we'll call it Completed.
+            statusText = 'Completed';
+            statusClass = 'bg-green text-green'; // Green for completed
+        }
+
+        // You could add more specific status mappings here if you have them
+        // e.g., 'processing', 'shipped', 'returned', etc.
+
+        return { statusText, statusClass };
+    };
+
 
     if (isLoggedIn === "true" && storedUserEmail) {
         if (userNameDisplay) userNameDisplay.textContent = storedUserName || "Guest User";
@@ -23,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Stored User Name:", storedUserName);
         console.log("Stored User Email:", storedUserEmail);
 
-        const apiOrdersUrl = "https://www.shubhakuteer.in/api/orders"; // Keep this as confirmed working
+        const apiOrdersUrl = "https://www.shubhakuteer.in/api/orders";
 
         fetch(apiOrdersUrl)
             .then(response => {
@@ -50,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             console.log("  Email:", order.email);
                             console.log("  Phone Number:", order.phone_number);
                             console.log("  Amount:", order.amount);
-                            console.log("  Status:", order.status);
+                            console.log("  Status (primary):", order.status);
                             console.log("  Delivery Status:", order.delivery_status);
                             console.log("  Products:", order.products);
                             console.log("  Created At:", order.created_at);
@@ -65,9 +98,12 @@ document.addEventListener("DOMContentLoaded", () => {
                              recentOrdersTableBody.innerHTML = '';
                         }
 
-
                         // --- Populate Dashboard Overview Counts ---
-                        const awaitingPickup = userOrders.filter(order => order.delivery_status === 'out_for_delivery_at' || order.status === 'pending').length; // Adjust status based on your backend logic
+                        // Re-evaluate 'Awaiting Pickup' based on our new status logic
+                        const awaitingPickup = userOrders.filter(order =>
+                            order.status === 'pending' || order.delivery_status === 'out_for_delivery_at'
+                        ).length;
+
                         const cancelled = userOrders.filter(order => order.status === 'canceled').length;
                         const total = userOrders.length;
 
@@ -79,32 +115,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         // --- Populate History Orders Tab ---
                         if (listOrderContainer) {
                             userOrders.forEach(order => {
-                                const orderStatusClass = (status) => {
-                                    switch (status) {
-                                        case 'pending': return 'bg-orange text-orange';
-                                        case 'delivery': // or 'out_for_delivery_at'
-                                        case 'out_for_delivery_at': return 'bg-purple text-purple';
-                                        case 'delivered': return 'bg-green text-green';
-                                        case 'canceled': return 'bg-red text-red';
-                                        default: return 'bg-gray text-gray'; // Default if status is unknown
-                                    }
-                                };
-
-                                const deliveryStatusText = order.delivery_status === 'delivered_at' ? 'Delivered' :
-                                                            order.delivery_status === 'out_for_delivery_at' ? 'Out for Delivery' :
-                                                            order.delivery_status === null && order.status === 'pending' ? 'Processing' :
-                                                            order.status; // Fallback to main status
-
-                                const deliveryStatusTagClass = orderStatusClass(order.delivery_status || order.status); // Use delivery_status if present, else main status
-
+                                const { statusText, statusClass } = getOrderStatusDisplay(order);
 
                                 let productsHtml = '';
                                 if (order.products && order.products.length > 0) {
                                     productsHtml = order.products.map(product => `
                                         <div class="prd_item flex flex-wrap items-center justify-between gap-3 py-5 border-b border-line">
-                                            <a href="product-default.html?id=${product.productId || ''}" class="flex items-center gap-5">
+                                            <a href="product-default.html?id=${product.id || ''}" class="flex items-center gap-5">
                                                 <div class="bg-img flex-shrink-0 md:w-[100px] w-20 aspect-square rounded-lg overflow-hidden">
-                                                    <img src="${product.imageUrl || '/assets/images/product/productDefault.png'}"
+                                                    <img src="${product.image || '/assets/images/product/productDefault.png'}"
                                                         alt="${product.name || 'Product Image'}"
                                                         class="w-full h-full object-cover" />
                                                 </div>
@@ -136,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 <strong class="text-title">Order status:</strong>
-                                                <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 ${deliveryStatusTagClass} caption1 font-semibold">${deliveryStatusText}</span>
+                                                <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 ${statusClass} caption1 font-semibold">${statusText}</span>
                                             </div>
                                         </div>
                                         <div class="list_prd px-5">
@@ -144,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                         </div>
                                         <div class="flex flex-wrap gap-4 p-5">
                                             <button class="button-main btn_order_detail">Order Details</button>
-                                            ${order.status === 'pending' ? `<button class="button-main bg-surface border border-line hover:bg-black text-black hover:text-white">Cancel Order</button>` : ''}
+                                            ${order.status === 'pending' && statusText !== 'Canceled' ? `<button class="button-main bg-surface border border-line hover:bg-black text-black hover:text-white">Cancel Order</button>` : ''}
                                         </div>
                                     </div>
                                 `;
@@ -155,22 +174,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (recentOrdersTableBody) {
                             const recentThreeOrders = userOrders.slice(0, 3); // Get the 3 most recent orders
                             recentThreeOrders.forEach(order => {
-                                const mainProduct = order.products && order.products.length > 0 ? order.products[0] : { name: 'N/A', category: 'N/A', imageUrl: '/assets/images/product/productDefault.png' };
-                                const orderStatusTagClass = (status) => {
-                                    switch (status) {
-                                        case 'pending': return 'bg-orange text-orange';
-                                        case 'out_for_delivery_at': return 'bg-purple text-purple';
-                                        case 'delivered_at': return 'bg-green text-green';
-                                        case 'canceled': return 'bg-red text-red';
-                                        default: return 'bg-gray text-gray';
-                                    }
-                                };
-                                const statusClass = orderStatusTagClass(order.delivery_status || order.status);
-                                const statusText = order.delivery_status === 'delivered_at' ? 'Completed' :
-                                                   order.delivery_status === 'out_for_delivery_at' ? 'Delivery' :
-                                                   order.status === 'pending' ? 'Pending' :
-                                                   order.status === 'canceled' ? 'Canceled' : 'Unknown';
-
+                                const mainProduct = order.products && order.products.length > 0 ? order.products[0] : { name: 'N/A', category: 'N/A', image: '/assets/images/product/productDefault.png' };
+                                const { statusText, statusClass } = getOrderStatusDisplay(order);
 
                                 recentOrdersTableBody.innerHTML += `
                                     <tr class="item duration-300">
@@ -178,8 +183,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                             <strong class="text-title">${order.id}</strong>
                                         </th>
                                         <td class="py-3">
-                                            <a href="product-default.html?id=${mainProduct.productId || ''}" class="product flex items-center gap-3">
-                                                <img src="${mainProduct.imageUrl || '/assets/images/product/productDefault.png'}"
+                                            <a href="product-default.html?id=${mainProduct.id || ''}" class="product flex items-center gap-3">
+                                                <img src="${mainProduct.image || '/assets/images/product/productDefault.png'}"
                                                     alt="${mainProduct.name}"
                                                     class="flex-shrink-0 w-12 h-12 rounded" />
                                                 <div class="info flex flex-col">
@@ -236,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("User is not logged in or email is not available in localStorage.");
     }
 
-    // --- Tab Switching Logic (if not already handled by another script) ---
+    // --- Tab Switching Logic (already there, just keeping it) ---
     const tabItems = document.querySelectorAll('.menu-tab .category-item');
     const filterItems = document.querySelectorAll('.right .filter-item');
 
@@ -245,17 +250,14 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const targetTab = item.dataset.item;
 
-            // Remove active class from all tabs and filter items
             tabItems.forEach(tab => tab.classList.remove('active'));
             filterItems.forEach(filter => filter.classList.remove('active'));
 
-            // Add active class to clicked tab and corresponding filter item
             item.classList.add('active');
             document.querySelector(`.filter-item[data-item="${targetTab}"]`).classList.add('active');
         });
     });
 
-    // Handle internal tab switching for "Your Orders" if needed (e.g., all, pending, delivery)
     const orderTabButtons = document.querySelectorAll('.tab_order .menu-tab .tab-item');
     const orderTabIndicator = document.querySelector('.tab_order .menu-tab .indicator');
 
@@ -264,7 +266,6 @@ document.addEventListener("DOMContentLoaded", () => {
             orderTabButtons.forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
 
-            // Move indicator
             const buttonWidth = button.offsetWidth;
             const buttonLeft = button.offsetLeft;
             if (orderTabIndicator) {
@@ -272,17 +273,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 orderTabIndicator.style.transform = `translateX(${buttonLeft}px)`;
             }
 
-            // In a real application, you would filter the displayed orders here
-            // based on the clicked tab (e.g., 'all', 'pending', 'delivery')
             console.log("Order tab clicked:", button.textContent.trim());
         });
     });
 
-    // Initialize indicator position for the 'all' tab
     const initialActiveOrderTab = document.querySelector('.tab_order .menu-tab .tab-item.active');
     if (initialActiveOrderTab && orderTabIndicator) {
         orderTabIndicator.style.width = `${initialActiveOrderTab.offsetWidth}px`;
         orderTabIndicator.style.transform = `translateX(${initialActiveOrderTab.offsetLeft}px)`;
     }
-
 });
