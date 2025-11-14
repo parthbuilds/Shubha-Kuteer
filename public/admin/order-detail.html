@@ -986,12 +986,12 @@
             if (!res.ok) {
                 const errorBody = await res.json().catch(() => ({}));
                 if (res.status === 404) {
-                    throw new Error(`Order #${orderId} not found.`); // FIXED: new new Error
+                    throw new Error(`Order #${orderId} not found.`); // FIXED HERE
                 } else if (res.status === 401 || res.status === 403) {
                     window.location.href = "/admin/login.html";
                     return;
                 } else {
-                    throw new Error(errorBody.error || `Failed to fetch order details (status ${res.status}).`); // FIXED: new new Error
+                    throw new Error(errorBody.error || `Failed to fetch order details (status ${res.status}).`); // FIXED HERE
                 }
             }
 
@@ -999,7 +999,7 @@
             const order = response.order; // Directly access .order
 
             if (!order || !order.id) {
-                throw new Error("Invalid API response format: 'order' object or ID missing."); // FIXED: new new Error
+                throw new Error("Invalid API response format: 'order' object or ID missing."); // FIXED HERE
             }
 
             console.log('Parsed order data:', order);
@@ -1360,7 +1360,7 @@
 
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
-                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`); // FIXED: new new Error
+                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`); // FIXED HERE
                     }
 
                     alert(`Order #${orderId} successfully marked as "Out for Delivery"!`);
@@ -1400,7 +1400,7 @@
 
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
-                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`); // FIXED: new new Error
+                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`); // FIXED HERE
                     }
 
                     alert(`Order #${orderId} successfully marked as "Delivered"!`);
