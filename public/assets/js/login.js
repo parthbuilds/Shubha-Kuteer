@@ -1,75 +1,98 @@
-// login.js
 document.addEventListener("DOMContentLoaded", () => {
-    const loginBtn = document.getElementById("loginBtn");
+    // Select elements and check if they exist
+    const loginBtn = document.getElementById("loginBtn"); // This is likely for a "Login" button that triggers a modal/page
     const logoutBtn = document.getElementById("logoutBtn");
-    const registerBlock = document.getElementById("registerBlock");
+    const registerBlock = document.getElementById("registerBlock"); // Assuming this is a block related to registration/login form
+    
+    // Select elements for the login form itself, if it exists on this page
+    const loginForm = document.getElementById("loginForm"); // Assuming you have a login form with this ID
+    const emailInput = document.getElementById("loginEmail"); // Input for email
+    const passwordInput = document.getElementById("loginPassword"); // Input for password
+    const loginMessage = document.getElementById("loginMessage"); // For displaying success/error messages
 
-    // -------------------------
-    // RESTORE LOGIN UI
-    // -------------------------
+    // Handle initial login state from localStorage
     const isLoggedIn = localStorage.getItem("isLoggedIn");
+    const userName = localStorage.getItem("userName");
+    const userEmail = localStorage.getItem("userEmail");
 
     if (isLoggedIn === "true") {
-        loginBtn?.classList.add("hidden");
-        logoutBtn?.classList.remove("hidden");
-        registerBlock && (registerBlock.style.display = "none");
+        // User is logged in
+        if (loginBtn) loginBtn.classList.add("hidden");
+        if (logoutBtn) logoutBtn.classList.remove("hidden");
+        if (registerBlock) registerBlock.style.display = "none";
+        
+        // Display user info if on a page that shows it (e.g., dashboard or profile)
+        const userNameDisplay = document.getElementById("userName");
+        const userEmailDisplay = document.getElementById("userEmail");
+        if (userNameDisplay) userNameDisplay.textContent = userName;
+        if (userEmailDisplay) userEmailDisplay.textContent = userEmail;
+
     } else {
-        loginBtn?.classList.remove("hidden");
-        logoutBtn?.classList.add("hidden");
-        registerBlock && (registerBlock.style.display = "block");
+        // Not logged in
+        if (loginBtn) loginBtn.classList.remove("hidden");
+        if (logoutBtn) logoutBtn.classList.add("hidden");
+        if (registerBlock) registerBlock.style.display = "block";
     }
 
-    // -------------------------
-    // FRONTEND LOGIN FUNCTION
-    // -------------------------
-    window.loginUserFrontend = async function (email, password) {
-        try {
-            console.log("📩 Sending login request…");
+    // Login Form Submission (if loginForm exists on the page)
+    if (loginForm) {
+        loginForm.addEventListener("submit", async (event) => {
+            event.preventDefault(); // Prevent default form submission
 
-            const res = await fetch("https://shubhakuteer.in/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
-            });
+            const email = emailInput.value;
+            const password = passwordInput.value;
 
-            const data = await res.json();
-            console.log("🔵 Raw Login API Response:", data);
+            try {
+                const response = await fetch("/api/auth/login", { // Adjust endpoint if different
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
 
-            // ⚠️ SAFELY READ USER FIELDS REGARDLESS OF API FORMAT
-            const u = data.user || data.data || data.userData || data.profile || {};
+                const data = await response.json();
 
-            const userData = {
-                firstName: u.first_name || u.fname || u.name?.split(" ")[0] || "",
-                lastName: u.last_name || u.lname || u.name?.split(" ")[1] || "",
-                email: u.email || data.email || "",
-                id: u.id || u.user_id || data.id || ""
-            };
+                if (response.ok) {
+                    // Login successful
+                    localStorage.setItem("isLoggedIn", "true");
+                    localStorage.setItem("token", data.token);
+                    localStorage.setItem("userName", data.user.full_name); // Store full name
+                    localStorage.setItem("userEmail", data.user.email); // Store email
 
-            // -------------------------
-            // SAVE TO LOCAL STORAGE
-            // -------------------------
-            localStorage.setItem("isLoggedIn", "true");
-            if (data.token) localStorage.setItem("token", data.token);
-            localStorage.setItem("userData", JSON.stringify(userData));
+                    if (loginMessage) {
+                        loginMessage.textContent = data.message;
+                        loginMessage.style.color = "green";
+                    }
 
-            console.log("💾 SAVED userData:", userData);
+                    // Redirect to dashboard or home page after successful login
+                    window.location.href = "dashboard.html"; // Or wherever you want to redirect
+                } else {
+                    // Login failed
+                    if (loginMessage) {
+                        loginMessage.textContent = data.message || "Login failed.";
+                        loginMessage.style.color = "red";
+                    }
+                    console.error("Login failed:", data.message);
+                }
+            } catch (error) {
+                if (loginMessage) {
+                    loginMessage.textContent = "An error occurred during login.";
+                    loginMessage.style.color = "red";
+                }
+                console.error("Network or server error during login:", error);
+            }
+        });
+    }
 
-            window.location.href = "dashboard.html";
-
-        } catch (err) {
-            console.error("🔥 Login error:", err);
-            alert("Login failed. Please try again.");
-        }
-    };
-
-    // -------------------------
-    // LOGOUT
-    // -------------------------
-    logoutBtn?.addEventListener("click", () => {
-        localStorage.removeItem("isLoggedIn");
-        localStorage.removeItem("token");
-        localStorage.removeItem("userData");
-
-        window.location.href = "index.html";
-    });
+    // Logout functionality
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            localStorage.removeItem("isLoggedIn");
+            localStorage.removeItem("token");
+            localStorage.removeItem("userName"); // Remove stored user name
+            localStorage.removeItem("userEmail"); // Remove stored user email
+            window.location.href = "index.html"; // redirect to homepage
+        });
+    }
 });

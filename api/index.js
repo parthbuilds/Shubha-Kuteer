@@ -69,29 +69,26 @@ export default async function handler(req, res) {
         }
 
         if (pathname === '/api/auth/login' && req.method === 'POST') {
-    try {
-        const { loginUser } = await import("../backend/controllers/authController.js");
-
-        const mockReq = {
-            body: req.body
-        };
-
-        const mockRes = {
-            status: (code) => ({
-                json: (data) => res.status(code).json(data)
-            }),
-            json: (data) => res.status(200).json(data)
-        };
-
-        await loginUser(mockReq, mockRes);
-        return;
-
-    } catch (error) {
-        console.error("Login error:", error);
-        return res.status(500).json({ message: "Login failed", error: error.message });
-    }
-}
-
+            try {
+                const { loginUser } = await import("../backend/controllers/authController.js");
+                const mockReq = {
+                    body: req.body,
+                    method: req.method,
+                    url: req.url
+                };
+                const mockRes = {
+                    status: (code) => ({
+                        json: (data) => res.status(code).json(data)
+                    }),
+                    json: (data) => res.status(200).json(data)
+                };
+                await loginUser(mockReq, mockRes);
+                return;
+            } catch (error) {
+                console.error("Login error:", error);
+                return res.status(500).json({ message: "Login failed", error: error.message });
+            }
+        }
 
         if (pathname === '/api/dashboard-content' && method === 'GET') {
             let authResult;
