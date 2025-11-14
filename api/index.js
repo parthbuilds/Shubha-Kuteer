@@ -106,9 +106,9 @@ export default async function handler(req, res) {
                     sendResponse(200, data);
                 }
             };
-        
+
             await checkAuth(req, authCheckMockRes);
-        
+
             if (authResult && authResult.code === 200) {
                 sendResponse(200, {
                     message: `Welcome to your dashboard, ${authResult.data.user.first_name}!`,
@@ -776,6 +776,9 @@ export default async function handler(req, res) {
                 id, first_name, last_name, email, phone_number,
                 city, apartment, postal_code, note, amount,
                 razorpay_order_id, razorpay_payment_id, status,
+                delivery_status, 
+                out_for_delivery_at,
+                delivered_at,
                 products, created_at, updated_at
             FROM orders
             ORDER BY created_at DESC
@@ -1015,6 +1018,62 @@ export default async function handler(req, res) {
                         return res.status(500).json({
                             success: false,
                             error: 'Failed to delete order',
+                            details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+                            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+                        });
+                    }
+                }
+
+                // PUT /api/orders/:id/delivery-status - Update delivery status
+                if (pathname.startsWith('/api/orders/') && pathname.endsWith('/delivery-status') && req.method === 'PUT') {
+                    const orderId = pathname.split('/')[3]; // Extracts ID from /api/orders/{id}/delivery-status
+                    const { delivery_status } = req.body;
+
+                    if (!orderId || isNaN(orderId)) {
+                        return res.status(400).json({ success: false, error: 'Invalid order ID provided.' });
+                    }
+                    if (!delivery_status || typeof delivery_status !== 'string' || delivery_status.trim() === '') {
+                        return res.status(400).json({ success: false, error: 'A valid delivery_status is required.' });
+                    }
+
+                    const validStatuses = ['pending', 'confirmed', 'shipped', 'out for delivery', 'delivered', 'cancelled'];
+                    if (!validStatuses.includes(delivery_status.toLowerCase())) {
+                        return res.status(400).json({ success: false, error: `Invalid delivery status: ${delivery_status}. Must be one of: ${validStatuses.join(', ')}.` });
+                    }
+
+                    try {
+                        let updateSql = `UPDATE orders SET delivery_status = ?, updated_at = NOW() WHERE id = ?`;
+                        let updateValues = [delivery_status, orderId];
+
+                        // Add specific timestamp updates based on status
+                        if (delivery_status.toLowerCase() === 'out for delivery') {
+                            updateSql = `UPDATE orders SET delivery_status = ?, out_for_delivery_at = NOW(), updated_at = NOW() WHERE id = ?`;
+                        } else if (delivery_status.toLowerCase() === 'delivered') {
+                            updateSql = `UPDATE orders SET delivery_status = ?, delivered_at = NOW(), updated_at = NOW() WHERE id = ?`;
+                        }
+                        // Note: You might want to prevent setting 'out for delivery' if already 'delivered', etc.
+                        // For simplicity, this example just updates. Add more complex logic if needed.
+
+                        const [result] = await pool.default.query(updateSql, updateValues);
+
+                        if (result.affectedRows === 0) {
+                            const [existingOrderRows] = await pool.default.query(`SELECT id FROM orders WHERE id = ?`, [orderId]);
+                            if (existingOrderRows.length === 0) {
+                                return res.status(404).json({ success: false, message: 'Order not found.' });
+                            }
+                            return res.status(400).json({ success: false, message: 'Order delivery status could not be updated (perhaps it was already this status).' });
+                        }
+
+                        return res.status(200).json({
+                            success: true,
+                            message: `Order ${orderId} delivery status updated to "${delivery_status}".`,
+                            new_status: delivery_status
+                        });
+                    } catch (error) {
+                        console.error(`Error updating delivery status for order ID: ${orderId}:`, error);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to update delivery status.',
                             details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
                             stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
                         });
