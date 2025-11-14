@@ -1,80 +1,87 @@
 document.addEventListener("DOMContentLoaded", () => {
+    console.log("dashboard.js: DOMContentLoaded - Script started.");
+
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const registerBlock = document.getElementById("registerBlock");
     const dashboardBtn = document.getElementById("dashboardBtn");
 
-    // Elements to display user information
     const userNameDisplay = document.getElementById("userName");
     const userEmailDisplay = document.getElementById("userEmail");
 
-    // Check login state from localStorage
+    console.log("dashboard.js: Elements selected:", { loginBtn, logoutBtn, registerBlock, dashboardBtn, userNameDisplay, userEmailDisplay });
+
     const isLoggedIn = localStorage.getItem("isLoggedIn");
-    const storedUserName = localStorage.getItem("userName"); // Get stored name
-    const storedUserEmail = localStorage.getItem("userEmail"); // Get stored email
+    const storedUserName = localStorage.getItem("userName"); 
+    const storedUserEmail = localStorage.getItem("userEmail"); 
+
+    console.log("dashboard.js: localStorage state - isLoggedIn:", isLoggedIn, "storedUserName:", storedUserName, "storedUserEmail:", storedUserEmail);
 
     if (isLoggedIn === "true") {
-        // ✅ User is logged in
+        console.log("dashboard.js: User is logged in.");
         if (loginBtn) loginBtn.classList.add("hidden");
         if (logoutBtn) logoutBtn.classList.remove("hidden");
         if (registerBlock) registerBlock.style.display = "none";
-        if (dashboardBtn) dashboardBtn.classList.remove("hidden"); // Show dashboard button
+        if (dashboardBtn) dashboardBtn.classList.remove("hidden"); 
 
-        // Display user's name and email
-        if (userNameDisplay) userNameDisplay.textContent = storedUserName || "Guest User";
-        if (userEmailDisplay) userEmailDisplay.textContent = storedUserEmail || "No Email";
-
-        // You might want to fetch more dashboard content here using the token
-        // fetchDashboardContent(localStorage.getItem("token"));
+        console.log("dashboard.js: Attempting to update userNameDisplay and userEmailDisplay.");
+        if (userNameDisplay) {
+            userNameDisplay.textContent = storedUserName || "Guest User";
+            console.log("dashboard.js: userNameDisplay updated to:", userNameDisplay.textContent);
+        } else {
+            console.warn("dashboard.js: Element with id 'userName' not found.");
+        }
+        if (userEmailDisplay) {
+            userEmailDisplay.textContent = storedUserEmail || "No Email";
+            console.log("dashboard.js: userEmailDisplay updated to:", userEmailDisplay.textContent);
+        } else {
+            console.warn("dashboard.js: Element with id 'userEmail' not found.");
+        }
 
     } else {
-        // ❌ User is not logged in
+        console.log("dashboard.js: User is NOT logged in. Hiding dashboard elements, showing login.");
         if (loginBtn) loginBtn.classList.remove("hidden");
         if (logoutBtn) logoutBtn.classList.add("hidden");
         if (registerBlock) registerBlock.style.display = "block";
-        if (dashboardBtn) dashboardBtn.classList.add("hidden"); // Hide dashboard button
+        if (dashboardBtn) dashboardBtn.classList.add("hidden"); 
 
-        // Clear or hide user info if not logged in
         if (userNameDisplay) userNameDisplay.textContent = "";
         if (userEmailDisplay) userEmailDisplay.textContent = "";
-
-        // Optionally redirect to login page if not logged in
-        // window.location.href = "login.html"; 
+        console.log("dashboard.js: User info display elements cleared.");
     }
 
-    // Logout functionality
     if (logoutBtn) {
+        console.log("dashboard.js: Logout button found. Attaching click listener.");
         logoutBtn.addEventListener("click", () => {
+            console.log("dashboard.js: Logout button clicked. Clearing localStorage.");
             localStorage.removeItem("isLoggedIn");
             localStorage.removeItem("token");
-            localStorage.removeItem("userName"); // Remove stored user name
-            localStorage.removeItem("userEmail"); // Remove stored user email
-            window.location.href = "index.html"; // redirect to homepage
+            localStorage.removeItem("userName"); 
+            localStorage.removeItem("userEmail"); 
+            console.log("dashboard.js: localStorage cleared. Redirecting to index.html.");
+            window.location.href = "index.html"; 
         });
     }
 
-    // Example function to fetch dashboard content (if you want to expand)
-    async function fetchDashboardContent(token) {
-        try {
-            const response = await fetch('/api/dashboard-content', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const data = await response.json();
-            if (response.ok) {
-                console.log("Dashboard content:", data);
-                // Update your dashboard UI with fetched data
-                // e.g., if you have an element for welcome message:
-                // const welcomeMessage = document.getElementById("welcomeMessage");
-                // if (welcomeMessage) welcomeMessage.textContent = data.message;
-            } else {
-                console.error("Failed to fetch dashboard content:", data.message);
-                // Handle unauthorized or other errors, maybe redirect to login
-            }
-        } catch (error) {
-            console.error("Error fetching dashboard content:", error);
-        }
-    }
+    // This function can be uncommented and used if you want to fetch dynamic content
+    // async function fetchDashboardContent(token) {
+    //     console.log("dashboard.js: Attempting to fetch dashboard content.");
+    //     try {
+    //         const response = await fetch('/api/dashboard-content', {
+    //             method: 'GET',
+    //             headers: {
+    //                 'Authorization': `Bearer ${token}`
+    //             }
+    //         });
+    //         const data = await response.json();
+    //         if (response.ok) {
+    //             console.log("dashboard.js: Dashboard content fetched successfully:", data);
+    //             // Update your dashboard UI with fetched data
+    //         } else {
+    //             console.error("dashboard.js: Failed to fetch dashboard content:", data.message);
+    //         }
+    //     } catch (error) {
+    //         console.error("dashboard.js: Error fetching dashboard content:", error);
+    //     }
+    // }
 });

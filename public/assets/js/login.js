@@ -1,49 +1,54 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Select elements and check if they exist
-    const loginBtn = document.getElementById("loginBtn"); // This is likely for a "Login" button that triggers a modal/page
-    const logoutBtn = document.getElementById("logoutBtn");
-    const registerBlock = document.getElementById("registerBlock"); // Assuming this is a block related to registration/login form
-    
-    // Select elements for the login form itself, if it exists on this page
-    const loginForm = document.getElementById("loginForm"); // Assuming you have a login form with this ID
-    const emailInput = document.getElementById("loginEmail"); // Input for email
-    const passwordInput = document.getElementById("loginPassword"); // Input for password
-    const loginMessage = document.getElementById("loginMessage"); // For displaying success/error messages
+    console.log("login.js: DOMContentLoaded - Script started.");
 
-    // Handle initial login state from localStorage
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const registerBlock = document.getElementById("registerBlock");
+    
+    const loginForm = document.getElementById("loginForm"); 
+    const emailInput = document.getElementById("loginEmail"); 
+    const passwordInput = document.getElementById("loginPassword"); 
+    const loginMessage = document.getElementById("loginMessage"); 
+
+    console.log("login.js: Elements selected:", { loginBtn, logoutBtn, registerBlock, loginForm, emailInput, passwordInput, loginMessage });
+
     const isLoggedIn = localStorage.getItem("isLoggedIn");
     const userName = localStorage.getItem("userName");
     const userEmail = localStorage.getItem("userEmail");
 
+    console.log("login.js: localStorage initial state - isLoggedIn:", isLoggedIn, "userName:", userName, "userEmail:", userEmail);
+
     if (isLoggedIn === "true") {
-        // User is logged in
+        console.log("login.js: User is logged in. Hiding login, showing logout.");
         if (loginBtn) loginBtn.classList.add("hidden");
         if (logoutBtn) logoutBtn.classList.remove("hidden");
         if (registerBlock) registerBlock.style.display = "none";
         
-        // Display user info if on a page that shows it (e.g., dashboard or profile)
         const userNameDisplay = document.getElementById("userName");
         const userEmailDisplay = document.getElementById("userEmail");
+        console.log("login.js: Display elements for user info (if on this page):", { userNameDisplay, userEmailDisplay });
         if (userNameDisplay) userNameDisplay.textContent = userName;
         if (userEmailDisplay) userEmailDisplay.textContent = userEmail;
 
     } else {
-        // Not logged in
+        console.log("login.js: User is NOT logged in. Showing login, hiding logout.");
         if (loginBtn) loginBtn.classList.remove("hidden");
         if (logoutBtn) logoutBtn.classList.add("hidden");
         if (registerBlock) registerBlock.style.display = "block";
     }
 
-    // Login Form Submission (if loginForm exists on the page)
     if (loginForm) {
+        console.log("login.js: Login form found. Attaching submit listener.");
         loginForm.addEventListener("submit", async (event) => {
-            event.preventDefault(); // Prevent default form submission
+            event.preventDefault(); 
+            console.log("login.js: Login form submitted.");
 
             const email = emailInput.value;
             const password = passwordInput.value;
+            console.log("login.js: Attempting login with email:", email);
 
             try {
-                const response = await fetch("/api/auth/login", { // Adjust endpoint if different
+                const response = await fetch("/api/auth/login", { 
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -52,47 +57,51 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
 
                 const data = await response.json();
+                console.log("login.js: API response data:", data);
 
                 if (response.ok) {
-                    // Login successful
+                    console.log("login.js: Login successful!");
                     localStorage.setItem("isLoggedIn", "true");
                     localStorage.setItem("token", data.token);
-                    localStorage.setItem("userName", data.user.full_name); // Store full name
-                    localStorage.setItem("userEmail", data.user.email); // Store email
+                    localStorage.setItem("userName", data.user.full_name); 
+                    localStorage.setItem("userEmail", data.user.email); 
+                    console.log("login.js: Stored in localStorage - isLoggedIn: true, token: (hidden), userName:", data.user.full_name, "userEmail:", data.user.email);
 
                     if (loginMessage) {
                         loginMessage.textContent = data.message;
                         loginMessage.style.color = "green";
                     }
-
-                    // Redirect to dashboard or home page after successful login
-                    window.location.href = "dashboard.html"; // Or wherever you want to redirect
+                    console.log("login.js: Redirecting to dashboard.html");
+                    window.location.href = "dashboard.html"; 
                 } else {
-                    // Login failed
+                    console.error("login.js: Login failed:", data.message);
                     if (loginMessage) {
                         loginMessage.textContent = data.message || "Login failed.";
                         loginMessage.style.color = "red";
                     }
-                    console.error("Login failed:", data.message);
                 }
             } catch (error) {
+                console.error("login.js: Network or server error during login:", error);
                 if (loginMessage) {
                     loginMessage.textContent = "An error occurred during login.";
                     loginMessage.style.color = "red";
                 }
-                console.error("Network or server error during login:", error);
             }
         });
+    } else {
+        console.log("login.js: Login form (id='loginForm') not found on this page.");
     }
 
-    // Logout functionality
     if (logoutBtn) {
+        console.log("login.js: Logout button found. Attaching click listener.");
         logoutBtn.addEventListener("click", () => {
+            console.log("login.js: Logout button clicked. Clearing localStorage.");
             localStorage.removeItem("isLoggedIn");
             localStorage.removeItem("token");
-            localStorage.removeItem("userName"); // Remove stored user name
-            localStorage.removeItem("userEmail"); // Remove stored user email
-            window.location.href = "index.html"; // redirect to homepage
+            localStorage.removeItem("userName"); 
+            localStorage.removeItem("userEmail"); 
+            console.log("login.js: localStorage cleared. Redirecting to index.html.");
+            window.location.href = "index.html"; 
         });
     }
 });
