@@ -955,7 +955,13 @@
             // 1. Check admin authentication first
             const authRes = await fetch(`${BASE_API_URL}/admin/auth/check`);
             if (!authRes.ok) {
-                window.location.href = "/admin/login.html";
+                // If the checkAuth endpoint in backend returns 401 with a redirect property
+                const errorData = await authRes.json().catch(() => ({}));
+                if (errorData.redirect) {
+                    window.location.href = errorData.redirect;
+                } else {
+                    window.location.href = "/admin/login.html"; // Fallback
+                }
                 return;
             }
 
@@ -965,12 +971,14 @@
 
             if (!res.ok) {
                 if (res.status === 404) {
-                    throw new Error(`Order #${orderId} not found.`);
+                    throw new new Error(`Order #${orderId} not found.`);
                 } else if (res.status === 401 || res.status === 403) {
-                    throw new Error("Authentication failed or access denied.");
+                    // Redirect to login if unauthorized or forbidden
+                    window.location.href = "/admin/login.html";
+                    return;
                 } else {
                     const errorBody = await res.json().catch(() => ({}));
-                    throw new Error(errorBody.error || `Failed to fetch order details (status ${res.status}).`);
+                    throw new new Error(errorBody.error || `Failed to fetch order details (status ${res.status}).`);
                 }
             }
 
@@ -980,16 +988,18 @@
             const order = response.order; // Directly access .order
 
             if (!order || !order.id) {
-                throw new Error("Invalid API response format: 'order' object or ID missing.");
+                throw new new Error("Invalid API response format: 'order' object or ID missing.");
             }
 
             console.log('Parsed order data:', order);
 
-            // Backend now handles JSON parsing; ensure it's an array for frontend logic
+            // --- IMPORTANT: Backend now ensures `order.products` is an array ---
+            // Frontend no longer needs to parse JSON string. Just ensure it's treated as an array.
+            const products = Array.isArray(order.products) ? order.products : [];
             if (!Array.isArray(order.products)) {
-                console.warn(`Order ${order.id}: 'products' was not an array. Resetting to empty array.`);
-                order.products = [];
+                console.warn(`Order ${order.id}: 'products' was not an array from backend. Using empty array.`);
             }
+            order.products = products; // Ensure consistency
 
             // 3. Update page title and heading
             document.title = `Order #${order.id} - Shubha Kuteer Admin`;
@@ -1179,7 +1189,9 @@
             }
 
             // 9. Payment & Delivery Status Info
-            const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text"); // This selector might be fragile, consider adding an ID
+            // Using more robust selectors if available, or rely on existing ones.
+            // Check your HTML structure for .wg-box:nth-child(3) to ensure it's correct.
+            const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
             if (paymentMethodEl) {
                 const { statusText: paymentStatusText, statusClass: paymentStatusClass } = getStatusDisplay(order.status);
                 const { statusText: deliveryStatusText, statusClass: deliveryStatusClass } = getStatusDisplay(order.delivery_status);
@@ -1218,7 +1230,7 @@
             const deliveredTimestampSpan = document.getElementById("deliveredTimestamp");
             const canceledStatusDiv = document.getElementById("canceledStatusDiv");
             const canceledTimestampSpan = document.getElementById("canceledTimestamp");
-            const canceledStatusText = document.getElementById("canceledStatusText"); // New element for text if you want to differentiate returned/cancelled
+            const canceledStatusText = document.getElementById("canceledStatusText");
 
             // Set order ID for both buttons
             if (outForDeliveryButton) outForDeliveryButton.setAttribute("data-order-id", order.id);
@@ -1244,9 +1256,10 @@
             if (currentPaymentStatus === 'cancelled' || currentDeliveryStatus === 'cancelled' || currentDeliveryStatus === 'returned') {
                 if (canceledStatusDiv && canceledTimestampSpan && canceledStatusText) {
                     canceledStatusDiv.style.display = 'block';
+                    // Use the specific timestamp fields provided by the backend
                     if (currentDeliveryStatus === 'returned') {
                         canceledStatusText.textContent = 'Order Returned On';
-                        canceledTimestampSpan.textContent = formatDateTime(order.updated_at || order.delivered_at || new Date().toISOString()); // Use delivered_at or updated_at for returned
+                        canceledTimestampSpan.textContent = formatDateTime(order.returned_at || order.updated_at || new Date().toISOString()); // Assuming a `returned_at` field might exist or fallback
                     } else { // cancelled
                         canceledStatusText.textContent = 'Order Cancelled On';
                         canceledTimestampSpan.textContent = formatDateTime(order.canceled_at || order.updated_at || new Date().toISOString());
@@ -1257,7 +1270,7 @@
                     outForDeliveryStatusDiv.style.display = 'block';
                     outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
                 }
-                if (deliveredStatusDiv && deliveredTimestampSpan) {
+                if (deliveredStatusDiv && deliveredTimestampSpan && order.delivered_at) { // Ensure delivered_at exists
                     deliveredStatusDiv.style.display = 'block';
                     deliveredTimestampSpan.textContent = formatDateTime(order.delivered_at);
                 }
@@ -1269,8 +1282,7 @@
                 if (deliveredButton) {
                     deliveredButton.style.display = 'block';
                 }
-            } else if (['pending', 'processing', 'shipped', 'confirmed'].includes(currentDeliveryStatus)) {
-                // If payment is completed/not failed, and delivery not delivered/out for delivery/cancelled/returned
+            } else if (['pending', 'processing', 'shipped', 'confirmed'].includes(currentDeliveryStatus) || currentPaymentStatus === 'completed') { // Also show if payment is completed
                 if (outForDeliveryButton) {
                     outForDeliveryButton.style.display = 'block';
                 }
@@ -1294,8 +1306,14 @@
         try {
             const res = await fetch(`${BASE_API_URL}/admin/users/me`);
             if (!res.ok) {
-                window.location.href = "/admin/login.html"; // Redirect if not authenticated
-                throw new Error("Failed to fetch admin data or session expired.");
+                // If the checkAuth endpoint in backend returns 401 with a redirect property
+                const errorData = await res.json().catch(() => ({}));
+                if (errorData.redirect) {
+                    window.location.href = errorData.redirect;
+                } else {
+                    window.location.href = "/admin/login.html"; // Fallback
+                }
+                return;
             }
             const data = await res.json();
 
@@ -1307,6 +1325,8 @@
 
         } catch (err) {
             console.error("Error loading admin data:", err);
+            // Consider redirecting to login on any error during admin data load
+            // window.location.href = "/admin/login.html";
         }
     }
 
@@ -1336,10 +1356,9 @@
 
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
-                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`);
+                        throw new new Error(errorData.message || `HTTP error! Status: ${res.status}`);
                     }
 
-                    // No need for success data, just reload
                     alert(`Order #${orderId} successfully marked as "Out for Delivery"!`);
                     await loadOrderDetails(orderId); // Reload to reflect changes
 
@@ -1377,10 +1396,9 @@
 
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
-                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`);
+                        throw new new Error(errorData.message || `HTTP error! Status: ${res.status}`);
                     }
 
-                    // No need for success data, just reload
                     alert(`Order #${orderId} successfully marked as "Delivered"!`);
                     await loadOrderDetails(orderId); // Reload to reflect changes
 
