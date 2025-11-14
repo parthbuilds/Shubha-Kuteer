@@ -68,63 +68,103 @@ export default async function handler(req, res) {
             }
         }
 
-        if (pathname === '/api/auth/login' && req.method === 'POST') {
+        // ======================================================================
+        // LOGIN (POST)
+        // ======================================================================
+        if (pathname === "/api/auth/login" && method === "POST") {
             try {
-                const { loginUser } = await import("../backend/controllers/authController.js");
-                const mockReq = {
-                    body: req.body,
-                    method: req.method,
-                    url: req.url
-                };
-                const mockRes = {
-                    status: (code) => ({
-                        json: (data) => res.status(code).json(data)
-                    }),
-                    json: (data) => res.status(200).json(data)
-                };
-                await loginUser(mockReq, mockRes);
-                return;
-            } catch (error) {
-                console.error("Login error:", error);
-                return res.status(500).json({ message: "Login failed", error: error.message });
-            }
-        }
+                const { loginUser } = await import("./backend/controllers/authController.js");
 
-        if (pathname === '/api/auth/login' && req.method === 'GET') {
-            try {
-                const { loginUser } = await import("../backend/controllers/authController.js");
+                // Parse JSON body
+                let body = "";
+                req.on("data", chunk => (body += chunk));
+                req.on("end", async () => {
+                    const parsedBody = JSON.parse(body || "{}");
 
-                // Extract query params manually
-                const url = new URL(req.url, `http://${req.headers.host}`);
-                const email = url.searchParams.get("email");
-                const password = url.searchParams.get("password");
+                    const mockReq = {
+                        body: parsedBody,
+                        method: req.method,
+                        url: req.url
+                    };
 
-                console.log("📩 Extracted GET login params:", { email, password });
+                    const mockRes = {
+                        status: (code) => ({
+                            json: (data) => sendResponse(res, code, data)
+                        }),
+                        json: (data) => sendResponse(res, 200, data)
+                    };
 
-                const mockReq = {
-                    body: { email, password }, // pass correctly to controller
-                    method: req.method,
-                    url: req.url
-                };
+                    await loginUser(mockReq, mockRes);
+                });
 
-                const mockRes = {
-                    status: (code) => ({
-                        json: (data) => res.status(code).json(data)
-                    }),
-                    json: (data) => res.status(200).json(data)
-                };
-
-                await loginUser(mockReq, mockRes);
                 return;
 
             } catch (error) {
-                console.error("Login error:", error);
-                return res.status(500).json({
+                console.error("❌ Login POST error:", error);
+                return sendResponse(res, 500, {
                     message: "Login failed",
                     error: error.message
                 });
             }
         }
+
+        // ======================================================================
+        // LOGIN (GET) — email & password in query
+        // ======================================================================
+        if (pathname === "/api/auth/login" && method === "GET") {
+            try {
+                const { loginUser } = await import("./backend/controllers/authController.js");
+
+                const email = url.searchParams.get("email");
+                const password = url.searchParams.get("password");
+
+                console.log("📩 GET Login Params:", { email, password });
+
+                if (!email || !password) {
+                    return sendResponse(res, 400, {
+                        message: "Email and password are required"
+                    });
+                }
+
+                const mockReq = {
+                    body: { email, password },
+                    method: req.method,
+                    url: req.url
+                };
+
+                const mockRes = {
+                    status: (code) => ({
+                        json: (data) => sendResponse(res, code, data)
+                    }),
+                    json: (data) => sendResponse(res, 200, data)
+                };
+
+                await loginUser(mockReq, mockRes);
+                return;
+
+            } catch (error) {
+                console.error("❌ Login GET error:", error);
+                return sendResponse(res, 500, {
+                    message: "Login failed",
+                    error: error.message
+                });
+            }
+        }
+
+        // ======================================================================
+        // STATIC FILE SERVING (Frontend)
+        // ======================================================================
+        let filePath = path.join(process.cwd(), "public", pathname === "/" ? "index.html" : pathname);
+
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                res.writeHead(404, { "Content-Type": "text/plain" });
+                res.end("Not Found");
+            } else {
+                res.writeHead(200);
+                res.end(data);
+            }
+        });
 
         // Admin auth routes
         if (pathname === '/api/admin/auth/login' && req.method === 'POST') {
