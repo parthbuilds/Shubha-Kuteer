@@ -75,11 +75,16 @@ export default async function handler(req, res) {
             try {
                 const { loginUser } = await import("./backend/controllers/authController.js");
 
-                // Parse JSON body
                 let body = "";
                 req.on("data", chunk => (body += chunk));
                 req.on("end", async () => {
-                    const parsedBody = JSON.parse(body || "{}");
+                    let parsedBody = {};
+
+                    try {
+                        parsedBody = JSON.parse(body || "{}");
+                    } catch (err) {
+                        return sendResponse(res, 400, { message: "Invalid JSON" });
+                    }
 
                     const mockReq = {
                         body: parsedBody,
@@ -108,6 +113,8 @@ export default async function handler(req, res) {
             }
         }
 
+
+
         // ======================================================================
         // LOGIN (GET) — email & password in query
         // ======================================================================
@@ -115,8 +122,10 @@ export default async function handler(req, res) {
             try {
                 const { loginUser } = await import("./backend/controllers/authController.js");
 
-                const email = url.searchParams.get("email");
-                const password = url.searchParams.get("password");
+                const urlObj = new URL(req.url, `http://${req.headers.host}`);
+
+                const email = urlObj.searchParams.get("email");
+                const password = urlObj.searchParams.get("password");
 
                 console.log("📩 GET Login Params:", { email, password });
 
@@ -150,21 +159,6 @@ export default async function handler(req, res) {
                 });
             }
         }
-
-        // ======================================================================
-        // STATIC FILE SERVING (Frontend)
-        // ======================================================================
-        let filePath = path.join(process.cwd(), "public", pathname === "/" ? "index.html" : pathname);
-
-        fs.readFile(filePath, (err, data) => {
-            if (err) {
-                res.writeHead(404, { "Content-Type": "text/plain" });
-                res.end("Not Found");
-            } else {
-                res.writeHead(200);
-                res.end(data);
-            }
-        });
 
         // Admin auth routes
         if (pathname === '/api/admin/auth/login' && req.method === 'POST') {

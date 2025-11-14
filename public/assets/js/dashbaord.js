@@ -130,54 +130,7 @@
 //         window.location.href = '/login.html';
 //     }
 
-//     // --- Core Dashboard Access Logic ---
-// async function checkDashboardAccess() {
-//     if (!window.location.pathname.startsWith('/dashboard')) {
-//         return;
-//     }
-
-//     const currentToken = localStorage.getItem('userToken');
-
-//     if (currentToken) {
-//         try {
-//             const authData = await callApi('/api/auth/check');
-//             if (authData.message === 'Authorized ✅') {
-//                 console.log('Token validated. User is authenticated.');
-//                 if (logoutBtnAnchor) {
-//                     logoutBtnAnchor.textContent = 'Logout';
-//                     logoutBtnAnchor.removeEventListener('click', handleLogout);
-//                     logoutBtnAnchor.addEventListener('click', handleLogout);
-//                 }
-                
-//                 // ===== ADD THIS PART =====
-//                 await loadUserNameToHeader();
-                
-//                 await loadAndRenderAllUserData();
-//                 switchTab('dashboard');
-//                 return;
-//             } else {
-//                 console.warn('Backend rejected token without 401:', authData.message);
-//                 localStorage.removeItem('userToken');
-//                 alert('Session invalid. Please log in again.');
-//                 window.location.href = '/login.html';
-//                 return;
-//             }
-//         } catch (error) {
-//             if (error.message !== 'Unauthorized') {
-//                 console.error('Error during initial auth check for dashboard:', error);
-//                 localStorage.removeItem('userToken');
-//                 alert('An error occurred during authentication. Please log in again.');
-//                 window.location.href = '/login.html';
-//             }
-//             return;
-//         }
-//     }
-
-//     console.log('No valid token found. Redirecting to login.');
-//     alert('You must be logged in to view the dashboard.');
-//     localStorage.removeItem('userToken');
-//     window.location.href = '/login.html';
-// }
+    
 
 //     // --- Form Submission Handlers (Login and Register) ---
 //     const loginForm = document.getElementById('loginForm');
@@ -873,35 +826,41 @@
 
 async function handleLogin(email, password) {
     try {
-        console.log("📤 Sending login request...", { email, password });
-
         const response = await fetch(`/api/auth/login?email=${email}&password=${password}`);
         const data = await response.json();
 
-        console.log("📥 API Response:", data);
+        console.log("📥 Login API response:", data);
 
         if (!response.ok) {
-            alert(data.message || "Login failed");
+            console.error("❌ Login failed:", data.message);
+            alert(data.message);
             return;
         }
 
-        if (data.user && data.user.email) {
-            // Save user in localStorage
+        if (data.user && data.token) {
+            // Store everything from controller output
+            localStorage.setItem("user_id", data.user.id);
             localStorage.setItem("user_first_name", data.user.first_name);
             localStorage.setItem("user_last_name", data.user.last_name);
             localStorage.setItem("user_email", data.user.email);
             localStorage.setItem("token", data.token);
 
-            console.log("💾 Saved to localStorage");
+            console.log("💾 Stored in localStorage:", {
+                id: data.user.id,
+                first_name: data.user.first_name,
+                last_name: data.user.last_name,
+                email: data.user.email,
+                token: data.token
+            });
 
             // Update UI
             showUserInUI();
         } else {
-            console.warn("⚠ No user data in response");
+            console.warn("⚠ Missing user data from backend!");
         }
 
-    } catch (error) {
-        console.error("🔥 Login error:", error);
+    } catch (err) {
+        console.error("🔥 Login error:", err);
     }
 }
 
@@ -910,15 +869,17 @@ function showUserInUI() {
     const lastName = localStorage.getItem("user_last_name");
     const email = localStorage.getItem("user_email");
 
-    console.log("👀 LocalStorage:", { firstName, lastName, email });
+    console.log("👀 Restoring user from localStorage:", {
+        firstName, lastName, email
+    });
 
-    if (firstName && lastName && email) {
-        document.getElementById("userName").textContent = `${firstName} ${lastName}`;
+    if (firstName && email) {
+        document.getElementById("userName").textContent = `${firstName} ${lastName || ""}`;
         document.getElementById("userEmail").textContent = email;
+    } else {
+        console.warn("⚠ No stored user — UI not updated.");
     }
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-    console.log("🔄 Restoring localStorage user…");
-    showUserInUI();
-});
+// Restore after refresh
+window.addEventListener("DOMContentLoaded", showUserInUI);
