@@ -1025,66 +1025,60 @@ export default async function handler(req, res) {
                 }
 
                 // PUT /api/orders/:id/delivery-status - Update delivery status
-        if (pathname.startsWith('/api/orders/') && pathname.endsWith('/delivery-status') && req.method === 'PUT') {
-            const orderId = pathname.split('/')[3]; // Extracts ID from /api/orders/{id}/delivery-status
-            const { delivery_status } = req.body; // Expecting the actual enum string
+                if (pathname.startsWith('/api/orders/') && pathname.endsWith('/delivery-status') && req.method === 'PUT') {
+                    const orderId = pathname.split('/')[3]; // Extracts ID from /api/orders/{id}/delivery-status
+                    const { delivery_status } = req.body;
 
-            if (!orderId || isNaN(orderId)) {
-                return res.status(400).json({ success: false, error: 'Invalid order ID provided.' });
-            }
-            if (!delivery_status || typeof delivery_status !== 'string' || delivery_status.trim() === '') {
-                return res.status(400).json({ success: false, error: 'A valid delivery_status is required.' });
-            }
-
-            // The frontend should now send the actual enum value (e.g., 'out for delivery', 'delivered')
-            const validStatuses = ['pending', 'processing', 'shipped', 'out for delivery', 'delivered', 'returned'];
-            if (!validStatuses.includes(delivery_status.toLowerCase())) {
-                return res.status(400).json({ success: false, error: `Invalid delivery status: "${delivery_status}". Must be one of: ${validStatuses.join(', ')}.` });
-            }
-
-            try {
-                let updateSql = `UPDATE orders SET delivery_status = ?, updated_at = NOW()`;
-                const updateValues = [delivery_status];
-
-                // Add specific timestamp updates based on status
-                if (delivery_status.toLowerCase() === 'out for delivery') {
-                    updateSql += `, out_for_delivery_at = NOW()`;
-                } else if (delivery_status.toLowerCase() === 'delivered') {
-                    updateSql += `, delivered_at = NOW()`;
-                } else if (delivery_status.toLowerCase() === 'cancelled') { // Assuming 'cancelled' might also update a timestamp
-                    updateSql += `, canceled_at = NOW()`;
-                }
-                // No need to set timestamps to NULL if changing back, just setting when they occur.
-
-                updateSql += ` WHERE id = ?`;
-                updateValues.push(orderId);
-
-                const [result] = await pool.default.query(updateSql, updateValues);
-
-                if (result.affectedRows === 0) {
-                    const [existingOrderRows] = await pool.default.query(`SELECT id FROM orders WHERE id = ?`, [orderId]);
-                    if (existingOrderRows.length === 0) {
-                        return res.status(404).json({ success: false, message: 'Order not found.' });
+                    if (!orderId || isNaN(orderId)) {
+                        return res.status(400).json({ success: false, error: 'Invalid order ID provided.' });
                     }
-                    // If affectedRows is 0 but order exists, it means the status was already the same.
-                    return res.status(200).json({ success: true, message: 'Order delivery status already set or no change required.' });
-                }
+                    if (!delivery_status || typeof delivery_status !== 'string' || delivery_status.trim() === '') {
+                        return res.status(400).json({ success: false, error: 'A valid delivery_status is required.' });
+                    }
 
-                return res.status(200).json({
-                    success: true,
-                    message: `Order ${orderId} delivery status updated to "${delivery_status}".`,
-                    new_status: delivery_status
-                });
-            } catch (error) {
-                console.error(`Error updating delivery status for order ID: ${orderId}:`, error);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to update delivery status.',
-                    details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
-                    stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-                });
-            }
-        }
+                    const validStatuses = ['pending', 'confirmed', 'shipped', 'out for delivery', 'delivered', 'cancelled'];
+                    if (!validStatuses.includes(delivery_status.toLowerCase())) {
+                        return res.status(400).json({ success: false, error: `Invalid delivery status: ${delivery_status}. Must be one of: ${validStatuses.join(', ')}.` });
+                    }
+
+                    try {
+                        let updateSql = `UPDATE orders SET delivery_status = ?, updated_at = NOW() WHERE id = ?`;
+                        let updateValues = [delivery_status, orderId];
+
+                        // Add specific timestamp updates based on status
+                        if (delivery_status.toLowerCase() === 'out for delivery') {
+                            updateSql = `UPDATE orders SET delivery_status = ?, out_for_delivery_at = NOW(), updated_at = NOW() WHERE id = ?`;
+                        } else if (delivery_status.toLowerCase() === 'delivered') {
+                            updateSql = `UPDATE orders SET delivery_status = ?, delivered_at = NOW(), updated_at = NOW() WHERE id = ?`;
+                        }
+                        // Note: You might want to prevent setting 'out for delivery' if already 'delivered', etc.
+                        // For simplicity, this example just updates. Add more complex logic if needed.
+
+                        const [result] = await pool.default.query(updateSql, updateValues);
+
+                        if (result.affectedRows === 0) {
+                            const [existingOrderRows] = await pool.default.query(`SELECT id FROM orders WHERE id = ?`, [orderId]);
+                            if (existingOrderRows.length === 0) {
+                                return res.status(404).json({ success: false, message: 'Order not found.' });
+                            }
+                            return res.status(400).json({ success: false, message: 'Order delivery status could not be updated (perhaps it was already this status).' });
+                        }
+
+                        return res.status(200).json({
+                            success: true,
+                            message: `Order ${orderId} delivery status updated to "${delivery_status}".`,
+                            new_status: delivery_status
+                        });
+                    } catch (error) {
+                        console.error(`Error updating delivery status for order ID: ${orderId}:`, error);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to update delivery status.',
+                            details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+                            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+                        });
+                    }
+                }
 
                 // GET /api/orders/test - Test endpoint
                 if (pathname === '/api/orders/test' && req.method === 'GET') {
