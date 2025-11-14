@@ -869,47 +869,82 @@
 //         handleAuthPages();
 //     }
 // });
-
 async function handleLogin(email, password) {
     try {
+        console.log("📤 Sending login request with:", { email, password });
+
         const response = await fetch(`/api/auth/login?email=${email}&password=${password}`);
         const data = await response.json();
 
+        console.log("📥 Raw API response:", data);
+
         if (!response.ok) {
+            console.error("❌ Login error from server:", data.message);
             alert(data.message || "Login failed");
             return;
         }
 
-        // FIXED — Make sure user object exists and has values
+        // Check if user data exists
         if (data.user && data.user.email) {
+            console.log("✅ User data received:", {
+                first_name: data.user.first_name,
+                last_name: data.user.last_name,
+                email: data.user.email,
+                token: data.token
+            });
+
             // Store in localStorage
             localStorage.setItem("user_first_name", data.user.first_name);
             localStorage.setItem("user_last_name", data.user.last_name);
             localStorage.setItem("user_email", data.user.email);
             localStorage.setItem("token", data.token);
 
-            // Show on UI
+            console.log("💾 Saved to localStorage:", {
+                first_name: localStorage.getItem("user_first_name"),
+                last_name: localStorage.getItem("user_last_name"),
+                email: localStorage.getItem("user_email"),
+                token: localStorage.getItem("token")
+            });
+
+            // Update UI
             showUserInUI();
         } else {
-            console.error("User data missing in API response");
+            console.warn("⚠ Missing user data in API response.");
         }
 
     } catch (err) {
-        console.error("Login error:", err);
+        console.error("🔥 Login error:", err);
     }
 }
 
+
+// ------------------------------------------------------------
+// SHOW USER IN FRONTEND
+// ------------------------------------------------------------
 function showUserInUI() {
     const firstName = localStorage.getItem("user_first_name");
     const lastName = localStorage.getItem("user_last_name");
     const email = localStorage.getItem("user_email");
 
+    console.log("👀 Displaying user from localStorage:", {
+        firstName,
+        lastName,
+        email
+    });
+
     if (firstName && lastName && email) {
         document.getElementById("userName").textContent = `${firstName} ${lastName}`;
         document.getElementById("userEmail").textContent = email;
+    } else {
+        console.warn("⚠ User not found in localStorage. UI not updated.");
     }
 }
 
+
+// ------------------------------------------------------------
+// LOAD USER ON PAGE REFRESH
+// ------------------------------------------------------------
 window.addEventListener("DOMContentLoaded", () => {
+    console.log("🔄 Page reloaded — restoring user from localStorage…");
     showUserInUI();
 });
