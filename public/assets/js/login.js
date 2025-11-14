@@ -111,9 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         loginButton.textContent = "Logged in ✅";
                     }
                     
-                    console.log("login.js: Redirecting to dashboard.html");
+                    console.log("login.js: Redirecting to index.html");
                     // Redirect to the dashboard page after successful login
-                    window.location.assign("dashboard.html"); 
+                    window.location.assign("index.html"); 
 
                 } else {
                     console.error("login.js: Login failed:", data.message);

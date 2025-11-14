@@ -7,6 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
 export const registerUser = async (req, res) => {
     const { name, email, password } = req.body;
+    const [firstName, lastName] = user.name ? user.name.split(' ') : ['', ''];
     if (!name || !email || !password) {
         return res.status(400).json({ message: "Name, email, and password are required ❌" });
     }
@@ -59,7 +60,8 @@ export const loginUser = async (req, res) => {
                 last_name: lastName || '',
                 email: user.email,
                 phone_number: '',
-                dob: ''
+                dob: '',
+                full_name: user.name
             }
         });
     } catch (error) {

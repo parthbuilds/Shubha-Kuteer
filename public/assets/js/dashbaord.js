@@ -62,26 +62,4 @@ document.addEventListener("DOMContentLoaded", () => {
             window.location.href = "index.html"; 
         });
     }
-
-    // This function can be uncommented and used if you want to fetch dynamic content
-    // async function fetchDashboardContent(token) {
-    //     console.log("dashboard.js: Attempting to fetch dashboard content.");
-    //     try {
-    //         const response = await fetch('/api/dashboard-content', {
-    //             method: 'GET',
-    //             headers: {
-    //                 'Authorization': `Bearer ${token}`
-    //             }
-    //         });
-    //         const data = await response.json();
-    //         if (response.ok) {
-    //             console.log("dashboard.js: Dashboard content fetched successfully:", data);
-    //             // Update your dashboard UI with fetched data
-    //         } else {
-    //             console.error("dashboard.js: Failed to fetch dashboard content:", data.message);
-    //         }
-    //     } catch (error) {
-    //         console.error("dashboard.js: Error fetching dashboard content:", error);
-    //     }
-    // }
 });
