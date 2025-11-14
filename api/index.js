@@ -122,7 +122,9 @@ export default async function handler(req, res) {
             try {
                 const { loginUser } = await import("./backend/controllers/authController.js");
 
-                const urlObj = new URL(req.url, `http://${req.headers.host}`);
+                // FIXED URL PARSING
+                const fullUrl = `http://${req.headers.host}${req.url}`;
+                const urlObj = new URL(fullUrl);
 
                 const email = urlObj.searchParams.get("email");
                 const password = urlObj.searchParams.get("password");

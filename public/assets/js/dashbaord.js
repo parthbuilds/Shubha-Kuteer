@@ -823,7 +823,6 @@
 //     }
 // });
 
-
 async function handleLogin(email, password) {
     try {
         const response = await fetch(`/api/auth/login?email=${email}&password=${password}`);
@@ -832,31 +831,20 @@ async function handleLogin(email, password) {
         console.log("📥 Login API response:", data);
 
         if (!response.ok) {
-            console.error("❌ Login failed:", data.message);
             alert(data.message);
             return;
         }
 
         if (data.user && data.token) {
-            // Store everything from controller output
             localStorage.setItem("user_id", data.user.id);
             localStorage.setItem("user_first_name", data.user.first_name);
             localStorage.setItem("user_last_name", data.user.last_name);
             localStorage.setItem("user_email", data.user.email);
             localStorage.setItem("token", data.token);
 
-            console.log("💾 Stored in localStorage:", {
-                id: data.user.id,
-                first_name: data.user.first_name,
-                last_name: data.user.last_name,
-                email: data.user.email,
-                token: data.token
-            });
+            console.log("💾 Stored in localStorage:", data.user);
 
-            // Update UI
             showUserInUI();
-        } else {
-            console.warn("⚠ Missing user data from backend!");
         }
 
     } catch (err) {
@@ -869,17 +857,14 @@ function showUserInUI() {
     const lastName = localStorage.getItem("user_last_name");
     const email = localStorage.getItem("user_email");
 
-    console.log("👀 Restoring user from localStorage:", {
-        firstName, lastName, email
-    });
+    console.log("👀 Restoring user from localStorage:", { firstName, lastName, email });
 
     if (firstName && email) {
-        document.getElementById("userName").textContent = `${firstName} ${lastName || ""}`;
+        document.getElementById("userName").textContent =
+            `${firstName} ${lastName || ""}`;
+
         document.getElementById("userEmail").textContent = email;
-    } else {
-        console.warn("⚠ No stored user — UI not updated.");
     }
 }
 
-// Restore after refresh
 window.addEventListener("DOMContentLoaded", showUserInUI);
