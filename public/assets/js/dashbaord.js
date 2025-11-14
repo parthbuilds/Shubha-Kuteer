@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
       statusClass = "bg-blue text-blue";
     } else if (order.status === "completed") {
       statusText = "Processing";
-      statusClass = "bg-orange text-orange";
+      statusClass = "bg-orange border-black text-orange";
     }
 
     return { statusText, statusClass };
