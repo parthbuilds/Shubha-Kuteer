@@ -874,7 +874,12 @@
     const BASE_API_URL = '/api'; // Adjust if your API is on a different base path
 
     // --- Utility Functions ---
-    // Function to parse date strings to a readable format
+    /**
+     * Formats a date string into a readable format.
+     * @param {string|null} dateString - The date string to format.
+     * @param {boolean} [includeTime=true] - Whether to include the time in the output.
+     * @returns {string} The formatted date string or 'N/A'/'Invalid Date'.
+     */
     function formatDateTime(dateString, includeTime = true) {
         if (!dateString) return 'N/A';
         try {
@@ -883,14 +888,26 @@
                 console.warn("Invalid date string provided to formatDateTime:", dateString);
                 return 'Invalid Date';
             }
-            return includeTime ? date.toLocaleString() : date.toLocaleDateString();
+            // Use Intl.DateTimeFormat for better localization and options
+            const options = {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                ...(includeTime && { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            };
+            return new Intl.DateTimeFormat(navigator.language, options).format(date);
         } catch (e) {
             console.error("Error formatting date:", e, dateString);
             return 'Invalid Date';
         }
     }
 
-    // Helper function to determine status text and class (consistent with backend enum strings)
+    /**
+     * Determines the display text and CSS class for a given status string.
+     * Consistent with backend enum strings.
+     * @param {string|null} statusString - The status string from the backend.
+     * @returns {{statusText: string, statusClass: string}} Object with display text and class.
+     */
     const getStatusDisplay = (statusString) => {
         let statusText = 'Unknown';
         let statusClass = 'bg-gray text-gray'; // Default unknown color
@@ -900,6 +917,7 @@
         }
 
         switch (statusString.toLowerCase()) {
+            // Payment Statuses
             case 'pending':
                 statusText = 'Pending';
                 statusClass = 'bg-blue text-blue';
@@ -912,14 +930,7 @@
                 statusText = 'Payment Failed';
                 statusClass = 'bg-red text-red';
                 break;
-            case 'cancelled':
-                statusText = 'Cancelled';
-                statusClass = 'bg-red text-red';
-                break;
-            case 'returned':
-                statusText = 'Returned';
-                statusClass = 'bg-red text-red';
-                break;
+            // Delivery Statuses
             case 'processing':
                 statusText = 'Processing';
                 statusClass = 'bg-yellow text-yellow';
@@ -935,6 +946,14 @@
             case 'delivered':
                 statusText = 'Delivered';
                 statusClass = 'bg-green text-green';
+                break;
+            case 'returned':
+                statusText = 'Returned';
+                statusClass = 'bg-red text-red';
+                break;
+            case 'cancelled': // Used for both payment and delivery cancellation
+                statusText = 'Cancelled';
+                statusClass = 'bg-red text-red';
                 break;
             default:
                 statusText = statusString.charAt(0).toUpperCase() + statusString.slice(1); // Capitalize unknown status
@@ -955,13 +974,8 @@
             // 1. Check admin authentication first
             const authRes = await fetch(`${BASE_API_URL}/admin/auth/check`);
             if (!authRes.ok) {
-                // If the checkAuth endpoint in backend returns 401 with a redirect property
                 const errorData = await authRes.json().catch(() => ({}));
-                if (errorData.redirect) {
-                    window.location.href = errorData.redirect;
-                } else {
-                    window.location.href = "/admin/login.html"; // Fallback
-                }
+                window.location.href = errorData.redirect || "/admin/login.html"; // Redirect to login
                 return;
             }
 
@@ -970,36 +984,31 @@
             console.log('API Response status:', res.status);
 
             if (!res.ok) {
+                const errorBody = await res.json().catch(() => ({}));
                 if (res.status === 404) {
-                    throw new new Error(`Order #${orderId} not found.`);
+                    throw new Error(`Order #${orderId} not found.`); // FIXED: new new Error
                 } else if (res.status === 401 || res.status === 403) {
-                    // Redirect to login if unauthorized or forbidden
                     window.location.href = "/admin/login.html";
                     return;
                 } else {
-                    const errorBody = await res.json().catch(() => ({}));
-                    throw new new Error(errorBody.error || `Failed to fetch order details (status ${res.status}).`);
+                    throw new Error(errorBody.error || `Failed to fetch order details (status ${res.status}).`); // FIXED: new new Error
                 }
             }
 
             const response = await res.json();
-            console.log('API Raw Response data:', response);
-
             const order = response.order; // Directly access .order
 
             if (!order || !order.id) {
-                throw new new Error("Invalid API response format: 'order' object or ID missing.");
+                throw new Error("Invalid API response format: 'order' object or ID missing."); // FIXED: new new Error
             }
 
             console.log('Parsed order data:', order);
 
-            // --- IMPORTANT: Backend now ensures `order.products` is an array ---
-            // Frontend no longer needs to parse JSON string. Just ensure it's treated as an array.
-            const products = Array.isArray(order.products) ? order.products : [];
-            if (!Array.isArray(order.products)) {
+            // Ensure order.products is always an array (backend should handle JSON parsing)
+            order.products = Array.isArray(order.products) ? order.products : [];
+            if (!Array.isArray(response.order.products)) { // Use original response to check if backend gave array
                 console.warn(`Order ${order.id}: 'products' was not an array from backend. Using empty array.`);
             }
-            order.products = products; // Ensure consistency
 
             // 3. Update page title and heading
             document.title = `Order #${order.id} - Shubha Kuteer Admin`;
@@ -1007,30 +1016,23 @@
             if (orderHeading) {
                 orderHeading.innerHTML = `Order <span class="highlight">#${order.id}</span>`;
             }
-
             const breadcrumbEl = document.querySelector(".breadcrumbs li:last-child .text-tiny");
             if (breadcrumbEl) {
                 breadcrumbEl.textContent = `Order #${order.id}`;
             }
 
             // 4. ADD CUSTOMER DETAILS
-            const allItemSection = document.querySelector(".table-order-detail");
             let customerSection = document.getElementById('customer-info-section');
             if (!customerSection) {
                 customerSection = document.createElement('div');
-                customerSection.className = 'wg-box mb-4'; // Match existing styles
+                customerSection.className = 'wg-box mb-4';
                 customerSection.id = 'customer-info-section';
-                // Attempt to insert before the product items table, fallback to appending if not found
-                if (allItemSection && allItemSection.parentNode) {
-                    allItemSection.parentNode.insertBefore(customerSection, allItemSection);
+                const mainContentArea = document.querySelector('.main-content-wrapper'); // Target a common parent element
+                if (mainContentArea) {
+                    mainContentArea.prepend(customerSection);
                 } else {
-                    console.warn("Could not find .table-order-detail to insert customer info. Appending to main content area if available.");
-                    const mainContentArea = document.querySelector('.main-content-wrapper'); // Adjust selector as needed
-                    if (mainContentArea) {
-                        mainContentArea.prepend(customerSection);
-                    } else {
-                        document.body.appendChild(customerSection);
-                    }
+                    console.error("Could not find a suitable element to prepend customer info section.");
+                    document.body.appendChild(customerSection); // Fallback to body
                 }
             }
             customerSection.innerHTML = `
@@ -1067,15 +1069,14 @@
             if (itemsContainer) {
                 itemsContainer.innerHTML = ''; // Clear previous items
 
-                if (order.products && order.products.length > 0) {
+                if (order.products.length > 0) {
                     console.log('Rendering products:', order.products);
-
                     order.products.forEach((product, index) => {
                         const productLi = document.createElement('li');
                         productLi.className = 'product-item gap14';
                         productLi.innerHTML = `
                         <div class="image no-bg">
-                            <img src="${product.image || '/admin/images/products/default-order.png'}" alt="${product.name || 'Product'}">
+                            <img src="${product.image || '/admin/images/products/default-product.png'}" alt="${product.name || 'Product'}">
                         </div>
                         <div class="flex items-center justify-between gap40 flex-grow flex-wrap">
                             <div class="name">
@@ -1109,20 +1110,20 @@
                         itemsContainer.appendChild(productLi);
                     });
                 } else {
-                    console.log('No products found for this order');
+                    console.log('No products found for this order.');
                     const noProductsLi = document.createElement('li');
                     noProductsLi.className = 'product-item gap14';
                     noProductsLi.innerHTML = `
-                    <div class="image no-bg">
-                        <img src="/admin/images/products/default-order.png" alt="No Products">
-                    </div>
-                    <div class="flex items-center justify-between gap40 flex-grow">
-                        <div class="name">
-                            <div class="text-tiny mb-1">Products</div>
-                            <div class="body-title-2" style="color: #999;">No products found for this order.</div>
+                        <div class="image no-bg">
+                            <img src="/admin/images/products/default-product.png" alt="No Products">
                         </div>
-                    </div>
-                `;
+                        <div class="flex items-center justify-between gap40 flex-grow">
+                            <div class="name">
+                                <div class="text-tiny mb-1">Products</div>
+                                <div class="body-title-2" style="color: #999;">No products found for this order.</div>
+                            </div>
+                        </div>
+                    `;
                     itemsContainer.appendChild(noProductsLi);
                 }
             }
@@ -1131,18 +1132,16 @@
             let calculatedSubtotal = 0;
             let totalItems = 0;
 
-            if (order.products && order.products.length > 0) {
-                order.products.forEach(product => {
-                    const productPrice = parseFloat(product.price) || 0;
-                    const productQuantity = parseInt(product.quantity) || 0;
-                    const productTotal = productPrice * productQuantity;
-                    calculatedSubtotal += productTotal;
-                    totalItems += productQuantity;
-                });
-            }
+            order.products.forEach(product => {
+                const productPrice = parseFloat(product.price) || 0;
+                const productQuantity = parseInt(product.quantity) || 0;
+                const productTotal = productPrice * productQuantity;
+                calculatedSubtotal += productTotal;
+                totalItems += productQuantity;
+            });
 
             console.log('Calculated subtotal:', calculatedSubtotal.toFixed(2));
-            console.log('Order amount from DB (original):', order.amount); // This should now match calculatedSubtotal from backend
+            console.log('Order amount from DB (original):', order.amount);
             console.log('Total items:', totalItems);
 
             // Update cart totals section
@@ -1154,7 +1153,7 @@
             if (shippingEl) shippingEl.textContent = "₹0.00"; // Assuming shipping is free for now
             if (taxEl) taxEl.textContent = "₹0.00"; // Assuming tax is 0 for now
 
-            const finalTotal = calculatedSubtotal; // Assuming no shipping/tax
+            const finalTotal = calculatedSubtotal;
             const totalPriceEl = document.querySelector('.body-title.tf-color-1');
 
             if (totalPriceEl) {
@@ -1179,35 +1178,33 @@
             const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
             if (shippingAddressEl) {
                 shippingAddressEl.innerHTML = `
-                ${order.apartment || ''}<br>
-                ${order.city || ''}<br>
-                ${order.postal_code || ''}<br>
-                <strong>Phone:</strong> ${order.phone_number || 'N/A'}<br>
-                <strong>Email:</strong> ${order.email || 'N/A'}<br>
-                ${order.note ? `<strong>Note:</strong> ${order.note}` : ''}
-            `;
+                    ${order.apartment || ''}<br>
+                    ${order.city || ''}<br>
+                    ${order.postal_code || ''}<br>
+                    <strong>Phone:</strong> ${order.phone_number || 'N/A'}<br>
+                    <strong>Email:</strong> ${order.email || 'N/A'}<br>
+                    ${order.note ? `<strong>Note:</strong> ${order.note}` : ''}
+                `;
             }
 
             // 9. Payment & Delivery Status Info
-            // Using more robust selectors if available, or rely on existing ones.
-            // Check your HTML structure for .wg-box:nth-child(3) to ensure it's correct.
-            const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
+            const paymentMethodEl = document.querySelector("#payment-delivery-info-box .body-text"); // Assuming an ID for this section for better targeting
             if (paymentMethodEl) {
                 const { statusText: paymentStatusText, statusClass: paymentStatusClass } = getStatusDisplay(order.status);
                 const { statusText: deliveryStatusText, statusClass: deliveryStatusClass } = getStatusDisplay(order.delivery_status);
 
                 paymentMethodEl.innerHTML = `
-                <strong>Payment Method:</strong> Razorpay<br>
-                <strong>Order Status:</strong> <span class="${paymentStatusClass}">${paymentStatusText.toUpperCase()}</span><br>
-                <strong>Delivery Status:</strong> <span class="${deliveryStatusClass}">${deliveryStatusText.toUpperCase()}</span><br>
-                <strong>Payment ID:</strong> ${order.razorpay_payment_id || 'Pending'}<br>
-                <strong>Order ID (Razorpay):</strong> ${order.razorpay_order_id || 'N/A'}<br>
-                <strong>Total Items:</strong> ${totalItems}
-            `;
+                    <strong>Payment Method:</strong> Razorpay<br>
+                    <strong>Order Status:</strong> <span class="${paymentStatusClass}">${paymentStatusText.toUpperCase()}</span><br>
+                    <strong>Delivery Status:</strong> <span class="${deliveryStatusClass}">${deliveryStatusText.toUpperCase()}</span><br>
+                    <strong>Payment ID:</strong> ${order.razorpay_payment_id || 'Pending'}<br>
+                    <strong>Order ID (Razorpay):</strong> ${order.razorpay_order_id || 'N/A'}<br>
+                    <strong>Total Items:</strong> ${totalItems}
+                `;
             }
 
             // 10. Update expected delivery date
-            const expectedDeliveryDateEl = document.querySelector("#expectedDeliveryDate");
+            const expectedDeliveryDateEl = document.getElementById("expectedDeliveryDate");
             if (expectedDeliveryDateEl && order.created_at) {
                 const orderDate = new Date(order.created_at);
                 const minDeliveryDate = new Date(orderDate);
@@ -1232,62 +1229,74 @@
             const canceledTimestampSpan = document.getElementById("canceledTimestamp");
             const canceledStatusText = document.getElementById("canceledStatusText");
 
-            // Set order ID for both buttons
+            // Store order ID on buttons
             if (outForDeliveryButton) outForDeliveryButton.setAttribute("data-order-id", order.id);
             if (deliveredButton) deliveredButton.setAttribute("data-order-id", order.id);
 
             // Reset display states initially for all relevant elements
-            const elementsToResetVisibility = [outForDeliveryButton, deliveredButton, outForDeliveryStatusDiv, deliveredStatusDiv, canceledStatusDiv];
-            elementsToResetVisibility.forEach(el => {
+            const elementsToManage = [
+                outForDeliveryButton, deliveredButton,
+                outForDeliveryStatusDiv, deliveredStatusDiv,
+                canceledStatusDiv
+            ];
+            elementsToManage.forEach(el => {
                 if (el) {
-                    el.style.display = 'none'; // Hide all status elements and buttons initially
-                    if (el.tagName === 'BUTTON') { // Also reset button state
+                    el.style.display = 'none'; // Hide all initially
+                    if (el.tagName === 'BUTTON') {
                         el.disabled = false;
-                        el.textContent = el.id === 'outForDeliveryButton' ? 'Mark as Out for Delivery' : 'Mark as Delivered';
                         el.classList.remove('disabled-button-style');
+                        // Reset button text to original (it will be set again if visible)
+                        if (el.id === 'outForDeliveryButton') el.textContent = 'Mark as Out for Delivery';
+                        if (el.id === 'deliveredButton') el.textContent = 'Mark as Delivered';
                     }
                 }
             });
 
-            // Logic based on order.status (payment) and order.delivery_status
             const currentPaymentStatus = (order.status || '').toLowerCase();
             const currentDeliveryStatus = (order.delivery_status || '').toLowerCase();
 
+            // Handle cancelled/returned statuses
             if (currentPaymentStatus === 'cancelled' || currentDeliveryStatus === 'cancelled' || currentDeliveryStatus === 'returned') {
                 if (canceledStatusDiv && canceledTimestampSpan && canceledStatusText) {
                     canceledStatusDiv.style.display = 'block';
-                    // Use the specific timestamp fields provided by the backend
                     if (currentDeliveryStatus === 'returned') {
                         canceledStatusText.textContent = 'Order Returned On';
-                        canceledTimestampSpan.textContent = formatDateTime(order.returned_at || order.updated_at || new Date().toISOString()); // Assuming a `returned_at` field might exist or fallback
+                        // Using order.canceled_at for returned_at as per DB schema
+                        canceledTimestampSpan.textContent = formatDateTime(order.canceled_at || order.updated_at || new Date().toISOString());
                     } else { // cancelled
                         canceledStatusText.textContent = 'Order Cancelled On';
                         canceledTimestampSpan.textContent = formatDateTime(order.canceled_at || order.updated_at || new Date().toISOString());
                     }
                 }
-            } else if (currentDeliveryStatus === 'delivered') {
+            }
+            // Handle delivered status
+            else if (currentDeliveryStatus === 'delivered') {
                 if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan && order.out_for_delivery_at) {
                     outForDeliveryStatusDiv.style.display = 'block';
-                    outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
+                    outForDeliveryTimestampSpan.textContent = `Out for Delivery On: ${formatDateTime(order.out_for_delivery_at)}`;
                 }
-                if (deliveredStatusDiv && deliveredTimestampSpan && order.delivered_at) { // Ensure delivered_at exists
+                if (deliveredStatusDiv && deliveredTimestampSpan && order.delivered_at) {
                     deliveredStatusDiv.style.display = 'block';
-                    deliveredTimestampSpan.textContent = formatDateTime(order.delivered_at);
+                    deliveredTimestampSpan.textContent = `Delivered On: ${formatDateTime(order.delivered_at)}`;
                 }
-            } else if (currentDeliveryStatus === 'out for delivery') {
+            }
+            // Handle out for delivery status (show delivered button)
+            else if (currentDeliveryStatus === 'out for delivery') {
                 if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan && order.out_for_delivery_at) {
                     outForDeliveryStatusDiv.style.display = 'block';
-                    outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
+                    outForDeliveryTimestampSpan.textContent = `Out for Delivery On: ${formatDateTime(order.out_for_delivery_at)}`;
                 }
                 if (deliveredButton) {
                     deliveredButton.style.display = 'block';
                 }
-            } else if (['pending', 'processing', 'shipped', 'confirmed'].includes(currentDeliveryStatus) || currentPaymentStatus === 'completed') { // Also show if payment is completed
+            }
+            // Handle other statuses where "out for delivery" is the next step
+            else if (currentPaymentStatus === 'completed' && ['pending', 'processing', 'shipped'].includes(currentDeliveryStatus)) {
                 if (outForDeliveryButton) {
                     outForDeliveryButton.style.display = 'block';
                 }
             } else {
-                console.warn(`Unhandled delivery status for button/status logic: ${currentDeliveryStatus}`);
+                console.warn(`Unhandled delivery/payment status combination for button/status logic: Payment: "${currentPaymentStatus}", Delivery: "${currentDeliveryStatus}"`);
             }
             // --- END Handle button visibility and status displays ---
 
@@ -1306,13 +1315,8 @@
         try {
             const res = await fetch(`${BASE_API_URL}/admin/users/me`);
             if (!res.ok) {
-                // If the checkAuth endpoint in backend returns 401 with a redirect property
                 const errorData = await res.json().catch(() => ({}));
-                if (errorData.redirect) {
-                    window.location.href = errorData.redirect;
-                } else {
-                    window.location.href = "/admin/login.html"; // Fallback
-                }
+                window.location.href = errorData.redirect || "/admin/login.html";
                 return;
             }
             const data = await res.json();
@@ -1356,7 +1360,7 @@
 
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
-                        throw new new Error(errorData.message || `HTTP error! Status: ${res.status}`);
+                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`); // FIXED: new new Error
                     }
 
                     alert(`Order #${orderId} successfully marked as "Out for Delivery"!`);
@@ -1367,7 +1371,7 @@
                     alert("Failed to mark order as out for delivery: " + error.message);
                 } finally {
                     // Reset button state regardless of success or failure
-                    if (outForDeliveryButton) { // Check if element still exists
+                    if (outForDeliveryButton) {
                         outForDeliveryButton.disabled = false;
                         outForDeliveryButton.textContent = 'Mark as Out for Delivery';
                         outForDeliveryButton.classList.remove('disabled-button-style');
@@ -1396,7 +1400,7 @@
 
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
-                        throw new new Error(errorData.message || `HTTP error! Status: ${res.status}`);
+                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`); // FIXED: new new Error
                     }
 
                     alert(`Order #${orderId} successfully marked as "Delivered"!`);
@@ -1407,7 +1411,7 @@
                     alert("Failed to mark order as delivered: " + error.message);
                 } finally {
                     // Reset button state regardless of success or failure
-                    if (deliveredButton) { // Check if element still exists
+                    if (deliveredButton) {
                         deliveredButton.disabled = false;
                         deliveredButton.textContent = 'Mark as Delivered';
                         deliveredButton.classList.remove('disabled-button-style');
