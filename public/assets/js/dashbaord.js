@@ -5,8 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const logoutBtn = document.getElementById("logoutBtn");
     const registerBlock = document.getElementById("registerBlock");
     
-    // Select the dashboard button using its correct ID "dashboard"
-    const dashboardLink = document.getElementById("dashboard"); // Changed from dashboardBtn to dashboardLink
+    // Select the dashboard link by its ID
+    const dashboardLink = document.getElementById("dashboard"); 
 
     const userNameDisplay = document.getElementById("userName");
     const userEmailDisplay = document.getElementById("userEmail");
@@ -18,18 +18,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isLoggedIn === "true") {
         // User is logged in
         if (loginBtn) loginBtn.classList.add("hidden");
-        if (logoutBtn) logoutBtn.classList.remove("hidden");
+        if (logoutBtn) logoutBtn.classList.remove("hidden"); // Show logout button
         if (registerBlock) registerBlock.style.display = "none";
         
-        // Show the dashboard link
-        // Assuming the parent div of the dashboard link needs to be toggled,
-        // or the link itself if it's the only element in that container.
+        // Make the dashboard link visible when logged in
         if (dashboardLink) {
             dashboardLink.classList.remove("hidden"); 
-            // If the parent div has an ID, you might need to target that instead
-            // For example, if the div with class "pt-3" had an ID:
-            // const dashboardLinkContainer = document.getElementById("dashboardContainer");
-            // if (dashboardLinkContainer) dashboardLinkContainer.classList.remove("hidden");
         }
 
         if (userNameDisplay) userNameDisplay.textContent = storedUserName || "Guest User";
@@ -38,15 +32,12 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
         // User is not logged in
         if (loginBtn) loginBtn.classList.remove("hidden");
-        if (logoutBtn) logoutBtn.classList.add("hidden");
+        if (logoutBtn) logoutBtn.classList.add("hidden"); // Hide logout button
         if (registerBlock) registerBlock.style.display = "block";
         
-        // Hide the dashboard link
+        // Hide the dashboard link when not logged in
         if (dashboardLink) {
             dashboardLink.classList.add("hidden");
-            // If the parent div has an ID, target that instead
-            // const dashboardLinkContainer = document.getElementById("dashboardContainer");
-            // if (dashboardLinkContainer) dashboardLinkContainer.classList.add("hidden");
         }
 
         if (userNameDisplay) userNameDisplay.textContent = "";
