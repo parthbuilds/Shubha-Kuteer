@@ -870,7 +870,7 @@
     <!-- Javascript -->
     <script>
     // --- Global Configuration ---
-    const BASE_API_URL = '/api'; // Adjust if your API is on a different base path
+    const BASE_API_URL = 'https://www.shubhakuteer.in/api'; // Use full URL if deployed to a subdomain/different origin
 
     // --- Utility Functions ---
     // Function to parse date strings to a readable format
@@ -878,7 +878,6 @@
         if (!dateString) return 'N/A';
         try {
             const date = new Date(dateString);
-            // Check if the date is valid
             if (isNaN(date.getTime())) {
                 throw new Error("Invalid date value");
             }
@@ -890,64 +889,88 @@
     }
 
     // Helper function to determine status text and class for both order and delivery status
+    // IMPORTANT: This now maps internal values to display values AND to backend API values
     const getStatusDisplay = (statusValue, type = 'order') => {
         let statusText = 'Unknown';
         let statusClass = 'bg-gray text-gray'; // Default unknown color
+        let apiValue = statusValue; // Default API value to the input statusValue
 
         const lowerCaseStatus = (statusValue || '').toLowerCase();
 
         if (type === 'order') {
             switch (lowerCaseStatus) {
-                case 'canceled':
+                case 'cancelled': // Backend expects 'cancelled'
                     statusText = 'Canceled';
                     statusClass = 'bg-red text-red';
+                    apiValue = 'cancelled';
                     break;
                 case 'pending':
                     statusText = 'Pending';
                     statusClass = 'bg-blue text-blue';
+                    apiValue = 'pending';
                     break;
                 case 'completed':
                     statusText = 'Completed';
                     statusClass = 'bg-green text-green';
+                    apiValue = 'completed';
                     break;
                 case 'processing': // Assuming a 'processing' status might exist
                     statusText = 'Processing';
                     statusClass = 'bg-yellow text-yellow';
+                    apiValue = 'processing';
                     break;
+                // Add other order statuses if your backend supports them
                 default:
                     statusText = 'Unknown Order Status';
                     statusClass = 'bg-gray text-gray';
+                    apiValue = lowerCaseStatus; // Use the raw value for unknown
             }
         } else if (type === 'delivery') {
             switch (lowerCaseStatus) {
                 case 'pending':
                     statusText = 'Pending Delivery';
                     statusClass = 'bg-blue text-blue';
+                    apiValue = 'pending'; // Backend expects 'pending'
                     break;
-                case 'out_for_delivery_at':
+                case 'confirmed':
+                    statusText = 'Confirmed';
+                    statusClass = 'bg-yellow text-yellow';
+                    apiValue = 'confirmed'; // Backend expects 'confirmed'
+                    break;
+                case 'shipped':
+                    statusText = 'Shipped';
+                    statusClass = 'bg-orange text-orange';
+                    apiValue = 'shipped'; // Backend expects 'shipped'
+                    break;
+                case 'out for delivery': // Backend expects 'out for delivery'
+                case 'out_for_delivery_at': // Current internal representation might be this
                     statusText = 'Out for Delivery';
                     statusClass = 'bg-purple text-purple';
+                    apiValue = 'out for delivery'; // Convert to backend's expected value
                     break;
-                case 'delivered_at':
+                case 'delivered': // Backend expects 'delivered'
+                case 'delivered_at': // Current internal representation might be this
                     statusText = 'Delivered';
                     statusClass = 'bg-green text-green';
+                    apiValue = 'delivered'; // Convert to backend's expected value
                     break;
-                case 'returned': // Example of another delivery status
-                    statusText = 'Returned';
-                    statusClass = 'bg-orange text-orange';
+                case 'cancelled': // Delivery can also be cancelled
+                    statusText = 'Cancelled Delivery';
+                    statusClass = 'bg-red text-red';
+                    apiValue = 'cancelled';
                     break;
                 default:
                     statusText = 'Unknown Delivery Status';
                     statusClass = 'bg-gray text-gray';
+                    apiValue = lowerCaseStatus; // Use raw value for unknown
             }
         }
-        return { statusText, statusClass };
+        return { statusText, statusClass, apiValue };
     };
 
     // --- Main Function to Load and Render Order Details ---
     async function loadOrderDetails(orderId) {
-        // Show loading spinner or similar UI if available
-        // document.getElementById('loading-indicator').style.display = 'block';
+        // document.getElementById('loading-indicator').style.display = 'block'; // If you have a loading indicator
 
         try {
             console.log('Loading order details for ID:', orderId);
@@ -969,7 +992,6 @@
                 if (res.status === 404) {
                     throw new Error(`Order #${orderId} not found.`);
                 } else if (res.status === 401 || res.status === 403) {
-                    // Redirect to login on auth failure for API requests too
                     window.location.href = "/admin/login.html";
                     throw new Error("Authentication failed or access denied.");
                 } else {
@@ -984,7 +1006,7 @@
             if (response.success && response.order) {
                 order = response.order;
             } else if (response) {
-                order = response; // Assume the whole response is the order if no 'success'/'order' wrapper
+                order = response;
             } else {
                 throw new Error("Invalid API response format: No order data found.");
             }
@@ -1022,7 +1044,7 @@
 
             // 4. ADD CUSTOMER DETAILS
             const customerInfoSection = document.getElementById('customer-info-section');
-            if (customerInfoSection) { // Update existing section if it exists
+            if (customerInfoSection) {
                 customerInfoSection.innerHTML = `
                 <div class="wg-box-header">
                     <div class="body-title-2">Customer Information</div>
@@ -1051,7 +1073,7 @@
                     </div>
                 </div>
             `;
-            } else { // Create new section if it doesn't exist
+            } else {
                 const allItemSection = document.querySelector(".table-order-detail");
                 if (allItemSection) {
                     const customerSection = document.createElement('div');
@@ -1217,10 +1239,12 @@
             }
 
             // 9. Update payment method with more details
-            const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text"); // This targets the payment box
+            const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
             if (paymentMethodEl) {
                 const orderStatus = getStatusDisplay(order.status, 'order');
+                // Use the backend's exact delivery status value for display
                 const deliveryStatus = getStatusDisplay(order.delivery_status, 'delivery');
+
 
                 paymentMethodEl.innerHTML = `
                 <strong>Payment Method:</strong> ${order.payment_method || 'Razorpay'}<br>
@@ -1258,11 +1282,9 @@
             const canceledStatusDiv = document.getElementById("canceledStatusDiv");
             const canceledTimestampSpan = document.getElementById("canceledTimestamp");
 
-            // Set order ID for both buttons
             if (outForDeliveryButton) outForDeliveryButton.setAttribute("data-order-id", order.id);
             if (deliveredButton) deliveredButton.setAttribute("data-order-id", order.id);
 
-            // Reset display states initially for all relevant elements
             const elementsToReset = [outForDeliveryButton, deliveredButton, outForDeliveryStatusDiv, deliveredStatusDiv, canceledStatusDiv];
             elementsToReset.forEach(el => {
                 if (el) {
@@ -1276,28 +1298,27 @@
             });
 
             const currentOrderStatus = (order.status || '').toLowerCase();
+            // Use the exact delivery status from the order object for logic
             const currentDeliveryStatus = (order.delivery_status || '').toLowerCase();
 
-            if (currentOrderStatus === 'canceled') {
+            if (currentOrderStatus === 'cancelled') { // Backend expects 'cancelled'
                 if (canceledStatusDiv && canceledTimestampSpan) {
                     canceledStatusDiv.style.display = 'block';
-                    canceledTimestampSpan.textContent = formatDateTime(order.updated_at || order.created_at); // Use updated_at or created_at as fallback
+                    canceledTimestampSpan.textContent = formatDateTime(order.updated_at || order.created_at);
                 }
-                // No action buttons for canceled orders
             } else {
-                // Logic for active orders
-                if (currentDeliveryStatus === 'delivered_at') {
-                    // Order is delivered
+                if (currentDeliveryStatus === 'delivered') { // Matches backend expected 'delivered'
                     if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
                         outForDeliveryStatusDiv.style.display = 'block';
+                        // Need the timestamp for "out for delivery" if available from backend
                         outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
                     }
                     if (deliveredStatusDiv && deliveredTimestampSpan) {
                         deliveredStatusDiv.style.display = 'block';
+                        // Need the timestamp for "delivered" if available from backend
                         deliveredTimestampSpan.textContent = formatDateTime(order.delivered_at);
                     }
-                } else if (currentDeliveryStatus === 'out_for_delivery_at') {
-                    // Order is out for delivery, show delivered button
+                } else if (currentDeliveryStatus === 'out for delivery') { // Matches backend expected 'out for delivery'
                     if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
                         outForDeliveryStatusDiv.style.display = 'block';
                         outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
@@ -1305,8 +1326,7 @@
                     if (deliveredButton) {
                         deliveredButton.style.display = 'block';
                     }
-                } else {
-                    // Order is pending/confirmed/shipped, show out for delivery button
+                } else if (currentDeliveryStatus === 'shipped' || currentDeliveryStatus === 'confirmed' || currentDeliveryStatus === 'pending') {
                     if (outForDeliveryButton) {
                         outForDeliveryButton.style.display = 'block';
                     }
@@ -1329,7 +1349,6 @@
         try {
             const res = await fetch(`${BASE_API_URL}/admin/users/me`);
             if (!res.ok) {
-                // Only redirect if it's a 401/403, otherwise just log error
                 if (res.status === 401 || res.status === 403) {
                     window.location.href = "/admin/login.html";
                 }
@@ -1339,14 +1358,14 @@
 
             const adminNameEl = document.getElementById("admin-name");
             const adminRoleEl = document.getElementById("admin-role");
-            const adminAvatarEl = document.getElementById("admin-avatar"); // Assuming an avatar element
+            const adminAvatarEl = document.getElementById("admin-avatar");
 
             if (adminNameEl) adminNameEl.textContent = data.admin.name || 'Admin';
             if (adminRoleEl) adminRoleEl.textContent = data.admin.role || 'Administrator';
             if (adminAvatarEl && data.admin.avatar_url) {
                 adminAvatarEl.src = data.admin.avatar_url;
             } else if (adminAvatarEl) {
-                adminAvatarEl.src = '/admin/images/users/default-admin.png'; // Default avatar
+                adminAvatarEl.src = '/admin/images/users/default-admin.png';
             }
 
         } catch (err) {
@@ -1361,14 +1380,14 @@
         const deliveredButton = document.getElementById("deliveredButton");
 
         // Unified function for handling status updates
-        const updateOrderStatus = async (button, deliveryStatusValue, successMessage) => {
+        const updateOrderStatus = async (button, deliveryStatusValueForAPI, displayMessage) => {
             const orderId = button.getAttribute("data-order-id");
             if (!orderId) {
                 alert(`Error: Order ID not found for '${button.textContent}' button.`);
                 return;
             }
 
-            if (!confirm(`Are you sure you want to mark Order #${orderId} as "${deliveryStatusValue.replace(/_/g, ' ').replace('at', '').trim()}"?`)) { // More generic confirmation text
+            if (!confirm(`Are you sure you want to mark Order #${orderId} as "${displayMessage.toLowerCase()}"?`)) {
                 return;
             }
 
@@ -1377,7 +1396,7 @@
             button.textContent = 'Updating...';
             button.classList.add('disabled-button-style');
 
-            const requestBody = { delivery_status: deliveryStatusValue };
+            const requestBody = { delivery_status: deliveryStatusValueForAPI };
             const apiUrl = `${BASE_API_URL}/orders/${orderId}/delivery-status`;
 
             console.log(`Attempting to update order #${orderId} delivery status.`);
@@ -1397,15 +1416,15 @@
 
 
                 if (!res.ok) {
-                    throw new Error(responseData.message || `HTTP error! Status: ${res.status}`);
+                    throw new Error(responseData.error || `HTTP error! Status: ${res.status}`);
                 }
 
-                alert(successMessage);
+                alert(`Order #${orderId} successfully marked as "${displayMessage}"!`);
                 await loadOrderDetails(orderId); // Reload details to update UI
 
             } catch (error) {
-                console.error(`Error marking order as ${deliveryStatusValue}:`, error);
-                alert(`Failed to mark order as ${deliveryStatusValue}: ` + error.message);
+                console.error(`Error marking order as ${displayMessage}:`, error);
+                alert(`Failed to mark order as ${displayMessage}: ` + error.message);
                 button.disabled = false;
                 button.textContent = originalText;
                 button.classList.remove('disabled-button-style');
@@ -1414,13 +1433,13 @@
 
         if (outForDeliveryButton) {
             outForDeliveryButton.addEventListener("click", () =>
-                updateOrderStatus(outForDeliveryButton, 'out_for_delivery_at', `Order #${outForDeliveryButton.getAttribute("data-order-id")} successfully marked as "Out for Delivery"!`)
+                updateOrderStatus(outForDeliveryButton, 'out for delivery', 'Out for Delivery') // Changed API value and display name
             );
         }
 
         if (deliveredButton) {
             deliveredButton.addEventListener("click", () =>
-                updateOrderStatus(deliveredButton, 'delivered_at', `Order #${deliveredButton.getAttribute("data-order-id")} successfully marked as "Delivered"!`)
+                updateOrderStatus(deliveredButton, 'delivered', 'Delivered') // Changed API value and display name
             );
         }
 
@@ -1439,7 +1458,6 @@
         loadAdminData();
     });
 </script>
-
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
     <script src="/admin/js/bootstrap-select.min.js"></script>
