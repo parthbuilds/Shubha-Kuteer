@@ -1091,6 +1091,48 @@ export default async function handler(req, res) {
                     });
                 }
 
+                // POST /api/orders/cancel-order
+                if (pathname === '/api/orders/cancel-order' && req.method === 'POST') {
+                    const { order_id } = req.body;
+
+                    if (!order_id) {
+                        return res.status(400).json({
+                            success: false,
+                            error: 'Missing required field: order_id'
+                        });
+                    }
+
+                    try {
+                        // Update order status to 'cancelled' and set canceled_at timestamp
+                        const [result] = await pool.default.query(`
+            UPDATE orders
+            SET status = 'cancelled', canceled_at = NOW(), updated_at = NOW()
+            WHERE id = ? AND status != 'delivered' -- Prevent canceling already delivered orders
+        `, [order_id]);
+
+                        if (result.affectedRows === 0) {
+                            return res.status(404).json({
+                                success: false,
+                                error: 'Order not found or cannot be cancelled (e.g., already delivered).'
+                            });
+                        }
+
+                        console.log(`Order ${order_id} cancelled successfully`);
+
+                        return res.status(200).json({
+                            success: true,
+                            message: 'Order cancelled successfully'
+                        });
+                    } catch (error) {
+                        console.error("Order cancellation error:", error);
+                        return res.status(500).json({
+                            success: false,
+                            error: `Failed to cancel order: ${error.message || 'Unknown error'}`,
+                            details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+                        });
+                    }
+                }
+
                 return res.status(404).json({ message: "Order endpoint not found" });
             } catch (error) {
                 console.error("Order operation error (outer catch):", error); // Clarified log
