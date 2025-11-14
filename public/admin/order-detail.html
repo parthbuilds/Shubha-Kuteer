@@ -890,7 +890,7 @@
         }
     }
 
-    // Helper function to determine status text and class (consistent with backend strings)
+    // Helper function to determine status text and class based on *enum values*
     const getOrderStatusDisplay = (statusString) => {
         let statusText = 'Unknown';
         let statusClass = 'bg-gray text-gray'; // Default unknown color
@@ -900,33 +900,41 @@
         }
 
         switch (statusString.toLowerCase()) {
-            case 'cancelled':
-                statusText = 'Canceled';
-                statusClass = 'bg-red text-red';
+            case 'pending':
+                statusText = 'Pending';
+                statusClass = 'bg-blue text-blue';
                 break;
-            case 'delivered':
-                statusText = 'Delivered';
-                statusClass = 'bg-green text-green';
+            case 'processing':
+                statusText = 'Processing';
+                statusClass = 'bg-yellow text-yellow';
+                break;
+            case 'shipped':
+                statusText = 'Shipped';
+                statusClass = 'bg-orange text-orange';
                 break;
             case 'out for delivery':
                 statusText = 'Out for Delivery';
                 statusClass = 'bg-purple text-purple';
                 break;
-            case 'pending':
-                statusText = 'Pending';
-                statusClass = 'bg-blue text-blue';
+            case 'delivered':
+                statusText = 'Delivered';
+                statusClass = 'bg-green text-green';
                 break;
-            case 'confirmed':
-                statusText = 'Confirmed';
-                statusClass = 'bg-yellow text-yellow'; // Or another suitable color
+            case 'returned':
+                statusText = 'Returned';
+                statusClass = 'bg-red text-red'; // Or another suitable color
                 break;
-            case 'shipped':
-                statusText = 'Shipped';
-                statusClass = 'bg-orange text-orange'; // Or another suitable color
+            case 'cancelled': // This usually comes from the primary 'status' enum, but good to handle here.
+                statusText = 'Canceled';
+                statusClass = 'bg-red text-red';
                 break;
-            case 'completed': // Assuming 'completed' is a final payment status, separate from delivery
+            case 'completed': // Primary payment status
                 statusText = 'Completed (Paid)';
                 statusClass = 'bg-green text-green';
+                break;
+            case 'failed': // Primary payment status
+                statusText = 'Payment Failed';
+                statusClass = 'bg-red text-red';
                 break;
             default:
                 statusText = statusString.charAt(0).toUpperCase() + statusString.slice(1); // Capitalize unknown status
@@ -1118,7 +1126,7 @@
             }
 
             console.log('Calculated subtotal:', calculatedSubtotal.toFixed(2));
-            console.log('Order amount from DB (original):', order.amount); // This might be slightly off if products array changes
+            console.log('Order amount from DB (original):', order.amount);
             console.log('Total items:', totalItems);
 
             // Update cart totals section
@@ -1225,10 +1233,11 @@
                 }
             });
 
-            // Logic based on order.status and order.delivery_status
-            const currentPaymentStatus = (order.status || '').toLowerCase(); // Main payment status (e.g., pending, completed, canceled)
-            const currentDeliveryStatus = (order.delivery_status || '').toLowerCase(); // Delivery sub-status (e.g., pending, out for delivery, delivered)
+            // Logic based on order.status (payment) and order.delivery_status (delivery)
+            const currentPaymentStatus = (order.status || '').toLowerCase();
+            const currentDeliveryStatus = (order.delivery_status || '').toLowerCase();
 
+            // First, check if the entire order is canceled (payment status takes precedence)
             if (currentPaymentStatus === 'cancelled') {
                 if (canceledStatusDiv && canceledTimestampSpan) {
                     canceledStatusDiv.style.display = 'block';
@@ -1239,14 +1248,19 @@
                 // If not canceled, proceed with delivery-related status and buttons
                 switch (currentDeliveryStatus) {
                     case 'pending':
-                    case '': // If delivery_status is null/empty, assume pending for delivery actions
-                    case 'confirmed':
+                    case 'processing':
                     case 'shipped':
+                        // If it's not yet 'out for delivery' or 'delivered', show 'Out for Delivery' button
                         if (outForDeliveryButton) {
                             outForDeliveryButton.style.display = 'block';
                         }
+                        // For 'shipped' specifically, you might want to force 'Out for Delivery' button
+                        if (currentDeliveryStatus === 'shipped' && outForDeliveryButton) {
+                             outForDeliveryButton.style.display = 'block';
+                             outForDeliveryButton.textContent = 'Mark as Out for Delivery (Shipped)';
+                        }
                         break;
-                    case 'out for delivery': // Matches the string now stored in delivery_status column
+                    case 'out for delivery':
                         if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
                             outForDeliveryStatusDiv.style.display = 'block';
                             outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
@@ -1255,24 +1269,23 @@
                             deliveredButton.style.display = 'block';
                         }
                         break;
-                    case 'delivered': // Matches the string now stored in delivery_status column
+                    case 'delivered':
                         if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
                             outForDeliveryStatusDiv.style.display = 'block';
+                            // It's possible out_for_delivery_at might be null if directly marked delivered, check for existence
                             outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
                         }
                         if (deliveredStatusDiv && deliveredTimestampSpan) {
                             deliveredStatusDiv.style.display = 'block';
                             deliveredTimestampSpan.textContent = formatDateTime(order.delivered_at);
                         }
+                        // No further action buttons needed as it's delivered
+                        break;
+                    case 'returned':
+                        // Handle returned status display, no buttons
                         break;
                     default:
                         console.warn(`Unknown or unhandled delivery status: ${currentDeliveryStatus}`);
-                        // Potentially show outForDelivery button if status is 'confirmed' or 'shipped' but not yet 'out for delivery'
-                        if (['confirmed', 'shipped'].includes(currentDeliveryDeliveryStatus)) {
-                             if (outForDeliveryButton) {
-                                outForDeliveryButton.style.display = 'block';
-                            }
-                        }
                         break;
                 }
             }
@@ -1329,9 +1342,8 @@
                     const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        // Send the backend expected timestamp field for the PUT,
-                        // and the backend will map it to the correct delivery_status string.
-                        body: JSON.stringify({ delivery_status: 'out_for_delivery_at' })
+                        // Now sending the actual enum string
+                        body: JSON.stringify({ delivery_status: 'out for delivery' })
                     });
 
                     if (!res.ok) {
@@ -1369,9 +1381,8 @@
                     const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        // Send the backend expected timestamp field for the PUT,
-                        // and the backend will map it to the correct delivery_status string.
-                        body: JSON.stringify({ delivery_status: 'delivered_at' })
+                        // Now sending the actual enum string
+                        body: JSON.stringify({ delivery_status: 'delivered' })
                     });
 
                     if (!res.ok) {
