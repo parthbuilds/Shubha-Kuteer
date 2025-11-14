@@ -1,7 +1,15 @@
 document.addEventListener("DOMContentLoaded", () => {
     const userNameDisplay = document.getElementById("userName");
     const userEmailDisplay = document.getElementById("userEmail");
-    const userOrdersDisplay = document.getElementById("userOrders"); // Assuming you have an element to display orders
+    // Removed userOrdersDisplay as we'll target a more specific container for the orders tab
+    const listOrderContainer = document.querySelector('.filter-item.tab_order .list_order'); // Target the list_order div within the orders tab
+
+    // Elements for the Dashboard 'Recent Orders' (optional, will only show a few if implemented)
+    const recentOrdersTableBody = document.querySelector('.filter-item[data-item="dashboard"] .recent_order table tbody');
+    const awaitingPickupCount = document.querySelector('.overview-item:nth-child(1) .counter h5');
+    const cancelledOrdersCount = document.querySelector('.overview-item:nth-child(2) .counter h5');
+    const totalOrdersCount = document.querySelector('.overview-item:nth-child(3) .counter h5');
+
 
     const isLoggedIn = localStorage.getItem("isLoggedIn");
     const storedUserName = localStorage.getItem("userName");
@@ -15,31 +23,24 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Stored User Name:", storedUserName);
         console.log("Stored User Email:", storedUserEmail);
 
-        // **IMPORTANT:** Ensure the URL includes the protocol (https://) and domain
-        // Replace 'YOUR_BACKEND_DOMAIN' with the actual domain if different from shubhakuteer.in
-        const apiOrdersUrl = "https://www.shubhakuteer.in/api/orders"; // Corrected URL with protocol
+        const apiOrdersUrl = "https://www.shubhakuteer.in/api/orders"; // Keep this as confirmed working
 
-        // Fetch orders from the API
         fetch(apiOrdersUrl)
             .then(response => {
                 if (!response.ok) {
-                    // If the response is not OK (e.g., 404, 500), throw an error
                     return response.json().then(err => { throw new Error(`HTTP error! status: ${response.status} - ${err.error || response.statusText}`); });
                 }
-                return response.json(); // Parse the JSON response body
+                return response.json();
             })
             .then(data => {
-                // The backend code returns an object with a 'success' flag and an 'orders' array
                 if (data.success && Array.isArray(data.orders)) {
                     const allOrders = data.orders;
                     console.log("All orders fetched from API (full response data):", data);
                     console.log("Extracted 'orders' array:", allOrders);
 
-                    // Filter orders for the current user's email
                     const userOrders = allOrders.filter(order => order.email === storedUserEmail);
                     console.log("Filtered orders for the current user:", userOrders);
 
-                    // --- Console Log for Matching Orders ---
                     if (userOrders.length > 0) {
                         console.log("\n--- Matched Orders for User:", storedUserEmail, "---");
                         userOrders.forEach((order, index) => {
@@ -51,59 +52,237 @@ document.addEventListener("DOMContentLoaded", () => {
                             console.log("  Amount:", order.amount);
                             console.log("  Status:", order.status);
                             console.log("  Delivery Status:", order.delivery_status);
-                            console.log("  Products:", order.products); // Will show the parsed array of products
+                            console.log("  Products:", order.products);
                             console.log("  Created At:", order.created_at);
-                            // Add any other relevant order details you want to log
                         });
                         console.log("------------------------------------------");
 
-                        // --- Display logic for matched orders (same as before) ---
-                        if (userOrdersDisplay) {
-                            userOrdersDisplay.innerHTML = "<h3>Your Orders:</h3>";
+                        // Clear existing dummy orders if any
+                        if (listOrderContainer) {
+                            listOrderContainer.innerHTML = '';
+                        }
+                        if (recentOrdersTableBody) {
+                             recentOrdersTableBody.innerHTML = '';
+                        }
+
+
+                        // --- Populate Dashboard Overview Counts ---
+                        const awaitingPickup = userOrders.filter(order => order.delivery_status === 'out_for_delivery_at' || order.status === 'pending').length; // Adjust status based on your backend logic
+                        const cancelled = userOrders.filter(order => order.status === 'canceled').length;
+                        const total = userOrders.length;
+
+                        if (awaitingPickupCount) awaitingPickupCount.textContent = awaitingPickup;
+                        if (cancelledOrdersCount) cancelledOrdersCount.textContent = cancelled;
+                        if (totalOrdersCount) totalOrdersCount.textContent = total;
+
+
+                        // --- Populate History Orders Tab ---
+                        if (listOrderContainer) {
                             userOrders.forEach(order => {
-                                // You can customize the display here to show more details
-                                userOrdersDisplay.innerHTML += `
-                                    <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
-                                        <p><strong>Order ID:</strong> ${order.id}</p>
-                                        <p><strong>Product Count:</strong> ${order.products ? order.products.length : 0}</p>
-                                        <p><strong>Total Amount:</strong> $${order.amount}</p>
-                                        <p><strong>Status:</strong> ${order.status}</p>
-                                        <p><strong>Delivery Status:</strong> ${order.delivery_status}</p>
-                                        ${order.products && order.products.length > 0 ? `
-                                            <p><strong>Items:</strong></p>
-                                            <ul>
-                                                ${order.products.map(p => `<li>${p.name} (Qty: ${p.quantity}, Price: $${p.price})</li>`).join('')}
-                                            </ul>
-                                        ` : '<p>No product details available.</p>'}
+                                const orderStatusClass = (status) => {
+                                    switch (status) {
+                                        case 'pending': return 'bg-orange text-orange';
+                                        case 'delivery': // or 'out_for_delivery_at'
+                                        case 'out_for_delivery_at': return 'bg-purple text-purple';
+                                        case 'delivered': return 'bg-green text-green';
+                                        case 'canceled': return 'bg-red text-red';
+                                        default: return 'bg-gray text-gray'; // Default if status is unknown
+                                    }
+                                };
+
+                                const deliveryStatusText = order.delivery_status === 'delivered_at' ? 'Delivered' :
+                                                            order.delivery_status === 'out_for_delivery_at' ? 'Out for Delivery' :
+                                                            order.delivery_status === null && order.status === 'pending' ? 'Processing' :
+                                                            order.status; // Fallback to main status
+
+                                const deliveryStatusTagClass = orderStatusClass(order.delivery_status || order.status); // Use delivery_status if present, else main status
+
+
+                                let productsHtml = '';
+                                if (order.products && order.products.length > 0) {
+                                    productsHtml = order.products.map(product => `
+                                        <div class="prd_item flex flex-wrap items-center justify-between gap-3 py-5 border-b border-line">
+                                            <a href="product-default.html?id=${product.productId || ''}" class="flex items-center gap-5">
+                                                <div class="bg-img flex-shrink-0 md:w-[100px] w-20 aspect-square rounded-lg overflow-hidden">
+                                                    <img src="${product.imageUrl || '/assets/images/product/productDefault.png'}"
+                                                        alt="${product.name || 'Product Image'}"
+                                                        class="w-full h-full object-cover" />
+                                                </div>
+                                                <div>
+                                                    <div class="prd_name text-title">${product.name || 'Unknown Product'}</div>
+                                                    <div class="caption1 text-secondary mt-2">
+                                                        ${product.size ? `<span class="prd_size uppercase">${product.size}</span><span>/</span>` : ''}
+                                                        ${product.color ? `<span class="prd_color capitalize">${product.color}</span>` : ''}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <div class="text-title">
+                                                <span class="prd_quantity">${product.quantity}</span>
+                                                <span> X </span>
+                                                <span class="prd_price">₹${parseFloat(product.price).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    `).join('');
+                                } else {
+                                    productsHtml = `<div class="prd_item py-5">No product details available for this order.</div>`;
+                                }
+
+                                listOrderContainer.innerHTML += `
+                                    <div class="order_item mt-5 border border-line rounded-lg box-shadow-xs">
+                                        <div class="flex flex-wrap items-center justify-between gap-4 p-5 border-b border-line">
+                                            <div class="flex items-center gap-2">
+                                                <strong class="text-title">Order Number:</strong>
+                                                <strong class="order_number text-button uppercase">${order.id}</strong>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <strong class="text-title">Order status:</strong>
+                                                <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 ${deliveryStatusTagClass} caption1 font-semibold">${deliveryStatusText}</span>
+                                            </div>
+                                        </div>
+                                        <div class="list_prd px-5">
+                                            ${productsHtml}
+                                        </div>
+                                        <div class="flex flex-wrap gap-4 p-5">
+                                            <button class="button-main btn_order_detail">Order Details</button>
+                                            ${order.status === 'pending' ? `<button class="button-main bg-surface border border-line hover:bg-black text-black hover:text-white">Cancel Order</button>` : ''}
+                                        </div>
                                     </div>
                                 `;
                             });
                         }
-                    } else {
-                        if (userOrdersDisplay) {
-                            userOrdersDisplay.textContent = "No orders found for this user.";
+
+                        // --- Populate Dashboard Recent Orders (e.g., top 3) ---
+                        if (recentOrdersTableBody) {
+                            const recentThreeOrders = userOrders.slice(0, 3); // Get the 3 most recent orders
+                            recentThreeOrders.forEach(order => {
+                                const mainProduct = order.products && order.products.length > 0 ? order.products[0] : { name: 'N/A', category: 'N/A', imageUrl: '/assets/images/product/productDefault.png' };
+                                const orderStatusTagClass = (status) => {
+                                    switch (status) {
+                                        case 'pending': return 'bg-orange text-orange';
+                                        case 'out_for_delivery_at': return 'bg-purple text-purple';
+                                        case 'delivered_at': return 'bg-green text-green';
+                                        case 'canceled': return 'bg-red text-red';
+                                        default: return 'bg-gray text-gray';
+                                    }
+                                };
+                                const statusClass = orderStatusTagClass(order.delivery_status || order.status);
+                                const statusText = order.delivery_status === 'delivered_at' ? 'Completed' :
+                                                   order.delivery_status === 'out_for_delivery_at' ? 'Delivery' :
+                                                   order.status === 'pending' ? 'Pending' :
+                                                   order.status === 'canceled' ? 'Canceled' : 'Unknown';
+
+
+                                recentOrdersTableBody.innerHTML += `
+                                    <tr class="item duration-300">
+                                        <th scope="row" class="py-3 text-left">
+                                            <strong class="text-title">${order.id}</strong>
+                                        </th>
+                                        <td class="py-3">
+                                            <a href="product-default.html?id=${mainProduct.productId || ''}" class="product flex items-center gap-3">
+                                                <img src="${mainProduct.imageUrl || '/assets/images/product/productDefault.png'}"
+                                                    alt="${mainProduct.name}"
+                                                    class="flex-shrink-0 w-12 h-12 rounded" />
+                                                <div class="info flex flex-col">
+                                                    <strong class="product_name text-button">${mainProduct.name}</strong>
+                                                    <span class="product_tag caption1 text-secondary">${mainProduct.category || 'Category'}</span>
+                                                </div>
+                                            </a>
+                                        </td>
+                                        <td class="py-3 price">₹${parseFloat(order.amount).toFixed(2)}</td>
+                                        <td class="py-3 text-right">
+                                            <span class="tag px-4 py-1.5 rounded-full bg-opacity-10 ${statusClass} caption1 font-semibold">${statusText}</span>
+                                        </td>
+                                    </tr>
+                                `;
+                            });
                         }
+
+
+                    } else {
+                        if (listOrderContainer) {
+                            listOrderContainer.innerHTML = "<p>No orders found for this user.</p>";
+                        }
+                        if (recentOrdersTableBody) {
+                             recentOrdersTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-5">No recent orders.</td></tr>';
+                        }
+                        if (awaitingPickupCount) awaitingPickupCount.textContent = '0';
+                        if (cancelledOrdersCount) cancelledOrdersCount.textContent = '0';
+                        if (totalOrdersCount) totalOrdersCount.textContent = '0';
+
                         console.log("No orders found for the current user:", storedUserEmail);
                     }
                 } else {
                     console.error("API response format error: 'success' flag is false or 'orders' is not an array.", data);
-                    if (userOrdersDisplay) {
-                        userOrdersDisplay.textContent = "Failed to process orders from the server.";
+                    if (listOrderContainer) {
+                        listOrderContainer.innerHTML = "<p>Failed to process orders from the server.</p>";
                     }
                 }
             })
             .catch(error => {
                 console.error("Error fetching or processing orders:", error);
-                if (userOrdersDisplay) {
-                    userOrdersDisplay.textContent = `Failed to load orders: ${error.message}. Please try again later.`;
+                if (listOrderContainer) {
+                    listOrderContainer.innerHTML = `<p>Failed to load orders: ${error.message}. Please try again later.</p>`;
                 }
             });
 
     } else {
-        // Clear display if not logged in or email not available
         if (userNameDisplay) userNameDisplay.textContent = "";
         if (userEmailDisplay) userEmailDisplay.textContent = "";
-        if (userOrdersDisplay) userOrdersDisplay.textContent = "Please log in to view your orders.";
+        if (listOrderContainer) listOrderContainer.innerHTML = "Please log in to view your orders.";
+        if (recentOrdersTableBody) recentOrdersTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-5">Please log in to view recent orders.</td></tr>';
+        if (awaitingPickupCount) awaitingPickupCount.textContent = '0';
+        if (cancelledOrdersCount) cancelledOrdersCount.textContent = '0';
+        if (totalOrdersCount) totalOrdersCount.textContent = '0';
         console.log("User is not logged in or email is not available in localStorage.");
     }
+
+    // --- Tab Switching Logic (if not already handled by another script) ---
+    const tabItems = document.querySelectorAll('.menu-tab .category-item');
+    const filterItems = document.querySelectorAll('.right .filter-item');
+
+    tabItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetTab = item.dataset.item;
+
+            // Remove active class from all tabs and filter items
+            tabItems.forEach(tab => tab.classList.remove('active'));
+            filterItems.forEach(filter => filter.classList.remove('active'));
+
+            // Add active class to clicked tab and corresponding filter item
+            item.classList.add('active');
+            document.querySelector(`.filter-item[data-item="${targetTab}"]`).classList.add('active');
+        });
+    });
+
+    // Handle internal tab switching for "Your Orders" if needed (e.g., all, pending, delivery)
+    const orderTabButtons = document.querySelectorAll('.tab_order .menu-tab .tab-item');
+    const orderTabIndicator = document.querySelector('.tab_order .menu-tab .indicator');
+
+    orderTabButtons.forEach((button, index) => {
+        button.addEventListener('click', () => {
+            orderTabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            // Move indicator
+            const buttonWidth = button.offsetWidth;
+            const buttonLeft = button.offsetLeft;
+            if (orderTabIndicator) {
+                orderTabIndicator.style.width = `${buttonWidth}px`;
+                orderTabIndicator.style.transform = `translateX(${buttonLeft}px)`;
+            }
+
+            // In a real application, you would filter the displayed orders here
+            // based on the clicked tab (e.g., 'all', 'pending', 'delivery')
+            console.log("Order tab clicked:", button.textContent.trim());
+        });
+    });
+
+    // Initialize indicator position for the 'all' tab
+    const initialActiveOrderTab = document.querySelector('.tab_order .menu-tab .tab-item.active');
+    if (initialActiveOrderTab && orderTabIndicator) {
+        orderTabIndicator.style.width = `${initialActiveOrderTab.offsetWidth}px`;
+        orderTabIndicator.style.transform = `translateX(${initialActiveOrderTab.offsetLeft}px)`;
+    }
+
 });
