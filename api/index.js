@@ -1033,20 +1033,15 @@ export default async function handler(req, res) {
                         return res.status(400).json({ success: false, error: 'A valid delivery_status is required.' });
                     }
 
-                    const validStatuses = ['pending', 'confirmed', 'shipped', 'out for delivery', 'delivered', 'returned', 'cancelled']; // Added 'cancelled' here too for consistency
+                    // Ensure this list matches your ENUM in the database
+                    const validStatuses = ['pending', 'processing', 'shipped', 'out for delivery', 'delivered', 'returned', 'cancelled'];
                     if (!validStatuses.includes(delivery_status.toLowerCase())) {
                         return res.status(400).json({ success: false, error: `Invalid delivery status: ${delivery_status}. Must be one of: ${validStatuses.join(', ')}.` });
                     }
 
                     try {
-                        let updateSql = `UPDATE orders SET delivery_status = ?, updated_at = NOW() `;
-                        let updateValues = [delivery_status];
-                        const setClauses = [];
-
-                        setClauses.push(`delivery_status = ?`);
-                        updateValues.push(delivery_status);
-                        setClauses.push(`updated_at = NOW()`);
-
+                        const setClauses = [`delivery_status = ?`, `updated_at = NOW()`];
+                        const updateValues = [delivery_status];
 
                         // Add specific timestamp updates based on status
                         if (delivery_status.toLowerCase() === 'out for delivery') {
@@ -1054,13 +1049,11 @@ export default async function handler(req, res) {
                         } else if (delivery_status.toLowerCase() === 'delivered') {
                             setClauses.push(`delivered_at = NOW()`);
                         } else if (delivery_status.toLowerCase() === 'cancelled') {
-                             setClauses.push(`canceled_at = NOW()`); // Ensure canceled_at is set for cancellations
+                            setClauses.push(`canceled_at = NOW()`);
                         }
 
-
-                        updateSql = `UPDATE orders SET ${setClauses.join(', ')} WHERE id = ?`;
-                        updateValues.push(orderId);
-
+                        const updateSql = `UPDATE orders SET ${setClauses.join(', ')} WHERE id = ?`;
+                        updateValues.push(orderId); // Add orderId at the end for the WHERE clause
 
                         const [result] = await pool.default.query(updateSql, updateValues);
 
@@ -1069,7 +1062,8 @@ export default async function handler(req, res) {
                             if (existingOrderRows.length === 0) {
                                 return res.status(404).json({ success: false, message: 'Order not found.' });
                             }
-                            return res.status(400).json({ success: false, message: 'Order delivery status could not be updated (perhaps it was already this status).' });
+                            // If order found but no rows affected, it means the status was already the same.
+                            return res.status(200).json({ success: true, message: `Order ${orderId} delivery status is already "${delivery_status}".`, new_status: delivery_status });
                         }
 
                         return res.status(200).json({
