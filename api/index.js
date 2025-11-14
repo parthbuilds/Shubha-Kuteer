@@ -91,64 +91,39 @@ export default async function handler(req, res) {
         }
 
         if (pathname === '/api/auth/login' && req.method === 'GET') {
-    try {
-        const { loginUser } = await import("../backend/controllers/authController.js");
+            try {
+                const { loginUser } = await import("../backend/controllers/authController.js");
 
-        // For GET → data comes through query parameters
-        const mockReq = {
-            body: req.query,   // convert GET query params into body format for controller
-            method: req.method,
-            url: req.url
-        };
+                // Extract query params manually
+                const url = new URL(req.url, `http://${req.headers.host}`);
+                const email = url.searchParams.get("email");
+                const password = url.searchParams.get("password");
 
-        const mockRes = {
-            status: (code) => ({
-                json: (data) => res.status(code).json(data)
-            }),
-            json: (data) => res.status(200).json(data)
-        };
+                console.log("📩 Extracted GET login params:", { email, password });
 
-        // Call your real controller function
-        await loginUser(mockReq, mockRes);
-        return;
+                const mockReq = {
+                    body: { email, password }, // pass correctly to controller
+                    method: req.method,
+                    url: req.url
+                };
 
-    } catch (error) {
-        console.error("Login error:", error);
-        return res.status(500).json({ 
-            message: "Login failed", 
-            error: error.message 
-        });
-    }
-}
+                const mockRes = {
+                    status: (code) => ({
+                        json: (data) => res.status(code).json(data)
+                    }),
+                    json: (data) => res.status(200).json(data)
+                };
 
-        if (pathname === '/api/dashboard-content' && method === 'GET') {
-            let authResult;
-            const authCheckMockRes = {
-                status: (code) => ({
-                    json: (data) => {
-                        authResult = { code, data };
-                        if (code !== 200) {
-                            sendResponse(code, data);
-                        }
-                    }
-                }),
-                json: (data) => {
-                    authResult = { code: 200, data };
-                    sendResponse(200, data);
-                }
-            };
-        
-            await checkAuth(req, authCheckMockRes);
-        
-            if (authResult && authResult.code === 200) {
-                sendResponse(200, {
-                    message: `Welcome to your dashboard, ${authResult.data.user.first_name}!`,
-                    userData: authResult.data.user,
-                    dashboardStats: "Your personalized statistics are here.",
-                    recentActivity: ["User logged in", "Viewed analytics"]
+                await loginUser(mockReq, mockRes);
+                return;
+
+            } catch (error) {
+                console.error("Login error:", error);
+                return res.status(500).json({
+                    message: "Login failed",
+                    error: error.message
                 });
             }
-            return;
         }
 
         // Admin auth routes
