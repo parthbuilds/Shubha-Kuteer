@@ -869,20 +869,36 @@
 
     <!-- Javascript -->
     <script>
+        // --- Global Configuration ---
+        const BASE_API_URL = '/api'; // Adjust if your API is on a different base path
+
+        // --- Utility Functions ---
+        // Function to parse date strings to a readable format
+        function formatDateTime(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                return new Date(dateString).toLocaleString();
+            } catch (e) {
+                console.error("Error formatting date:", e, dateString);
+                return 'Invalid Date';
+            }
+        }
+
+        // --- Main Function to Load and Render Order Details ---
         async function loadOrderDetails(orderId) {
             try {
                 console.log('Loading order details for ID:', orderId);
 
-                // Check admin authentication first
-                const authRes = await fetch("/api/admin/auth/check");
+                // 1. Check admin authentication first
+                const authRes = await fetch(`${BASE_API_URL}/admin/auth/check`);
                 if (!authRes.ok) {
                     // If not authenticated, redirect to login and prevent further execution
                     window.location.href = "/admin/login.html";
                     return;
                 }
 
-                // Fetch order details from backend
-                const res = await fetch(`/api/orders/${orderId}`);
+                // 2. Fetch order details from backend
+                const res = await fetch(`${BASE_API_URL}/orders/${orderId}`);
                 console.log('API Response status:', res.status);
 
                 if (!res.ok) {
@@ -892,21 +908,24 @@
                     } else if (res.status === 401 || res.status === 403) {
                         throw new Error("Authentication failed or access denied.");
                     } else {
-                        throw new Error(`Failed to fetch order details (status ${res.status}).`);
+                        const errorBody = await res.json().catch(() => ({}));
+                        throw new Error(errorBody.error || `Failed to fetch order details (status ${res.status}).`);
                     }
                 }
 
                 const response = await res.json();
                 console.log('API Raw Response data:', response);
 
-                // Handle API response format: assuming 'success' field or direct order object
+                // Handle API response format: assuming 'success' field and 'order' object
                 let order;
                 if (response.success && response.order) {
                     order = response.order;
-                } else if (response.id) { // Check for a key that indicates it's the order object itself
+                } else { // Fallback if the order object is directly the response (less common but handled)
                     order = response;
-                } else {
-                    throw new Error("Invalid API response format for order details.");
+                }
+
+                if (!order || !order.id) {
+                    throw new Error("Invalid API response format: 'order' object or ID missing.");
                 }
 
                 console.log('Parsed order data before product parsing:', order);
@@ -925,7 +944,7 @@
                 }
 
 
-                // Update page title and heading
+                // 3. Update page title and heading
                 document.title = `Order #${order.id} - Shubha Kuteer Admin`;
                 const orderHeading = document.querySelector("h3");
                 if (orderHeading) {
@@ -938,11 +957,12 @@
                     breadcrumbEl.textContent = `Order #${order.id}`;
                 }
 
-                // ADD CUSTOMER DETAILS ABOVE THE "ALL ITEM" SECTION
+                // 4. ADD CUSTOMER DETAILS ABOVE THE "ALL ITEM" SECTION
                 const allItemSection = document.querySelector(".table-order-detail");
-                if (allItemSection) {
+                if (allItemSection && !document.getElementById('customer-info-section')) { // Prevent re-adding
                     const customerSection = document.createElement('div');
                     customerSection.className = 'wg-box mb-4';
+                    customerSection.id = 'customer-info-section'; // Add ID to prevent re-addition
                     customerSection.innerHTML = `
                     <div class="wg-box-header">
                         <div class="body-title-2">Customer Information</div>
@@ -974,7 +994,7 @@
                     allItemSection.parentNode.insertBefore(customerSection, allItemSection);
                 }
 
-                // Update order items section - show ONLY product data
+                // 5. Update order items section - show ONLY product data
                 const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
                 if (itemsContainer) {
                     itemsContainer.innerHTML = ''; // Clear existing items
@@ -1039,7 +1059,7 @@
                     }
                 }
 
-                // Calculate totals from products
+                // 6. Calculate totals from products
                 let calculatedSubtotal = 0;
                 let totalItems = 0;
 
@@ -1079,7 +1099,7 @@
 
                 console.log('Final total calculated:', finalTotal.toFixed(2));
 
-                // Update summary section (right sidebar)
+                // 7. Update summary section (right sidebar)
                 const orderIdSummaryEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
                 const dateSummaryEl = document.querySelector(".summary-item:nth-child(3) .body-title-2");
                 const totalSummaryEl = document.querySelector(".summary-item:nth-child(4) .body-title-2");
@@ -1088,7 +1108,7 @@
                 if (dateSummaryEl) dateSummaryEl.textContent = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
                 if (totalSummaryEl) totalSummaryEl.textContent = `₹${finalTotal.toFixed(2)}`;
 
-                // Fix shipping address
+                // 8. Fix shipping address
                 const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
                 if (shippingAddressEl) {
                     shippingAddressEl.innerHTML = `
@@ -1100,13 +1120,26 @@
                 `;
                 }
 
-                // Update payment method with more details
+                // 9. Update payment method with more details
                 const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
                 if (paymentMethodEl) {
-                    const statusClass = order.status === 'delivered' ? 'text-green' : (order.status === 'out for delivery' ? 'text-orange' : 'text-blue');
+                    // Use the new delivery_status for styling
+                    let deliveryStatusClass = '';
+                    const currentDeliveryStatus = order.delivery_status ? order.delivery_status.toLowerCase() : 'unknown';
+                    if (currentDeliveryStatus === 'delivered') {
+                        deliveryStatusClass = 'text-green';
+                    } else if (currentDeliveryStatus === 'out for delivery' || currentDeliveryStatus === 'shipped') {
+                        deliveryStatusClass = 'text-orange';
+                    } else if (currentDeliveryStatus === 'cancelled') {
+                        deliveryStatusClass = 'text-red';
+                    } else { // pending, confirmed, etc.
+                        deliveryStatusClass = 'text-blue';
+                    }
+
                     paymentMethodEl.innerHTML = `
                     <strong>Payment Method:</strong> Razorpay<br>
-                    <strong>Status:</strong> <span class="${statusClass}">${order.status ? order.status.toUpperCase() : 'N/A'}</span><br>
+                    <strong>Payment Status:</strong> <span class="${deliveryStatusClass}">${order.status ? order.status.toUpperCase() : 'N/A'}</span><br>
+                    <strong>Delivery Status:</strong> <span class="${deliveryStatusClass}">${currentDeliveryStatus ? currentDeliveryStatus.toUpperCase() : 'N/A'}</span><br>
                     <strong>Payment ID:</strong> ${order.razorpay_payment_id || 'Pending'}<br>
                     <strong>Order ID (Razorpay):</strong> ${order.razorpay_order_id || 'N/A'}<br>
                     <strong>Total Items:</strong> ${totalItems}<br>
@@ -1114,7 +1147,7 @@
                 `;
                 }
 
-                // Update expected delivery date - CHANGE TO 7-10 DAYS
+                // 10. Update expected delivery date - CHANGE TO 7-10 DAYS
                 const expectedDeliveryDateEl = document.querySelector("#expectedDeliveryDate"); // Use specific ID
                 if (expectedDeliveryDateEl && order.created_at) {
                     const orderDate = new Date(order.created_at);
@@ -1129,7 +1162,7 @@
                     expectedDeliveryDateEl.textContent = 'N/A';
                 }
 
-                // --- Handle button visibility and status displays ---
+                // 11. --- Handle button visibility and status displays ---
                 const outForDeliveryButton = document.getElementById("outForDeliveryButton");
                 const deliveredButton = document.getElementById("deliveredButton");
                 const outForDeliveryStatusDiv = document.getElementById("outForDeliveryStatus");
@@ -1142,46 +1175,64 @@
                 if (deliveredButton) deliveredButton.setAttribute("data-order-id", order.id);
 
                 // Reset display states initially
-                if (outForDeliveryButton) outForDeliveryButton.style.display = 'none';
-                if (deliveredButton) deliveredButton.style.display = 'none';
+                if (outForDeliveryButton) {
+                    outForDeliveryButton.style.display = 'none';
+                    outForDeliveryButton.disabled = false; // Ensure it's not disabled from previous state
+                    outForDeliveryButton.textContent = 'Mark as Out for Delivery';
+                    outForDeliveryButton.classList.remove('disabled-button-style');
+                }
+                if (deliveredButton) {
+                    deliveredButton.style.display = 'none';
+                    deliveredButton.disabled = false; // Ensure it's not disabled from previous state
+                    deliveredButton.textContent = 'Mark as Delivered';
+                    deliveredButton.classList.remove('disabled-button-style');
+                }
                 if (outForDeliveryStatusDiv) outForDeliveryStatusDiv.style.display = 'none';
                 if (deliveredStatusDiv) deliveredStatusDiv.style.display = 'none';
 
-                if (order.status === 'pending') {
-                    if (outForDeliveryButton) {
-                        outForDeliveryButton.style.display = 'block'; // Show "Mark as Out for Delivery"
-                        outForDeliveryButton.disabled = false;
-                        outForDeliveryButton.classList.remove('disabled-button-style');
-                    }
-                } else if (order.status === 'out for delivery') {
-                    if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan && order.out_for_delivery_at) {
-                        outForDeliveryStatusDiv.style.display = 'block';
-                        outForDeliveryTimestampSpan.textContent = new Date(order.out_for_delivery_at).toLocaleString();
-                    }
-                    if (deliveredButton) {
-                        deliveredButton.style.display = 'block'; // Show "Mark as Delivered"
-                        deliveredButton.disabled = false;
-                        deliveredButton.classList.remove('disabled-button-style');
-                    }
-                    // Hide out for delivery button if already out for delivery
-                    if (outForDeliveryButton) outForDeliveryButton.style.display = 'none';
 
-                } else if (order.status === 'delivered') {
-                    if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan && order.out_for_delivery_at) {
-                        outForDeliveryStatusDiv.style.display = 'block';
-                        outForDeliveryTimestampSpan.textContent = new Date(order.out_for_delivery_at).toLocaleString();
-                    }
-                    if (deliveredStatusDiv && deliveredTimestampSpan && order.delivered_at) {
-                        deliveredStatusDiv.style.display = 'block';
-                        deliveredTimestampSpan.textContent = new Date(order.delivered_at).toLocaleString();
-                    }
-                    // All buttons should be hidden/disabled as the order is complete
-                    if (outForDeliveryButton) outForDeliveryButton.style.display = 'none';
-                    if (deliveredButton) deliveredButton.style.display = 'none';
+                // Logic based on order.delivery_status
+                const currentDeliveryStatus = order.delivery_status ? order.delivery_status.toLowerCase() : 'pending'; // Default to pending if not set
+
+                switch (currentDeliveryStatus) {
+                    case 'pending':
+                    case 'confirmed':
+                    case 'shipped':
+                        if (outForDeliveryButton) {
+                            outForDeliveryButton.style.display = 'block'; // Show "Mark as Out for Delivery"
+                        }
+                        break;
+                    case 'out for delivery':
+                        if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
+                            outForDeliveryStatusDiv.style.display = 'block';
+                            outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
+                        }
+                        if (deliveredButton) {
+                            deliveredButton.style.display = 'block'; // Show "Mark as Delivered"
+                        }
+                        break;
+                    case 'delivered':
+                        if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
+                            outForDeliveryStatusDiv.style.display = 'block';
+                            outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
+                        }
+                        if (deliveredStatusDiv && deliveredTimestampSpan) {
+                            deliveredStatusDiv.style.display = 'block';
+                            deliveredTimestampSpan.textContent = formatDateTime(order.delivered_at);
+                        }
+                        // No buttons needed if already delivered
+                        break;
+                    case 'cancelled':
+                        // If an order is cancelled, no delivery actions are relevant
+                        // You might want to display a "Cancelled" message prominently
+                        break;
+                    default:
+                        console.warn(`Unknown delivery status: ${currentDeliveryStatus}`);
+                        break;
                 }
                 // --- END Handle button visibility and status displays ---
 
-                console.log('Order details loaded successfully');
+                console.log('Order details loaded successfully and UI updated.');
 
             } catch (err) {
                 console.error("⚠️ Error loading order details:", err);
@@ -1194,24 +1245,10 @@
             }
         }
 
-        // Get orderId from URL (order-detail.html?id=15)
-        const urlParams = new URLSearchParams(window.location.search);
-        const orderId = urlParams.get("id");
-
-        console.log('Order ID from URL:', orderId);
-
-        if (orderId) {
-            loadOrderDetails(orderId);
-        } else {
-            alert("No order ID found in URL. Please provide an ID like ?id=123");
-            // Redirect to order list or show a message
-            // window.location.href = "/admin/orders.html";
-        }
-
-        // This script is separate and handles admin data for the header/sidebar
+        // --- Admin Data Loader (for header/sidebar) ---
         async function loadAdminData() {
             try {
-                const res = await fetch("/api/admin/users/me");
+                const res = await fetch(`${BASE_API_URL}/admin/users/me`);
                 if (!res.ok) {
                     // If admin session is invalid, redirect to login
                     window.location.href = "/admin/login.html";
@@ -1232,17 +1269,11 @@
             }
         }
 
-        // Call without ID
-        loadAdminData();
 
-        // --- NEW: Event Listeners for Order Status Buttons ---
+        // --- Event Listeners for Order Status Buttons ---
         document.addEventListener('DOMContentLoaded', () => {
             const outForDeliveryButton = document.getElementById("outForDeliveryButton");
             const deliveredButton = document.getElementById("deliveredButton");
-            const outForDeliveryStatusDiv = document.getElementById("outForDeliveryStatus");
-            const outForDeliveryTimestampSpan = document.getElementById("outForDeliveryTimestamp");
-            const deliveredStatusDiv = document.getElementById("deliveredStatus");
-            const deliveredTimestampSpan = document.getElementById("deliveredTimestamp");
 
             // Event Listener for "Mark as Out for Delivery"
             if (outForDeliveryButton) {
@@ -1257,9 +1288,10 @@
                     outForDeliveryButton.classList.add('disabled-button-style');
 
                     try {
-                        const res = await fetch(`/api/orders/${orderId}/out-for-delivery`, {
+                        const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, { // Use unified endpoint
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ delivery_status: 'out for delivery' })
                         });
 
                         if (!res.ok) {
@@ -1270,24 +1302,13 @@
                         const data = await res.json();
                         alert(`Order #${orderId} successfully marked as "Out for Delivery"!`);
 
-                        // Update UI: hide this button, show 'Out for Delivery' status and 'Mark as Delivered' button
-                        outForDeliveryButton.style.display = 'none';
-                        if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
-                            outForDeliveryStatusDiv.style.display = 'block';
-                            outForDeliveryTimestampSpan.textContent = new Date(data.out_for_delivery_at || Date.now()).toLocaleString();
-                        }
-                        if (deliveredButton) {
-                            deliveredButton.style.display = 'block'; // Show delivered button
-                            deliveredButton.disabled = false;
-                            deliveredButton.classList.remove('disabled-button-style');
-                        }
-
-                        // Reload order details to ensure payment method status is updated
+                        // Reload order details to ensure all UI elements are updated
                         await loadOrderDetails(orderId);
 
                     } catch (error) {
                         console.error("Error marking order as out for delivery:", error);
                         alert("Failed to mark order as out for delivery: " + error.message);
+                        // Re-enable button on error
                         outForDeliveryButton.disabled = false;
                         outForDeliveryButton.textContent = 'Mark as Out for Delivery';
                         outForDeliveryButton.classList.remove('disabled-button-style');
@@ -1308,9 +1329,10 @@
                     deliveredButton.classList.add('disabled-button-style');
 
                     try {
-                        const res = await fetch(`/api/orders/${orderId}/delivered`, {
+                        const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, { // Use unified endpoint
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ delivery_status: 'delivered' })
                         });
 
                         if (!res.ok) {
@@ -1321,55 +1343,38 @@
                         const data = await res.json();
                         alert(`Order #${orderId} successfully marked as "Delivered"!`);
 
-                        // Update UI: hide this button, show 'Delivered' status
-                        deliveredButton.style.display = 'none';
-                        if (deliveredStatusDiv && deliveredTimestampSpan) {
-                            deliveredStatusDiv.style.display = 'block';
-                            deliveredTimestampSpan.textContent = new Date(data.delivered_at || Date.now()).toLocaleString();
-                        }
-
-                        // Reload order details to ensure all statuses and payment method status are updated
+                        // Reload order details to ensure all UI elements are updated
                         await loadOrderDetails(orderId);
 
                     } catch (error) {
                         console.error("Error marking order as delivered:", error);
                         alert("Failed to mark order as delivered: " + error.message);
+                        // Re-enable button on error
                         deliveredButton.disabled = false;
                         deliveredButton.textContent = 'Mark as Delivered';
                         deliveredButton.classList.remove('disabled-button-style');
                     }
                 });
             }
-        });
-    </script>
 
-    <script>
-        // This script is separate and handles admin data for the header/sidebar
-        async function loadAdminData() {
-            try {
-                const res = await fetch("/api/admin/users/me");
-                if (!res.ok) {
-                    // If admin session is invalid, redirect to login
-                    window.location.href = "/admin/login.html";
-                    throw new Error("Failed to fetch admin data or session expired.");
-                }
-                const data = await res.json();
+            // --- Initial Load ---
+            // Get orderId from URL (order-detail.html?id=15)
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get("id");
 
-                // Insert into DOM
-                const adminNameEl = document.getElementById("admin-name");
-                const adminRoleEl = document.getElementById("admin-role");
+            console.log('Order ID from URL:', orderId);
 
-                if (adminNameEl) adminNameEl.textContent = data.admin.name;
-                if (adminRoleEl) adminRoleEl.textContent = data.admin.role;
-
-            } catch (err) {
-                console.error("Error loading admin data:", err);
-                // Optionally, display a message to the user or log out
+            if (orderId) {
+                loadOrderDetails(orderId);
+            } else {
+                alert("No order ID found in URL. Please provide an ID like ?id=123");
+                // Redirect to order list or show a message
+                // window.location.href = "/admin/orders.html";
             }
-        }
 
-        // Call without ID
-        loadAdminData();
+            // Load admin data for the header/sidebar
+            loadAdminData();
+        });
     </script>
 
     <script src="/admin/js/jquery.min.js"></script>
