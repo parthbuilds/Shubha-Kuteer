@@ -1027,7 +1027,7 @@ export default async function handler(req, res) {
                 // PUT /api/orders/:id/delivery-status - Update delivery status
                 if (pathname.startsWith('/api/orders/') && pathname.endsWith('/delivery-status') && req.method === 'PUT') {
                     const orderId = pathname.split('/')[3]; // Extracts ID from /api/orders/{id}/delivery-status
-                    const { delivery_status } = req.body;
+                    const { delivery_status } = req.body; // Expecting 'out for delivery' or 'delivered' directly
 
                     if (!orderId || isNaN(orderId)) {
                         return res.status(400).json({ success: false, error: 'Invalid order ID provided.' });
@@ -1036,7 +1036,7 @@ export default async function handler(req, res) {
                         return res.status(400).json({ success: false, error: 'A valid delivery_status is required.' });
                     }
 
-                    const validStatuses = ['pending', 'confirmed', 'shipped', 'out for delivery', 'delivered', 'cancelled'];
+                    const validStatuses = ['pending', 'processing', 'shipped', 'out for delivery', 'delivered', 'returned', 'cancelled']; // Added 'cancelled' and 'returned' from schema
                     if (!validStatuses.includes(delivery_status.toLowerCase())) {
                         return res.status(400).json({ success: false, error: `Invalid delivery status: ${delivery_status}. Must be one of: ${validStatuses.join(', ')}.` });
                     }
@@ -1046,10 +1046,15 @@ export default async function handler(req, res) {
                         let updateValues = [delivery_status, orderId];
 
                         // Add specific timestamp updates based on status
+                        // Use the exact string 'out for delivery' and 'delivered' from the enum
                         if (delivery_status.toLowerCase() === 'out for delivery') {
                             updateSql = `UPDATE orders SET delivery_status = ?, out_for_delivery_at = NOW(), updated_at = NOW() WHERE id = ?`;
                         } else if (delivery_status.toLowerCase() === 'delivered') {
                             updateSql = `UPDATE orders SET delivery_status = ?, delivered_at = NOW(), updated_at = NOW() WHERE id = ?`;
+                        }
+                        // For 'cancelled' status (from payment status, but good to handle here if needed)
+                        else if (delivery_status.toLowerCase() === 'cancelled') {
+                             updateSql = `UPDATE orders SET delivery_status = ?, canceled_at = NOW(), updated_at = NOW() WHERE id = ?`;
                         }
                         // Note: You might want to prevent setting 'out for delivery' if already 'delivered', etc.
                         // For simplicity, this example just updates. Add more complex logic if needed.
@@ -1067,7 +1072,7 @@ export default async function handler(req, res) {
                         return res.status(200).json({
                             success: true,
                             message: `Order ${orderId} delivery status updated to "${delivery_status}".`,
-                            new_status: delivery_status
+                            new_status: delivery_status // Return the actual status string
                         });
                     } catch (error) {
                         console.error(`Error updating delivery status for order ID: ${orderId}:`, error);
