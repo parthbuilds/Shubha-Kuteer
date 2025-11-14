@@ -822,50 +822,43 @@
 //         handleAuthPages();
 //     }
 // });
-function showUserOnFrontend() {
+// dashboard.js
+
+document.addEventListener("DOMContentLoaded", () => {
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const dashboardBtn = document.getElementById("dashboardBtn");
+    const registerBlock = document.getElementById("registerBlock");
+
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
     const userData = JSON.parse(localStorage.getItem("userData") || "{}");
 
-    console.log("Restoring user from localStorage:", userData);
+    console.log("📦 Restoring user from localStorage:", userData);
 
-    const output = document.getElementById("user-output");
+    // UI logic
+    if (isLoggedIn === "true") {
+        loginBtn?.classList.add("hidden");
+        logoutBtn?.classList.remove("hidden");
+        dashboardBtn?.classList.remove("hidden");
+        registerBlock && (registerBlock.style.display = "none");
 
-    if (!output) return;
+        // Update User UI
+        document.getElementById("userName").textContent =
+            `${userData.firstName} ${userData.lastName}`;
 
-    // If user is not found
-    if (!userData.email) {
-        output.innerHTML = `<p>No user logged in.</p>`;
-        return;
+        document.getElementById("userEmail").textContent =
+            userData.email;
+
+    } else {
+        loginBtn?.classList.remove("hidden");
+        logoutBtn?.classList.add("hidden");
+        dashboardBtn?.classList.add("hidden");
+        registerBlock && (registerBlock.style.display = "block");
     }
 
-    output.innerHTML = `
-        <h3>Logged-in User Details</h3>
-        <p><strong>First Name:</strong> ${userData.firstName}</p>
-        <p><strong>Last Name:</strong> ${userData.lastName}</p>
-        <p><strong>Email:</strong> ${userData.email}</p>
-        <p><strong>User ID:</strong> ${userData.id}</p>
-    `;
-}
-
-
-// -------------------------------
-// PAGE LOAD – RESTORE USER
-// -------------------------------
-document.addEventListener("DOMContentLoaded", () => {
-    showUserOnFrontend();
-});
-
-
-// -------------------------------
-// LOGIN BUTTON HANDLER
-// -------------------------------
-document.getElementById("login-btn")?.addEventListener("click", () => {
-    const email = document.getElementById("email")?.value.trim();
-    const password = document.getElementById("password")?.value.trim();
-
-    if (!email || !password) {
-        alert("Enter email & password");
-        return;
-    }
-
-    loginUser(email, password);
+    // Logout
+    logoutBtn?.addEventListener("click", () => {
+        localStorage.clear();
+        window.location.href = "index.html";
+    });
 });
