@@ -6,6 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const logoutBtn = document.getElementById("logoutBtn");
     const registerBlock = document.getElementById("registerBlock");
     
+    // Select the dashboard link
+    const dashboardLink = document.getElementById("dashboard"); // The 'a' tag with id="dashboard"
+
     // Select elements specific to the login form
     const loginForm = document.getElementById("loginForm"); 
     const emailInput = document.getElementById("email"); 
@@ -16,24 +19,36 @@ document.addEventListener("DOMContentLoaded", () => {
     const userNameDisplay = document.getElementById("userName");
     const userEmailDisplay = document.getElementById("userEmail");
 
-    // --- Initial Check of Login State from localStorage ---
-    const isLoggedIn = localStorage.getItem("isLoggedIn");
-    const storedUserName = localStorage.getItem("userName");
-    const storedUserEmail = localStorage.getItem("userEmail");
+    // --- Function to update UI based on login state ---
+    const updateUI = () => {
+        const isLoggedIn = localStorage.getItem("isLoggedIn");
+        const storedUserName = localStorage.getItem("userName");
+        const storedUserEmail = localStorage.getItem("userEmail");
 
-    if (isLoggedIn === "true") {
-        if (loginBtn) loginBtn.classList.add("hidden");
-        if (logoutBtn) logoutBtn.classList.remove("hidden");
-        if (registerBlock) registerBlock.style.display = "none";
-        
-        if (userNameDisplay) userNameDisplay.textContent = storedUserName || "Guest User";
-        if (userEmailDisplay) userEmailDisplay.textContent = storedUserEmail || "No Email";
+        if (isLoggedIn === "true") {
+            // User is logged in: Hide login, show logout and dashboard
+            if (loginBtn) loginBtn.classList.add("hidden");
+            if (logoutBtn) logoutBtn.classList.remove("hidden"); // Show logout
+            if (dashboardLink) dashboardLink.classList.remove("hidden"); // Show dashboard
+            if (registerBlock) registerBlock.style.display = "none";
+            
+            if (userNameDisplay) userNameDisplay.textContent = storedUserName || "Guest User";
+            if (userEmailDisplay) userEmailDisplay.textContent = storedUserEmail || "No Email";
 
-    } else {
-        if (loginBtn) loginBtn.classList.remove("hidden");
-        if (logoutBtn) logoutBtn.classList.add("hidden");
-        if (registerBlock) registerBlock.style.display = "block";
-    }
+        } else {
+            // User is NOT logged in: Show login, hide logout and dashboard
+            if (loginBtn) loginBtn.classList.remove("hidden");
+            if (logoutBtn) logoutBtn.classList.add("hidden"); // Hide logout
+            if (dashboardLink) dashboardLink.classList.add("hidden"); // Hide dashboard
+            if (registerBlock) registerBlock.style.display = "block";
+            
+            if (userNameDisplay) userNameDisplay.textContent = "";
+            if (userEmailDisplay) userEmailDisplay.textContent = "";
+        }
+    };
+
+    // --- Initial UI update on page load ---
+    updateUI();
 
     // --- Login Form Submission Logic ---
     if (loginForm) {
@@ -78,6 +93,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         loginButton.textContent = "Logged in ✅";
                     }
                     
+                    // After successful login and localStorage update, update UI and redirect
+                    updateUI(); // Update UI immediately before redirect
                     window.location.assign("index.html"); 
 
                 } else {
@@ -89,16 +106,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         loginButton.disabled = false;
                         loginButton.textContent = "Login";
                     }
+                    updateUI(); // Ensure UI is correct if login fails but isLoggedIn was true for some reason
                 }
             } catch (error) {
                 if (loginMessage) {
                     loginMessage.textContent = "An error occurred during login. Please try again.";
-                    loginMessage.style.color = "red";
+                    if (loginMessage) loginMessage.style.color = "red"; 
                 }
                 if (loginButton) {
                     loginButton.disabled = false;
                     loginButton.textContent = "Login";
                 }
+                updateUI(); // Update UI in case of network error
             }
         });
     }
@@ -110,6 +129,9 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.removeItem("token");
             localStorage.removeItem("userName"); 
             localStorage.removeItem("userEmail"); 
+            
+            // After logout and localStorage clear, update UI and redirect
+            updateUI(); // Update UI immediately after logout
             window.location.href = "index.html"; 
         });
     }
