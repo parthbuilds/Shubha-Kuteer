@@ -884,6 +884,32 @@
         }
     }
 
+    // Helper function to determine status text and class for ADMIN VIEW
+    const getOrderStatusDisplayAdmin = (order) => {
+        let statusText = 'UNKNOWN';
+        let statusClass = 'text-gray'; // Default unknown color
+
+        if (order.status === 'canceled') {
+            statusText = 'CANCELED';
+            statusClass = 'text-red';
+        } else if (order.delivery_status === 'delivered_at' || order.delivery_status === 'delivered') { // Added 'delivered' for consistency
+            statusText = 'DELIVERED';
+            statusClass = 'text-green';
+        } else if (order.delivery_status === 'out_for_delivery_at' || order.delivery_status === 'out for delivery' || order.delivery_status === 'shipped') {
+            statusText = 'OUT FOR DELIVERY';
+            statusClass = 'text-orange'; // Orange for in-progress delivery
+        } else if (order.status === 'pending' || order.status === 'confirmed') { // Assuming 'confirmed' is similar to pending
+            statusText = 'PENDING / PROCESSING';
+            statusClass = 'text-blue'; // Blue for pending, adjust as needed
+        } else if (order.status === 'completed') {
+            statusText = 'COMPLETED';
+            statusClass = 'text-green';
+        }
+
+        return { statusText, statusClass };
+    };
+
+
     // --- Main Function to Load and Render Order Details ---
     async function loadOrderDetails(orderId) {
         try {
@@ -1123,23 +1149,15 @@
             // 9. Update payment method with more details
             const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
             if (paymentMethodEl) {
-                // Use the new delivery_status for styling
-                let deliveryStatusClass = '';
-                const currentDeliveryStatus = (order.delivery_status || 'pending').toLowerCase(); // Default to pending if not set
-                if (currentDeliveryStatus === 'delivered') {
-                    deliveryStatusClass = 'text-green';
-                } else if (currentDeliveryStatus === 'out for delivery' || currentDeliveryStatus === 'shipped') {
-                    deliveryStatusClass = 'text-orange';
-                } else if (currentDeliveryStatus === 'cancelled') {
-                    deliveryStatusClass = 'text-red';
-                } else { // pending, confirmed, etc.
-                    deliveryStatusClass = 'text-blue';
-                }
+                const { statusText: paymentStatusDisplay, statusClass: paymentStatusClass } = getOrderStatusDisplayAdmin(order);
+                // For Delivery Status in this section, use the same logic, but maybe only if not canceled
+                const { statusText: deliveryStatusDisplay, statusClass: deliveryStatusClass } = getOrderStatusDisplayAdmin(order);
+
 
                 paymentMethodEl.innerHTML = `
                     <strong>Payment Method:</strong> Razorpay<br>
-                    <strong>Payment Status:</strong> <span class="${deliveryStatusClass}">${(order.status || 'N/A').toUpperCase()}</span><br>
-                    <strong>Delivery Status:</strong> <span class="${deliveryStatusClass}">${currentDeliveryStatus.toUpperCase()}</span><br>
+                    <strong>Payment Status:</strong> <span class="${paymentStatusClass}">${paymentStatusDisplay}</span><br>
+                    <strong>Delivery Status:</strong> <span class="${deliveryStatusClass}">${deliveryStatusDisplay}</span><br>
                     <strong>Payment ID:</strong> ${order.razorpay_payment_id || 'Pending'}<br>
                     <strong>Order ID (Razorpay):</strong> ${order.razorpay_order_id || 'N/A'}<br>
                     <strong>Total Items:</strong> ${totalItems}<br>
@@ -1169,13 +1187,32 @@
             const outForDeliveryTimestampSpan = document.getElementById("outForDeliveryTimestamp");
             const deliveredStatusDiv = document.getElementById("deliveredStatus");
             const deliveredTimestampSpan = document.getElementById("deliveredTimestamp");
+            // Add an element to display "Canceled" prominently
+            let canceledMessageDiv = document.getElementById("canceledMessage");
+            if (!canceledMessageDiv) {
+                canceledMessageDiv = document.createElement('div');
+                canceledMessageDiv.id = 'canceledMessage';
+                canceledMessageDiv.className = 'wg-box p-4 text-center bg-red-100 border border-red-500 rounded-lg my-4'; // Tailwind classes for a red box
+                canceledMessageDiv.innerHTML = '<h4 class="text-red-700 font-bold text-xl">ORDER CANCELED</h4><p class="text-red-600 mt-2">This order has been officially canceled.</p>';
+                // Insert it above the first action button
+                const actionButtonsContainer = outForDeliveryButton ? outForDeliveryButton.parentNode : null;
+                if (actionButtonsContainer) {
+                    actionButtonsContainer.insertBefore(canceledMessageDiv, actionButtonsContainer.firstChild);
+                } else {
+                    // Fallback if no button container, append to a known parent
+                    const mainContent = document.querySelector('.main-content-detail'); // Adjust this selector if needed
+                    if (mainContent) mainContent.appendChild(canceledMessageDiv);
+                }
+            }
+            canceledMessageDiv.style.display = 'none'; // Hide by default
+
 
             // Set order ID for both buttons
             if (outForDeliveryButton) outForDeliveryButton.setAttribute("data-order-id", order.id);
             if (deliveredButton) deliveredButton.setAttribute("data-order-id", order.id);
 
-            // Reset display states initially for all
-            const elementsToReset = [outForDeliveryButton, deliveredButton, outForDeliveryStatusDiv, deliveredStatusDiv];
+            // Reset display states initially for all relevant elements
+            const elementsToReset = [outForDeliveryButton, deliveredButton, outForDeliveryStatusDiv, deliveredStatusDiv, canceledMessageDiv];
             elementsToReset.forEach(el => {
                 if (el) {
                     el.style.display = 'none';
@@ -1187,46 +1224,62 @@
                 }
             });
 
-            // Logic based on order.delivery_status
-            const currentDeliveryStatus = (order.delivery_status || 'pending').toLowerCase(); // Default to pending if not set
 
-            switch (currentDeliveryStatus) {
-                case 'pending':
-                case 'confirmed': // Assuming 'confirmed' means payment confirmed, ready for dispatch
-                case 'shipped': // Assuming 'shipped' is a step before 'out for delivery'
-                    if (outForDeliveryButton) {
-                        outForDeliveryButton.style.display = 'block'; // Show "Mark as Out for Delivery"
-                    }
-                    break;
-                case 'out for delivery':
-                    // Just show the status, not the button to mark it 'out for delivery' again
-                    if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
-                        outForDeliveryStatusDiv.style.display = 'block';
-                        outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
-                    }
-                    // Show 'Mark as Delivered' button if it's currently out for delivery
-                    if (deliveredButton) {
-                        deliveredButton.style.display = 'block';
-                    }
-                    break;
-                case 'delivered':
-                    // Show both status displays, no action buttons
-                    if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
-                        outForDeliveryStatusDiv.style.display = 'block';
-                        outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
-                    }
-                    if (deliveredStatusDiv && deliveredTimestampSpan) {
-                        deliveredStatusDiv.style.display = 'block';
-                        deliveredTimestampSpan.textContent = formatDateTime(order.delivered_at);
-                    }
-                    break;
-                case 'cancelled':
-                    // If an order is cancelled, no delivery actions are relevant
-                    // You might want to display a "Cancelled" message prominently
-                    break;
-                default:
-                    console.warn(`Unknown delivery status: ${currentDeliveryStatus}`);
-                    break;
+            // Logic based on order.status and order.delivery_status
+            const currentOverallStatus = (order.status || '').toLowerCase(); // Use main status
+            const currentDeliveryStatus = (order.delivery_status || '').toLowerCase(); // Use delivery status
+
+            if (currentOverallStatus === 'canceled') {
+                if (canceledMessageDiv) {
+                    canceledMessageDiv.style.display = 'block'; // Show "ORDER CANCELED" message
+                }
+                // Hide all delivery-related buttons and status divs
+                if (outForDeliveryButton) outForDeliveryButton.style.display = 'none';
+                if (deliveredButton) deliveredButton.style.display = 'none';
+                if (outForDeliveryStatusDiv) outForDeliveryStatusDiv.style.display = 'none';
+                if (deliveredStatusDiv) deliveredStatusDiv.style.display = 'none';
+            } else {
+                switch (currentDeliveryStatus) {
+                    case 'pending':
+                    case 'confirmed': // Assuming 'confirmed' means payment confirmed, ready for dispatch
+                    case 'shipped': // Assuming 'shipped' is a step before 'out for delivery'
+                    case '': // If delivery_status is null/empty, but order isn't canceled
+                        if (outForDeliveryButton) {
+                            outForDeliveryButton.style.display = 'block'; // Show "Mark as Out for Delivery"
+                        }
+                        break;
+                    case 'out for delivery':
+                    case 'out_for_delivery_at': // From your data, case-sensitive match
+                        // Show 'Out for Delivery' status
+                        if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
+                            outForDeliveryStatusDiv.style.display = 'block';
+                            outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
+                        }
+                        // Show 'Mark as Delivered' button if it's currently out for delivery
+                        if (deliveredButton) {
+                            deliveredButton.style.display = 'block';
+                        }
+                        break;
+                    case 'delivered':
+                    case 'delivered_at': // From your data, case-sensitive match
+                        // Show both status displays, no action buttons
+                        if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
+                            outForDeliveryStatusDiv.style.display = 'block';
+                            outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
+                        }
+                        if (deliveredStatusDiv && deliveredTimestampSpan) {
+                            deliveredStatusDiv.style.display = 'block';
+                            deliveredTimestampSpan.textContent = formatDateTime(order.delivered_at);
+                        }
+                        break;
+                    default:
+                        console.warn(`Unknown or unhandled delivery status: ${currentDeliveryStatus}`);
+                        // If delivery_status is weird, but not canceled, show outForDeliveryButton as a fallback for action
+                        if (outForDeliveryButton && currentOverallStatus !== 'canceled') {
+                            outForDeliveryButton.style.display = 'block';
+                        }
+                        break;
+                }
             }
             // --- END Handle button visibility and status displays ---
 
@@ -1290,7 +1343,7 @@
                     const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ delivery_status: 'out for delivery' })
+                        body: JSON.stringify({ delivery_status: 'out_for_delivery_at' }) // Ensure this matches backend expected value
                     });
 
                     if (!res.ok) {
@@ -1332,7 +1385,7 @@
                     const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ delivery_status: 'delivered' })
+                        body: JSON.stringify({ delivery_status: 'delivered_at' }) // Ensure this matches backend expected value
                     });
 
                     if (!res.ok) {
