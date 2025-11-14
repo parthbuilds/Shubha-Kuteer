@@ -71,94 +71,40 @@ export default async function handler(req, res) {
         // ======================================================================
         // LOGIN (POST)
         // ======================================================================
-        if (pathname === "/api/auth/login" && method === "POST") {
+        async function loginUser(email, password) {
             try {
-                const { loginUser } = await import("./backend/controllers/authController.js");
-
-                let body = "";
-                req.on("data", chunk => (body += chunk));
-                req.on("end", async () => {
-                    let parsedBody = {};
-
-                    try {
-                        parsedBody = JSON.parse(body || "{}");
-                    } catch (err) {
-                        return sendResponse(res, 400, { message: "Invalid JSON" });
-                    }
-
-                    const mockReq = {
-                        body: parsedBody,
-                        method: req.method,
-                        url: req.url
-                    };
-
-                    const mockRes = {
-                        status: (code) => ({
-                            json: (data) => sendResponse(res, code, data)
-                        }),
-                        json: (data) => sendResponse(res, 200, data)
-                    };
-
-                    await loginUser(mockReq, mockRes);
+                const response = await fetch("https://shubhakuteer.in/api/auth/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ email, password })
                 });
 
-                return;
+                const data = await response.json();
+                console.log("Login API Response:", data);
 
-            } catch (error) {
-                console.error("❌ Login POST error:", error);
-                return sendResponse(res, 500, {
-                    message: "Login failed",
-                    error: error.message
-                });
-            }
-        }
+                if (data.token && data.user) {
+                    // Store user info in localStorage
+                    const userData = {
+                        firstName: data.user.first_name || "",
+                        lastName: data.user.last_name || "",
+                        email: data.user.email || "",
+                        id: data.user.id || "",
+                    };
 
+                    localStorage.setItem("authToken", data.token);
+                    localStorage.setItem("userData", JSON.stringify(userData));
 
+                    console.log("Saved to localStorage:", userData);
 
-        // ======================================================================
-        // LOGIN (GET) — email & password in query
-        // ======================================================================
-        if (pathname === "/api/auth/login" && method === "GET") {
-            try {
-                const { loginUser } = await import("./backend/controllers/authController.js");
-
-                // FIXED URL PARSING
-                const fullUrl = `http://${req.headers.host}${req.url}`;
-                const urlObj = new URL(fullUrl);
-
-                const email = urlObj.searchParams.get("email");
-                const password = urlObj.searchParams.get("password");
-
-                console.log("📩 GET Login Params:", { email, password });
-
-                if (!email || !password) {
-                    return sendResponse(res, 400, {
-                        message: "Email and password are required"
-                    });
+                    // Update UI
+                    showUserOnFrontend();
+                } else {
+                    console.error("Invalid login response format:", data);
                 }
-
-                const mockReq = {
-                    body: { email, password },
-                    method: req.method,
-                    url: req.url
-                };
-
-                const mockRes = {
-                    status: (code) => ({
-                        json: (data) => sendResponse(res, code, data)
-                    }),
-                    json: (data) => sendResponse(res, 200, data)
-                };
-
-                await loginUser(mockReq, mockRes);
-                return;
-
             } catch (error) {
-                console.error("❌ Login GET error:", error);
-                return sendResponse(res, 500, {
-                    message: "Login failed",
-                    error: error.message
-                });
+                console.error("Login error:", error);
             }
         }
 

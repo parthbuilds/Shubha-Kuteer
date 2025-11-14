@@ -822,49 +822,50 @@
 //         handleAuthPages();
 //     }
 // });
+function showUserOnFrontend() {
+    const userData = JSON.parse(localStorage.getItem("userData") || "{}");
 
-async function handleLogin(email, password) {
-    try {
-        const response = await fetch(`/api/auth/login?email=${email}&password=${password}`);
-        const data = await response.json();
+    console.log("Restoring user from localStorage:", userData);
 
-        console.log("📥 Login API response:", data);
+    const output = document.getElementById("user-output");
 
-        if (!response.ok) {
-            alert(data.message);
-            return;
-        }
+    if (!output) return;
 
-        if (data.user && data.token) {
-            localStorage.setItem("user_id", data.user.id);
-            localStorage.setItem("user_first_name", data.user.first_name);
-            localStorage.setItem("user_last_name", data.user.last_name);
-            localStorage.setItem("user_email", data.user.email);
-            localStorage.setItem("token", data.token);
-
-            console.log("💾 Stored in localStorage:", data.user);
-
-            showUserInUI();
-        }
-
-    } catch (err) {
-        console.error("🔥 Login error:", err);
+    // If user is not found
+    if (!userData.email) {
+        output.innerHTML = `<p>No user logged in.</p>`;
+        return;
     }
+
+    output.innerHTML = `
+        <h3>Logged-in User Details</h3>
+        <p><strong>First Name:</strong> ${userData.firstName}</p>
+        <p><strong>Last Name:</strong> ${userData.lastName}</p>
+        <p><strong>Email:</strong> ${userData.email}</p>
+        <p><strong>User ID:</strong> ${userData.id}</p>
+    `;
 }
 
-function showUserInUI() {
-    const firstName = localStorage.getItem("user_first_name");
-    const lastName = localStorage.getItem("user_last_name");
-    const email = localStorage.getItem("user_email");
 
-    console.log("👀 Restoring user from localStorage:", { firstName, lastName, email });
+// -------------------------------
+// PAGE LOAD – RESTORE USER
+// -------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+    showUserOnFrontend();
+});
 
-    if (firstName && email) {
-        document.getElementById("userName").textContent =
-            `${firstName} ${lastName || ""}`;
 
-        document.getElementById("userEmail").textContent = email;
+// -------------------------------
+// LOGIN BUTTON HANDLER
+// -------------------------------
+document.getElementById("login-btn")?.addEventListener("click", () => {
+    const email = document.getElementById("email")?.value.trim();
+    const password = document.getElementById("password")?.value.trim();
+
+    if (!email || !password) {
+        alert("Enter email & password");
+        return;
     }
-}
 
-window.addEventListener("DOMContentLoaded", showUserInUI);
+    loginUser(email, password);
+});
