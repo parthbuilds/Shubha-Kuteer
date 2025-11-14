@@ -1980,14 +1980,6 @@ input[type=file]::-webkit-file-upload-button {
     overflow-y: auto;
 }
 
-/* 🔥 Allow dropdown to escape the header */
-.header-menu,
-.menu-main,
-.menu-main ul,
-.menu-main li {
-  overflow: visible !important;
-  z-index: 1 !important;
-}
 
 .modal-newsletter {
   display: flex;
