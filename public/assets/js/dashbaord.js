@@ -22,8 +22,8 @@ document.addEventListener("DOMContentLoaded", () => {
         let statusText = 'Unknown';
         let statusClass = 'bg-gray text-gray'; // Default unknown color
 
-        if (order.status === 'canceled') {
-            statusText = 'Canceled';
+        if (order.status === 'cancelled') { // Changed from 'canceled' to 'cancelled' to match backend
+            statusText = 'Cancelled';
             statusClass = 'bg-red text-red';
         } else if (order.delivery_status === 'delivered_at') {
             statusText = 'Delivered';
@@ -79,13 +79,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (userOrders.length > 0) {
                     // --- Populate Dashboard Overview Counts ---
+                    // Awaiting Pickup: orders by email on pending payments column, not delivered or out for delivery
                     const awaitingPickup = userOrders.filter(order =>
-                        // If order.status is 'completed' but not yet delivered, it might be 'awaiting pickup/processing'
-                        (order.status === 'pending' || order.status === 'completed') &&
-                        (order.delivery_status !== 'delivered_at' && order.delivery_status !== 'out for delivery' && order.delivery_status !== 'out_for_delivery_at')
+                        (order.status === 'pending' || order.status === 'completed') && // Assuming 'completed' means payment done, but not yet shipped/delivered
+                        (order.delivery_status !== 'delivered_at' && order.delivery_status !== 'out for delivery' && order.delivery_status !== 'out_for_delivery_at') &&
+                        order.status !== 'cancelled' // Ensure it's not cancelled
                     ).length;
 
-                    const cancelled = userOrders.filter(order => order.status === 'canceled').length;
+                    // Cancelled Orders: orders by email with status 'cancelled'
+                    const cancelled = userOrders.filter(order => order.status === 'cancelled').length;
+
+                    // Total Number of Orders: all orders by email
                     const total = userOrders.length;
 
                     if (awaitingPickupCountEl) awaitingPickupCountEl.textContent = awaitingPickup;
@@ -160,8 +164,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                     </div>
                                     <div class="flex flex-wrap gap-4 p-5">
                                         <a href="order-detail.html?id=${order.id}" class="button-main btn_order_detail">Order Details</a>
-                                        ${order.status === 'pending' || (order.status === 'completed' && order.delivery_status !== 'delivered_at' && order.delivery_status !== 'out for delivery' && order.delivery_status !== 'out_for_delivery_at')
-                                            ? `<button class="button-main bg-surface border border-line hover:bg-black text-black hover:text-white cancel-order-btn" data-order-id="${order.id}">Cancel Order</button>`
+                                        ${(order.status === 'pending' || order.status === 'completed') && (order.delivery_status !== 'delivered_at' && order.delivery_status !== 'out for delivery' && order.delivery_status !== 'out_for_delivery_at') && order.status !== 'cancelled'
+                                            ? `<button class="button-main bg-red border border-line hover:bg-black text-white cancel-order-btn" data-order-id="${order.id}">Cancel Order</button>`
                                             : ''}
                                     </div>
                                 </div>
@@ -263,16 +267,16 @@ document.addEventListener("DOMContentLoaded", () => {
         button.classList.add('opacity-50', 'cursor-not-allowed'); // Simple disabled styling
 
         try {
-            const res = await fetch(`https://www.shubhakuteer.in/api/orders/${orderId}/cancel`, {
-                method: 'PUT', // Assuming PUT is appropriate for status update, confirm with backend
+            // Updated API endpoint and method as per your backend
+            const res = await fetch(`https://www.shubhakuteer.in/api/orders/cancel-order`, {
+                method: 'POST', // Changed to POST as per your backend
                 headers: {
                     'Content-Type': 'application/json',
                     // Add Authorization header if your API requires it for canceling orders
                     // 'Authorization': `Bearer ${localStorage.getItem('userAuthToken')}`
                 },
                 body: JSON.stringify({
-                    status: 'canceled', // New status for the order
-                    canceled_at: new Date().toISOString() // Optionally send timestamp
+                    order_id: orderId // Backend expects 'order_id'
                 })
             });
 
@@ -282,14 +286,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const data = await res.json();
-            alert(`Order #${orderId} has been successfully canceled.`);
-            console.log("Order canceled response:", data);
+            alert(`Order #${orderId} has been successfully cancelled.`); // Updated message
+            console.log("Order cancelled response:", data);
 
             // Re-fetch and re-render all orders to update the UI
             await fetchAndRenderUserOrders();
 
         } catch (error) {
-            console.error("Error canceling order:", error);
+            console.error("Error cancelling order:", error);
             alert("Failed to cancel order: " + error.message);
             button.disabled = false;
             button.textContent = 'Cancel Order';

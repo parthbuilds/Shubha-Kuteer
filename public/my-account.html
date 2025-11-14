@@ -1054,83 +1054,13 @@
                         data-item="address">
                         <form>
                             <button type="button"
-                                class="tab_btn flex items-center justify-between w-full pb-1.5 border-b border-line active"
-                                data-item="billing">
-                                <strong class="heading6">Billing address</strong>
-                                <span class="ph ph-caret-down text-2xl ic_down duration-300"></span>
-                            </button>
-                            <div class="form_address active" data-item="billing">
-                                <div class="grid sm:grid-cols-2 gap-4 gap-y-5 mt-5 text-secondary">
-                                    <div class="first-name">
-                                        <label for="billingFirstName" class="caption1 capitalize">First Name <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg"
-                                            id="billingFirstName" type="text" required />
-                                    </div>
-                                    <div class="last-name">
-                                        <label for="billingLastName" class="caption1 capitalize">Last Name <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="billingLastName"
-                                            type="text" required />
-                                    </div>
-                                    <div class="company">
-                                        <label for="billingCompany" class="caption1 capitalize">Company name
-                                            (optional)</label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="billingCompany"
-                                            type="text" required />
-                                    </div>
-                                    <div class="country">
-                                        <label for="billingCountry" class="caption1 capitalize">Country / Region <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="billingCountry"
-                                            type="text" required />
-                                    </div>
-                                    <div class="street">
-                                        <label for="billingStreet" class="caption1 capitalize">street address <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="billingStreet"
-                                            type="text" required />
-                                    </div>
-                                    <div class="city">
-                                        <label for="billingCity" class="caption1 capitalize">Town / city <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="billingCity"
-                                            type="text" required />
-                                    </div>
-                                    <div class="state">
-                                        <label for="billingState" class="caption1 capitalize">state <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="billingState"
-                                            type="text" required />
-                                    </div>
-                                    <div class="zip">
-                                        <label for="billingZip" class="caption1 capitalize">ZIP <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="billingZip"
-                                            type="text" required />
-                                    </div>
-                                    <div class="phone">
-                                        <label for="billingPhone" class="caption1 capitalize">Phone <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="billingPhone"
-                                            type="text" required />
-                                    </div>
-                                    <div class="email">
-                                        <label for="billingEmail" class="caption1 capitalize">Email <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="billingEmail"
-                                            type="email" required />
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button"
                                 class="tab_btn flex items-center justify-between w-full mt-10 pb-1.5 border-b border-line"
                                 data-item="shipping">
                                 <strong class="heading6">Shipping address</strong>
                                 <span class="ph ph-caret-down text-2xl ic_down duration-300"></span>
                             </button>
                             <div class="form_address" data-item="shipping">
-                                <div class="grid sm:grid-cols-2 gap-4 gap-y-5 mt-5">
+                                <div class="grid sm:grid-cols-2 gap-4 gap-y-5 mt-5 text-secondary" >
                                     <div class="first-name">
                                         <label for="shippingFirstName" class="caption1 capitalize">First Name <span
                                                 class="text-red">*</span></label>
