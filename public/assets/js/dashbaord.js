@@ -235,14 +235,13 @@ document.addEventListener("DOMContentLoaded", () => {
                                     <div class="list_prd px-5">
                                         ${productsHtml}
                                     </div>
-                                    // This block replaces the entire <div> with buttons inside listOrderContainer.innerHTML
-<div class="flex flex-wrap gap-4 p-5">
-    <button
-        class="button-main bg-red border border-line hover:bg-black text-white hover:text-white cancel-order-btn"
-        data-order-id="${order.id}">
-        Cancel Order
-    </button>
-</div>
+                                        <div class="flex flex-wrap gap-4 p-5">
+                                            <button
+                                                class="button-main bg-red border border-line hover:bg-black text-white hover:text-white cancel-order-btn"
+                                                data-order-id="${order.id}">
+                                                Cancel Order
+                                            </button>
+                                        </div>
                                 </div>
                             `;
             });
