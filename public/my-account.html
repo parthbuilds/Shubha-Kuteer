@@ -1050,77 +1050,78 @@
                             </div>
                         </div>
                     </div>
-                    <div class=" text-content w-full p-7 border border-line rounded-xl"
+                    <div class="filter-item tab_address text-content w-full p-7 border border-line rounded-xl"
                         data-item="address">
                         <form>
-                            <div class="mt-10 pb-1.5 border-b border-line">
-                                <strong class="heading6">Shipping address</strong>
-                                <!-- The caret-down icon is removed as it's no longer a collapsible element -->
-                            </div>
-                            <div class="form_address" data-item="shipping">
-                                <div class="grid sm:grid-cols-2 gap-4 gap-y-5 mt-5 text-secondary">
-                                    <div class="first-name">
-                                        <label for="shippingFirstName" class="form-caption capitalize">First Name <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg"
-                                            id="shippingFirstName" type="text" required />
-                                    </div>
-                                    <div class="last-name">
-                                        <label for="shippingLastName" class="form-caption capitalize">Last Name <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg"
-                                            id="shippingLastName" type="text" required />
-                                    </div>
-                                    <div class="company">
-                                        <label for="shippingCompany" class="form-caption capitalize">Company name
-                                            (optional)</label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingCompany"
-                                            type="text" />
-                                    </div>
-                                    <div class="country">
-                                        <label for="shippingCountry" class="form-caption capitalize">Country / Region
-                                            <span class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingCountry"
-                                            type="text" required />
-                                    </div>
-                                    <div class="street">
-                                        <label for="shippingStreet" class="form-caption capitalize">street address <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingStreet"
-                                            type="text" required />
-                                    </div>
-                                    <div class="city">
-                                        <label for="shippingCity" class="form-caption capitalize">Town / city <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingCity"
-                                            type="text" required />
-                                    </div>
-                                    <div class="state">
-                                        <label for="shippingState" class="form-caption capitalize">state <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingState"
-                                            type="text" required />
-                                    </div>
-                                    <div class="zip">
-                                        <label for="shippingZip" class="form-caption capitalize">ZIP <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingZip"
-                                            type="text" required />
-                                    </div>
-                                    <div class="phone">
-                                        <label for="shippingPhone" class="form-caption capitalize">Phone <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingPhone"
-                                            type="text" required />
-                                    </div>
-                                    <div class="email">
-                                        <label for="shippingEmail" class="form-caption capitalize">Email <span
-                                                class="text-red">*</span></label>
-                                        <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingEmail"
-                                            type="email" required />
-                                    </div>
+                            <!-- Shipping Address Section -->
+                            <div class="heading5 pb-4">Shipping address</div>
+                            <!-- Changed from heading6 and moved to align with Information section styling -->
+
+                            <div class="grid sm:grid-cols-2 gap-4 gap-y-5 mt-5">
+                                <!-- Used grid styling from "Information" section -->
+                                <div class="first-name">
+                                    <label for="shippingFirstName" class="form-caption capitalize">First Name <span
+                                            class="text-red">*</span></label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingFirstName"
+                                        type="text" required />
+                                </div>
+                                <div class="last-name">
+                                    <label for="shippingLastName" class="form-caption capitalize">Last Name <span
+                                            class="text-red">*</span></label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingLastName"
+                                        type="text" required />
+                                </div>
+                                <div class="company">
+                                    <label for="shippingCompany" class="form-caption capitalize">Company name
+                                        (optional)</label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingCompany"
+                                        type="text" />
+                                </div>
+                                <div class="country">
+                                    <label for="shippingCountry" class="form-caption capitalize">Country / Region <span
+                                            class="text-red">*</span></label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingCountry"
+                                        type="text" required />
+                                </div>
+                                <div class="street">
+                                    <label for="shippingStreet" class="form-caption capitalize">street address <span
+                                            class="text-red">*</span></label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingStreet"
+                                        type="text" required />
+                                </div>
+                                <div class="city">
+                                    <label for="shippingCity" class="form-caption capitalize">Town / city <span
+                                            class="text-red">*</span></label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingCity"
+                                        type="text" required />
+                                </div>
+                                <div class="state">
+                                    <label for="shippingState" class="form-caption capitalize">state <span
+                                            class="text-red">*</span></label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingState"
+                                        type="text" required />
+                                </div>
+                                <div class="zip">
+                                    <label for="shippingZip" class="form-caption capitalize">ZIP <span
+                                            class="text-red">*</span></label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingZip"
+                                        type="text" required />
+                                </div>
+                                <div class="phone">
+                                    <label for="shippingPhone" class="form-caption capitalize">Phone <span
+                                            class="text-red">*</span></label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingPhone"
+                                        type="text" required />
+                                </div>
+                                <div class="email">
+                                    <label for="shippingEmail" class="form-caption capitalize">Email <span
+                                            class="text-red">*</span></label>
+                                    <input class="border-line mt-2 px-4 py-3 w-full rounded-lg" id="shippingEmail"
+                                        type="email" required />
                                 </div>
                             </div>
+                            <!-- End Shipping Address Section -->
+
                             <div class="block-button lg:mt-10 mt-6">
                                 <button type="submit" class="button-main bg-black">Update Address</button>
                             </div>
