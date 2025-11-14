@@ -515,6 +515,13 @@ input[type=file]::-webkit-file-upload-button {
   color: var(--secondary)
 }
 
+.form-caption {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--primary);
+}
+
 .caption2 {
   font-size: 12px;
   line-height: 16px;
