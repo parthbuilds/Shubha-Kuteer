@@ -962,7 +962,7 @@
 
             // 2. Fetch order details from backend
             const res = await fetch(`${BASE_API_URL}/orders/${orderId}`);
-            console.log('API Response status:', res.status);
+            console.log('API Response status for order details:', res.status);
 
             if (!res.ok) {
                 const errorBody = await res.json().catch(() => ({}));
@@ -978,7 +978,7 @@
             }
 
             const response = await res.json();
-            console.log('API Raw Response data:', response);
+            console.log('API Raw Response data for order details:', response);
 
             let order;
             if (response.success && response.order) {
@@ -1029,7 +1029,7 @@
                 </div>
                 <div class="flex items-center gap-6 p-4">
                     <div class="image no-bg">
-                        <img src="${order.customer_image_url || '/admin/images/users/default-user.png'}" alt="Customer" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                        <img src="${order.customer_image_url || '/admin/images/users/default-user.png'}" alt="Customer" onerror="this.onerror=null;this.src='/admin/images/users/default-user.png';" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
                     </div>
                     <div class="flex items-center justify-between gap-8 flex-grow flex-wrap">
                         <div class="name">
@@ -1063,7 +1063,7 @@
                     </div>
                     <div class="flex items-center gap-6 p-4">
                         <div class="image no-bg">
-                            <img src="${order.customer_image_url || '/admin/images/users/default-user.png'}" alt="Customer" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                            <img src="${order.customer_image_url || '/admin/images/users/default-user.png'}" alt="Customer" onerror="this.onerror=null;this.src='/admin/images/users/default-user.png';" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
                         </div>
                         <div class="flex items-center justify-between gap-8 flex-grow flex-wrap">
                             <div class="name">
@@ -1368,7 +1368,7 @@
                 return;
             }
 
-            if (!confirm(`Are you sure you want to mark Order #${orderId} as "${successMessage.replace('Order #', '').replace(' successfully marked as ', '').replace('!', '')}"?`)) {
+            if (!confirm(`Are you sure you want to mark Order #${orderId} as "${deliveryStatusValue.replace(/_/g, ' ').replace('at', '').trim()}"?`)) { // More generic confirmation text
                 return;
             }
 
@@ -1377,16 +1377,27 @@
             button.textContent = 'Updating...';
             button.classList.add('disabled-button-style');
 
+            const requestBody = { delivery_status: deliveryStatusValue };
+            const apiUrl = `${BASE_API_URL}/orders/${orderId}/delivery-status`;
+
+            console.log(`Attempting to update order #${orderId} delivery status.`);
+            console.log('API URL:', apiUrl);
+            console.log('Request Body:', JSON.stringify(requestBody));
+
             try {
-                const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
+                const res = await fetch(apiUrl, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ delivery_status: deliveryStatusValue })
+                    body: JSON.stringify(requestBody)
                 });
 
+                console.log('API Response status for status update:', res.status);
+                const responseData = await res.json().catch(() => ({ message: 'No response body' }));
+                console.log('API Response data for status update:', responseData);
+
+
                 if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({}));
-                    throw new Error(errorData.message || `HTTP error! Status: ${res.status}`);
+                    throw new Error(responseData.message || `HTTP error! Status: ${res.status}`);
                 }
 
                 alert(successMessage);
