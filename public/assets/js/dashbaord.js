@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // **IMPORTANT:** Ensure the URL includes the protocol (https://) and domain
         // Replace 'YOUR_BACKEND_DOMAIN' with the actual domain if different from shubhakuteer.in
-        const apiOrdersUrl = "https://shubhakuteer.in/api/orders"; // Corrected URL with protocol
+        const apiOrdersUrl = "https://www.shubhakuteer.in/api/orders"; // Corrected URL with protocol
 
         // Fetch orders from the API
         fetch(apiOrdersUrl)
