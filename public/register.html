@@ -82,6 +82,11 @@
                                 type="email" placeholder="Email address *" required />
                         </div>
 
+                        <div class="phone mt-5">
+                            <input class="border-line px-4 pt-3 pb-3 w-full rounded-lg" name="phone" id="phone"
+                                type="tel" placeholder="Phone Number *" required />
+                        </div>
+
                         <div class="pass mt-5">
                             <input class="border-line px-4 pt-3 pb-3 w-full rounded-lg" name="password" id="password"
                                 type="password" placeholder="Password *" required />
@@ -1139,6 +1144,7 @@
 
                 const name = document.getElementById("name").value.trim();
                 const email = document.getElementById("email").value.trim();
+                const phone = document.getElementById("phone").value.trim(); // Added phone number
                 const password = document.getElementById("password").value;
                 const confirmPassword = document.getElementById("confirmPassword").value;
 
@@ -1157,7 +1163,7 @@
                     const response = await fetch("/api/auth/register", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name, email, password })
+                        body: JSON.stringify({ name, email, phone, password }) // Included phone
                     });
 
                     const result = await response.json();
@@ -1190,7 +1196,7 @@
     <script src="./assets/js/phosphor-icons.js"></script>
     <script src="./assets/js/swiper-bundle.min.js"></script>
     <script src="./assets/js/main.js"></script>
-    <script src="./assets/js/search.js" ></script>
+    <script src="./assets/js/search.js"></script>
 </body>
 
 </html>

@@ -6,23 +6,37 @@ const BCRYPT_SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
 export const registerUser = async (req, res) => {
-    const { name, email, password } = req.body;
-    const [firstName, lastName] = user.name ? user.name.split(' ') : ['', ''];
-    if (!name || !email || !password) {
-        return res.status(400).json({ message: "Name, email, and password are required ❌" });
+    // Destructure phone from req.body
+    const { name, email, phone, password } = req.body;
+
+    // Validate all required fields, including phone
+    if (!name || !email || !phone || !password) {
+        return res.status(400).json({ message: "Name, email, phone, and password are required ❌" });
     }
     try {
-        const [existingUser] = await pool.query(
+        // Check for existing user by email or phone
+        const [existingUserByEmail] = await pool.query(
             "SELECT * FROM users WHERE email = ?",
             [email]
         );
-        if (existingUser.length > 0) {
+        if (existingUserByEmail.length > 0) {
             return res.status(409).json({ message: "Email already registered ❌" });
         }
+
+        const [existingUserByPhone] = await pool.query(
+            "SELECT * FROM users WHERE phone = ?",
+            [phone]
+        );
+        if (existingUserByPhone.length > 0) {
+            return res.status(409).json({ message: "Phone number already registered ❌" });
+        }
+
         const password_hash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+
+        // Insert new user with phone number
         await pool.query(
-            "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-            [name, email, password_hash]
+            "INSERT INTO users (name, email, phone, password_hash) VALUES (?, ?, ?, ?)",
+            [name, email, phone, password_hash]
         );
         return res.status(201).json({ message: "Registration successful! 🎉" });
     } catch (error) {
@@ -32,13 +46,15 @@ export const registerUser = async (req, res) => {
 };
 
 export const loginUser = async (req, res) => {
+    // You might want to allow login by email OR phone. For now, keeping it to email as per original.
+    // If you want to allow login by phone, you'd adjust the query.
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required ❌" });
     }
     try {
         const [rows] = await pool.query(
-            "SELECT id, name, email, password_hash FROM users WHERE email = ?",
+            "SELECT id, name, email, phone, password_hash FROM users WHERE email = ?", // Select phone as well
             [email]
         );
         if (rows.length === 0) {
@@ -59,7 +75,7 @@ export const loginUser = async (req, res) => {
                 first_name: firstName,
                 last_name: lastName || '',
                 email: user.email,
-                phone_number: '',
+                phone_number: user.phone, // Include phone number here
                 dob: '',
                 full_name: user.name
             }
@@ -81,7 +97,7 @@ export const checkAuth = async (req, res) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         const [rows] = await pool.query(
-            "SELECT id, name, email FROM users WHERE id = ?",
+            "SELECT id, name, email, phone FROM users WHERE id = ?", // Select phone here too
             [decoded.id]
         );
         if (rows.length === 0) {
@@ -96,7 +112,7 @@ export const checkAuth = async (req, res) => {
                 first_name: firstName,
                 last_name: lastName || '',
                 email: user.email,
-                phone_number: '',
+                phone_number: user.phone, 
                 dob: ''
             }
         });
