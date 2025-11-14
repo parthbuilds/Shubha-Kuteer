@@ -82,10 +82,15 @@ export default async function handler(req, res) {
                 });
 
                 const data = await response.json();
-                console.log("Login API Response:", data);
+                console.log("🔵 [DEBUG] Login API Response:", data);
+
+                // Check if backend returned anything
+                if (!data.user) {
+                    console.log("🔴 [DEBUG] No user returned from backend!");
+                }
 
                 if (data.token && data.user) {
-                    // Store user info in localStorage
+
                     const userData = {
                         firstName: data.user.first_name || "",
                         lastName: data.user.last_name || "",
@@ -93,20 +98,29 @@ export default async function handler(req, res) {
                         id: data.user.id || "",
                     };
 
+                    // BEFORE SAVING
+                    console.log("🟡 [DEBUG] UserData BEFORE saving:", userData);
+
+                    // Save
                     localStorage.setItem("authToken", data.token);
                     localStorage.setItem("userData", JSON.stringify(userData));
 
-                    console.log("Saved to localStorage:", userData);
+                    // AFTER SAVING
+                    console.log("🟢 [DEBUG] LocalStorage userData AFTER saving:", localStorage.getItem("userData"));
+                    console.log("🟢 [DEBUG] LocalStorage token AFTER saving:", localStorage.getItem("authToken"));
 
                     // Update UI
                     showUserOnFrontend();
+
                 } else {
-                    console.error("Invalid login response format:", data);
+                    console.error("🔴 [DEBUG] Invalid login response format:", data);
                 }
+
             } catch (error) {
-                console.error("Login error:", error);
+                console.error("🔥 [DEBUG] Login error:", error);
             }
         }
+
 
         // Admin auth routes
         if (pathname === '/api/admin/auth/login' && req.method === 'POST') {
