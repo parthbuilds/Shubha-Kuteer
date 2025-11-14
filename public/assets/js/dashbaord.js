@@ -872,52 +872,44 @@
 
 async function handleLogin(email, password) {
     try {
-        // 1. Make GET login request
         const response = await fetch(`/api/auth/login?email=${email}&password=${password}`);
         const data = await response.json();
 
         if (!response.ok) {
-            console.error("Login failed:", data.message);
-            alert(data.message);
+            alert(data.message || "Login failed");
             return;
         }
 
-        // 2. Store user + token in localStorage
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("token", data.token);
+        // FIXED — Make sure user object exists and has values
+        if (data.user && data.user.email) {
+            // Store in localStorage
+            localStorage.setItem("user_first_name", data.user.first_name);
+            localStorage.setItem("user_last_name", data.user.last_name);
+            localStorage.setItem("user_email", data.user.email);
+            localStorage.setItem("token", data.token);
 
-        // 3. Update frontend UI
-        showUserInUI(data.user);
+            // Show on UI
+            showUserInUI();
+        } else {
+            console.error("User data missing in API response");
+        }
 
-    } catch (error) {
-        console.error("Login error:", error);
+    } catch (err) {
+        console.error("Login error:", err);
     }
 }
 
+function showUserInUI() {
+    const firstName = localStorage.getItem("user_first_name");
+    const lastName = localStorage.getItem("user_last_name");
+    const email = localStorage.getItem("user_email");
 
-// ------------------------------------------------
-// Function to show user data in the UI
-// ------------------------------------------------
-function showUserInUI(user) {
-    if (!user) return;
-
-    document.getElementById("userName").textContent =
-        `${user.first_name} ${user.last_name}`;
-
-    document.getElementById("userEmail").textContent =
-        user.email;
-}
-
-
-// ------------------------------------------------
-// Auto-load user on refresh
-// ------------------------------------------------
-function loadUserFromLocalStorage() {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-        showUserInUI(JSON.parse(storedUser));
+    if (firstName && lastName && email) {
+        document.getElementById("userName").textContent = `${firstName} ${lastName}`;
+        document.getElementById("userEmail").textContent = email;
     }
 }
 
-// Call on page load
-loadUserFromLocalStorage();
+window.addEventListener("DOMContentLoaded", () => {
+    showUserInUI();
+});
