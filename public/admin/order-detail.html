@@ -869,525 +869,564 @@
 
     <!-- Javascript -->
     <script>
-        // --- Global Configuration ---
-        const BASE_API_URL = '/api'; // Adjust if your API is on a different base path
+    // --- Global Configuration ---
+    const BASE_API_URL = '/api'; // Adjust if your API is on a different base path
 
-        // --- Utility Functions ---
-        // Function to parse date strings to a readable format
-        function formatDateTime(dateString) {
-            if (!dateString) return 'N/A';
-            try {
-                return new Date(dateString).toLocaleString();
-            } catch (e) {
-                console.error("Error formatting date:", e, dateString);
-                return 'Invalid Date';
-            }
+    // --- Utility Functions ---
+    // Function to parse date strings to a readable format
+    function formatDateTime(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            return new Date(dateString).toLocaleString();
+        } catch (e) {
+            console.error("Error formatting date:", e, dateString);
+            return 'Invalid Date';
+        }
+    }
+
+    // Helper function to determine status text and class
+    const getOrderStatusDisplay = (order) => {
+        let statusText = 'Unknown';
+        let statusClass = 'bg-gray text-gray'; // Default unknown color
+
+        // Prioritize delivery_status for display if it's set
+        const currentDeliveryStatus = (order.delivery_status || '').toLowerCase();
+        const currentMainStatus = (order.status || '').toLowerCase();
+
+        if (currentMainStatus === 'cancelled' || currentDeliveryStatus === 'cancelled') {
+            statusText = 'Cancelled';
+            statusClass = 'bg-red text-red';
+        } else if (currentDeliveryStatus === 'delivered') {
+            statusText = 'Delivered';
+            statusClass = 'bg-green text-green';
+        } else if (currentDeliveryStatus === 'out for delivery') {
+            statusText = 'Out for Delivery';
+            statusClass = 'bg-purple text-purple';
+        } else if (currentDeliveryStatus === 'shipped') {
+            statusText = 'Shipped';
+            statusClass = 'bg-blue text-blue'; // Example: blue for shipped
+        } else if (currentDeliveryStatus === 'processing') {
+            statusText = 'Processing';
+            statusClass = 'bg-orange text-orange'; // Example: orange for processing
+        } else if (currentDeliveryStatus === 'confirmed') {
+             statusText = 'Confirmed';
+             statusClass = 'bg-cyan text-cyan'; // Example: cyan for confirmed
+        } else if (currentMainStatus === 'pending') { // Fallback to main status if no specific delivery_status
+            statusText = 'Pending';
+            statusClass = 'bg-blue text-blue';
+        } else if (currentMainStatus === 'completed') {
+            statusText = 'Completed';
+            statusClass = 'bg-green text-green';
+        } else if (currentMainStatus === 'failed') {
+            statusText = 'Failed';
+            statusClass = 'bg-red text-red';
         }
 
-        // Helper function to determine status text and class (copied from user dashboard script for consistency)
-        const getOrderStatusDisplay = (order) => {
-            let statusText = 'Unknown';
-            let statusClass = 'bg-gray text-gray'; // Default unknown color
+        return { statusText, statusClass };
+    };
 
-            if (order.status === 'canceled') {
-                statusText = 'Canceled';
-                statusClass = 'bg-red text-red';
-            } else if (order.delivery_status === 'delivered_at') {
-                statusText = 'Delivered';
-                statusClass = 'bg-green text-green';
-            } else if (order.delivery_status === 'out_for_delivery_at') {
-                statusText = 'Out for Delivery';
-                statusClass = 'bg-purple text-purple';
-            } else if (order.status === 'pending') {
-                statusText = 'Pending';
-                statusClass = 'bg-blue text-blue'; // Using blue for pending, adjust as needed
-            } else if (order.status === 'completed') {
-                statusText = 'Completed';
-                statusClass = 'bg-green text-green';
+    // --- Main Function to Load and Render Order Details ---
+    async function loadOrderDetails(orderId) {
+        try {
+            console.log('Loading order details for ID:', orderId);
+
+            // 1. Check admin authentication first
+            const authRes = await fetch(`${BASE_API_URL}/admin/auth/check`);
+            if (!authRes.ok) {
+                window.location.href = "/admin/login.html";
+                return;
             }
-            return { statusText, statusClass };
-        };
 
-        // --- Main Function to Load and Render Order Details ---
-        async function loadOrderDetails(orderId) {
-            try {
-                console.log('Loading order details for ID:', orderId);
+            // 2. Fetch order details from backend
+            const res = await fetch(`${BASE_API_URL}/orders/${orderId}`);
 
-                // 1. Check admin authentication first
-                const authRes = await fetch(`${BASE_API_URL}/admin/auth/check`);
-                if (!authRes.ok) {
-                    // If not authenticated, redirect to login and prevent further execution
-                    window.location.href = "/admin/login.html";
-                    return;
-                }
+            if (!res.ok) {
+                const errorBody = await res.json().catch(() => ({}));
+                throw new Error(errorBody.error || `Failed to fetch order details (status ${res.status}).`);
+            }
 
-                // 2. Fetch order details from backend
-                const res = await fetch(`${BASE_API_URL}/orders/${orderId}`);
-                console.log('API Response status:', res.status);
+            const response = await res.json();
+            let order;
+            if (response.success && response.order) {
+                order = response.order;
+            } else {
+                order = response; // Fallback if API doesn't wrap in { success, order }
+            }
 
-                if (!res.ok) {
-                    if (res.status === 404) {
-                        throw new Error(`Order #${orderId} not found.`);
-                    } else if (res.status === 401 || res.status === 403) {
-                        throw new Error("Authentication failed or access denied.");
-                    } else {
-                        const errorBody = await res.json().catch(() => ({}));
-                        throw new Error(errorBody.error || `Failed to fetch order details (status ${res.status}).`);
-                    }
-                }
+            if (!order || !order.id) {
+                throw new Error("Invalid API response format: 'order' object or ID missing.");
+            }
 
-                const response = await res.json();
-                console.log('API Raw Response data:', response);
-
-                let order;
-                if (response.success && response.order) {
-                    order = response.order;
-                } else {
-                    order = response;
-                }
-
-                if (!order || !order.id) {
-                    throw new Error("Invalid API response format: 'order' object or ID missing.");
-                }
-
-                console.log('Parsed order data before product parsing:', order);
-
-                if (typeof order.products === 'string') {
-                    try {
-                        order.products = JSON.parse(order.products);
-                        console.log('Parsed products array:', order.products);
-                    } catch (parseError) {
-                        console.error("Error parsing products string:", parseError);
-                        order.products = [];
-                    }
-                } else if (!Array.isArray(order.products)) {
+            // Parse products if they are a string
+            if (typeof order.products === 'string') {
+                try {
+                    order.products = JSON.parse(order.products);
+                } catch (parseError) {
+                    console.error("Error parsing products string:", parseError);
                     order.products = [];
                 }
+            } else if (!Array.isArray(order.products)) {
+                order.products = [];
+            }
 
+            // 3. Update page title and heading
+            document.title = `Order #${order.id} - Shubha Kuteer Admin`;
+            const orderHeading = document.querySelector("h3");
+            if (orderHeading) {
+                orderHeading.innerHTML = `Order <span class="highlight">#${order.id}</span>`;
+            }
 
-                // 3. Update page title and heading
-                document.title = `Order #${order.id} - Shubha Kuteer Admin`;
-                const orderHeading = document.querySelector("h3");
-                if (orderHeading) {
-                    orderHeading.innerHTML = `Order <span class="highlight">#${order.id}</span>`;
-                }
+            const breadcrumbEl = document.querySelector(".breadcrumbs li:last-child .text-tiny");
+            if (breadcrumbEl) {
+                breadcrumbEl.textContent = `Order #${order.id}`;
+            }
 
-                const breadcrumbEl = document.querySelector(".breadcrumbs li:last-child .text-tiny");
-                if (breadcrumbEl) {
-                    breadcrumbEl.textContent = `Order #${order.id}`;
-                }
-
-                // 4. ADD CUSTOMER DETAILS
-                const allItemSection = document.querySelector(".table-order-detail");
-                if (allItemSection && !document.getElementById('customer-info-section')) {
-                    const customerSection = document.createElement('div');
-                    customerSection.className = 'wg-box mb-4';
-                    customerSection.id = 'customer-info-section';
-                    customerSection.innerHTML = `
-                    <div class="wg-box-header">
-                        <div class="body-title-2">Customer Information</div>
+            // 4. Add Customer Details Section
+            const allItemSection = document.querySelector(".table-order-detail");
+            let customerSection = document.getElementById('customer-info-section');
+            if (!customerSection) {
+                customerSection = document.createElement('div');
+                customerSection.className = 'wg-box mb-4';
+                customerSection.id = 'customer-info-section';
+                allItemSection.parentNode.insertBefore(customerSection, allItemSection);
+            }
+            customerSection.innerHTML = `
+                <div class="wg-box-header">
+                    <div class="body-title-2">Customer Information</div>
+                </div>
+                <div class="flex items-center gap-6 p-4">
+                    <div class="image no-bg">
+                        <img src="/admin/images/products/default-user.png" alt="Customer" style="width: 60px; height: 60px;">
                     </div>
-                    <div class="flex items-center gap-6 p-4">
-                        <div class="image no-bg">
-                            <img src="/admin/images/products/default-user.png" alt="Customer" style="width: 60px; height: 60px;">
+                    <div class="flex items-center justify-between gap-8 flex-grow flex-wrap">
+                        <div class="name">
+                            <div class="text-tiny mb-1">Customer Name</div>
+                            <div class="body-title-2">${order.first_name || ''} ${order.last_name || ''}</div>
                         </div>
-                        <div class="flex items-center justify-between gap-8 flex-grow flex-wrap">
-                            <div class="name">
-                                <div class="text-tiny mb-1">Customer Name</div>
-                                <div class="body-title-2">${order.first_name || ''} ${order.last_name || ''}</div>
-                            </div>
-                            <div class="name">
-                                <div class="text-tiny mb-1">Email</div>
-                                <div class="body-title-2">${order.email || 'N/A'}</div>
-                            </div>
-                            <div class="name">
-                                <div class="text-tiny mb-1">Phone</div>
-                                <div class="body-title-2">${order.phone_number || 'N/A'}</div>
-                            </div>
-                            <div class="name">
-                                <div class="text-tiny mb-1">Order Date</div>
-                                <div class="body-title-2">${order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A'}</div>
-                            </div>
+                        <div class="name">
+                            <div class="text-tiny mb-1">Email</div>
+                            <div class="body-title-2">${order.email || 'N/A'}</div>
+                        </div>
+                        <div class="name">
+                            <div class="text-tiny mb-1">Phone</div>
+                            <div class="body-title-2">${order.phone_number || 'N/A'}</div>
+                        </div>
+                        <div class="name">
+                            <div class="text-tiny mb-1">Order Date</div>
+                            <div class="body-title-2">${order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A'}</div>
                         </div>
                     </div>
-                `;
-                    allItemSection.parentNode.insertBefore(customerSection, allItemSection);
-                }
+                </div>
+            `;
 
-                // 5. Update order items section - show ONLY product data
-                const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
-                if (itemsContainer) {
-                    itemsContainer.innerHTML = '';
+            // 5. Update order items section - show ONLY product data
+            const itemsContainer = document.querySelector(".table-order-detail ul.flex.flex-column");
+            if (itemsContainer) {
+                itemsContainer.innerHTML = '';
 
-                    if (order.products && order.products.length > 0) {
-                        console.log('Rendering products:', order.products);
-
-                        order.products.forEach((product, index) => {
-                            const productLi = document.createElement('li');
-                            productLi.className = 'product-item gap14';
-                            productLi.innerHTML = `
-                            <div class="image no-bg">
-                                <img src="${product.image || '/admin/images/products/default-order.png'}" alt="${product.name || 'Product'}">
-                            </div>
-                            <div class="flex items-center justify-between gap40 flex-grow flex-wrap">
-                                <div class="name">
-                                    <div class="text-tiny mb-1">Product ${index + 1}</div>
-                                    <a href="#!" class="body-title-2">${product.name || 'N/A'}</a>
-                                    <div class="text-tiny mt-1" style="color: #666;">
-                                        ${product.category ? `Category: ${product.category}` : ''}
-                                        ${product.brand ? ` | Brand: ${product.brand}` : ''}
-                                    </div>
-                                </div>
-                                <div class="name">
-                                    <div class="text-tiny mb-1">Size/Color</div>
-                                    <div class="body-title-2">
-                                        ${product.size || 'N/A'} / ${product.color || 'N/A'}
-                                    </div>
-                                </div>
-                                <div class="name">
-                                    <div class="text-tiny mb-1">Quantity</div>
-                                    <div class="body-title-2">${product.quantity || 0}</div>
-                                </div>
-                                <div class="name">
-                                    <div class="text-tiny mb-1">Unit Price</div>
-                                    <div class="body-title-2">₹${(product.price || 0).toFixed(2)}</div>
-                                </div>
-                                <div class="name">
-                                    <div class="text-tiny mb-1">Total</div>
-                                    <div class="body-title-2">₹${((product.price || 0) * (product.quantity || 0)).toFixed(2)}</div>
-                                </div>
-                            </div>
-                        `;
-                            itemsContainer.appendChild(productLi);
-                        });
-                    } else {
-                        console.log('No products found for this order');
-                        const noProductsLi = document.createElement('li');
-                        noProductsLi.className = 'product-item gap14';
-                        noProductsLi.innerHTML = `
+                if (order.products && order.products.length > 0) {
+                    order.products.forEach((product, index) => {
+                        const productLi = document.createElement('li');
+                        productLi.className = 'product-item gap14';
+                        productLi.innerHTML = `
                         <div class="image no-bg">
-                            <img src="/admin/images/products/default-order.png" alt="No Products">
+                            <img src="${product.image || '/admin/images/products/default-order.png'}" alt="${product.name || 'Product'}">
                         </div>
-                        <div class="flex items-center justify-between gap40 flex-grow">
+                        <div class="flex items-center justify-between gap40 flex-grow flex-wrap">
                             <div class="name">
-                                <div class="text-tiny mb-1">Products</div>
-                                <div class="body-title-2" style="color: #999;">No products found for this order.</div>
+                                <div class="text-tiny mb-1">Product ${index + 1}</div>
+                                <a href="#!" class="body-title-2">${product.name || 'N/A'}</a>
+                                <div class="text-tiny mt-1" style="color: #666;">
+                                    ${product.category ? `Category: ${product.category}` : ''}
+                                    ${product.brand ? ` | Brand: ${product.brand}` : ''}
+                                </div>
+                            </div>
+                            <div class="name">
+                                <div class="text-tiny mb-1">Size/Color</div>
+                                <div class="body-title-2">
+                                    ${product.size || 'N/A'} / ${product.color || 'N/A'}
+                                </div>
+                            </div>
+                            <div class="name">
+                                <div class="text-tiny mb-1">Quantity</div>
+                                <div class="body-title-2">${product.quantity || 0}</div>
+                            </div>
+                            <div class="name">
+                                <div class="text-tiny mb-1">Unit Price</div>
+                                <div class="body-title-2">₹${(product.price || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="name">
+                                <div class="text-tiny mb-1">Total</div>
+                                <div class="body-title-2">₹${((product.price || 0) * (product.quantity || 0)).toFixed(2)}</div>
                             </div>
                         </div>
                     `;
-                        itemsContainer.appendChild(noProductsLi);
-                    }
-                }
-
-                // 6. Calculate totals from products
-                let calculatedSubtotal = 0;
-                let totalItems = 0;
-
-                if (order.products && order.products.length > 0) {
-                    order.products.forEach(product => {
-                        const productPrice = parseFloat(product.price) || 0;
-                        const productQuantity = parseInt(product.quantity) || 0;
-                        const productTotal = productPrice * productQuantity;
-                        calculatedSubtotal += productTotal;
-                        totalItems += productQuantity;
+                        itemsContainer.appendChild(productLi);
                     });
-                }
-
-                console.log('Calculated subtotal:', calculatedSubtotal.toFixed(2));
-                console.log('Order amount from DB (original):', order.amount);
-                console.log('Total items:', totalItems);
-
-                // Update cart totals section
-                const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
-                const shippingEl = document.querySelector(".cart-totals-item:nth-child(3) .body-title-2");
-                const taxEl = document.querySelector(".cart-totals-item:nth-child(5) .body-title-2");
-
-                if (subtotalEl) subtotalEl.textContent = `₹${calculatedSubtotal.toFixed(2)}`;
-                if (shippingEl) shippingEl.textContent = "₹0.00"; // Assuming shipping is free
-                if (taxEl) taxEl.textContent = "₹0.00"; // Assuming tax is 0
-
-                const finalTotal = calculatedSubtotal;
-                const totalPriceEl = document.querySelector('.body-title.tf-color-1');
-
-                if (totalPriceEl) {
-                    totalPriceEl.textContent = `₹${finalTotal.toFixed(2)}`;
-                    console.log('Updated total price element to:', `₹${finalTotal.toFixed(2)}`);
                 } else {
-                    console.error('Could not find .body-title.tf-color-1 element!');
-                }
-
-                console.log('Final total calculated:', finalTotal.toFixed(2));
-
-                // 7. Update summary section (right sidebar)
-                const orderIdSummaryEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
-                const dateSummaryEl = document.querySelector(".summary-item:nth-child(3) .body-title-2");
-                const totalSummaryEl = document.querySelector(".summary-item:nth-child(4) .body-title-2");
-
-                if (orderIdSummaryEl) orderIdSummaryEl.textContent = `#${order.id || 'N/A'}`;
-                if (dateSummaryEl) dateSummaryEl.textContent = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
-                if (totalSummaryEl) totalSummaryEl.textContent = `₹${finalTotal.toFixed(2)}`;
-
-                // 8. Fix shipping address
-                const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
-                if (shippingAddressEl) {
-                    shippingAddressEl.innerHTML = `
-                    ${order.apartment || ''}<br>
-                    ${order.city || ''}<br>
-                    ${order.postal_code || ''}<br>
-                    <strong>Phone:</strong> ${order.phone_number || 'N/A'}<br>
-                    <strong>Email:</strong> ${order.email || 'N/A'}
+                    const noProductsLi = document.createElement('li');
+                    noProductsLi.className = 'product-item gap14';
+                    noProductsLi.innerHTML = `
+                    <div class="image no-bg">
+                        <img src="/admin/images/products/default-order.png" alt="No Products">
+                    </div>
+                    <div class="flex items-center justify-between gap40 flex-grow">
+                        <div class="name">
+                            <div class="text-tiny mb-1">Products</div>
+                            <div class="body-title-2" style="color: #999;">No products found for this order.</div>
+                        </div>
+                    </div>
                 `;
+                    itemsContainer.appendChild(noProductsLi);
                 }
+            }
 
-                // 9. Update payment method with more details
-                const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
-                if (paymentMethodEl) {
-                    const { statusText: orderStatusText, statusClass: orderStatusClass } = getOrderStatusDisplay(order);
+            // 6. Calculate totals from products
+            let calculatedSubtotal = 0;
+            let totalItems = 0;
 
-                    // Use the delivery_status text and class directly, or default if it's null
-                    let deliveryStatusDisplay = 'N/A';
-                    let deliveryStatusDisplayClass = 'text-gray';
-                    if (order.delivery_status) {
-                        const { statusText: dsText, statusClass: dsClass } = getOrderStatusDisplay({
-                            delivery_status: order.delivery_status, // Only pass this relevant field for delivery status
-                            status: order.status // Also pass main status for context in helper
-                        });
-                        deliveryStatusDisplay = dsText;
-                        deliveryStatusDisplayClass = dsClass;
-                    } else if (order.status) { // Fallback to main status if delivery_status is null
-                        deliveryStatusDisplay = orderStatusText;
-                        deliveryStatusDisplayClass = orderStatusClass;
-                    }
+            if (order.products && order.products.length > 0) {
+                order.products.forEach(product => {
+                    const productPrice = parseFloat(product.price) || 0;
+                    const productQuantity = parseInt(product.quantity) || 0;
+                    const productTotal = productPrice * productQuantity;
+                    calculatedSubtotal += productTotal;
+                    totalItems += productQuantity;
+                });
+            }
 
+            // Update cart totals section
+            const subtotalEl = document.querySelector(".cart-totals-item:nth-child(1) .body-title-2");
+            const shippingEl = document.querySelector(".cart-totals-item:nth-child(3) .body-title-2");
+            const taxEl = document.querySelector(".cart-totals-item:nth-child(5) .body-title-2");
 
-                    paymentMethodEl.innerHTML = `
-                    <strong>Payment Method:</strong> Razorpay<br>
-                    <strong>Order Status:</strong> <span class="${orderStatusClass}">${orderStatusText.toUpperCase()}</span><br>
-                    <strong>Delivery Status:</strong> <span class="${deliveryStatusDisplayClass}">${deliveryStatusDisplay.toUpperCase()}</span><br>
-                    <strong>Payment ID:</strong> ${order.razorpay_payment_id || 'Pending'}<br>
-                    <strong>Order ID (Razorpay):</strong> ${order.razorpay_order_id || 'N/A'}<br>
-                    <strong>Total Items:</strong> ${totalItems}<br>
-                    <strong>Note:</strong> ${order.note || 'No additional notes'}
-                `;
-                }
+            if (subtotalEl) subtotalEl.textContent = `₹${calculatedSubtotal.toFixed(2)}`;
+            if (shippingEl) shippingEl.textContent = "₹0.00"; // Assuming shipping is free
+            if (taxEl) taxEl.textContent = "₹0.00"; // Assuming tax is 0
 
-                // 10. Update expected delivery date - CHANGE TO 7-10 DAYS
-                const expectedDeliveryDateEl = document.querySelector("#expectedDeliveryDate");
-                if (expectedDeliveryDateEl && order.created_at) {
-                    const orderDate = new Date(order.created_at);
-                    const minDeliveryDate = new Date(orderDate);
-                    const maxDeliveryDate = new Date(orderDate);
+            const finalTotal = calculatedSubtotal;
+            const totalPriceEl = document.querySelector('.body-title.tf-color-1');
 
-                    minDeliveryDate.setDate(orderDate.getDate() + 7);
-                    maxDeliveryDate.setDate(orderDate.getDate() + 10);
+            if (totalPriceEl) {
+                totalPriceEl.textContent = `₹${finalTotal.toFixed(2)}`;
+            }
 
-                    expectedDeliveryDateEl.textContent = `${minDeliveryDate.toLocaleDateString()} - ${maxDeliveryDate.toLocaleDateString()}`;
-                } else if (expectedDeliveryDateEl) {
-                    expectedDeliveryDateEl.textContent = 'N/A';
-                }
+            // 7. Update summary section (right sidebar)
+            const orderIdSummaryEl = document.querySelector(".summary-item:nth-child(2) .body-title-2");
+            const dateSummaryEl = document.querySelector(".summary-item:nth-child(3) .body-title-2");
+            const totalSummaryEl = document.querySelector(".summary-item:nth-child(4) .body-title-2");
 
-                // 11. --- Handle button visibility and status displays ---
-                const outForDeliveryButton = document.getElementById("outForDeliveryButton");
-                const deliveredButton = document.getElementById("deliveredButton");
-                const outForDeliveryStatusDiv = document.getElementById("outForDeliveryStatus");
-                const outForDeliveryTimestampSpan = document.getElementById("outForDeliveryTimestamp");
-                const deliveredStatusDiv = document.getElementById("deliveredStatus");
-                const deliveredTimestampSpan = document.getElementById("deliveredTimestamp");
-                const canceledStatusDiv = document.getElementById("canceledStatusDiv"); // New: Canceled status div
-                const canceledTimestampSpan = document.getElementById("canceledTimestamp"); // New: Canceled timestamp
+            if (orderIdSummaryEl) orderIdSummaryEl.textContent = `#${order.id || 'N/A'}`;
+            if (dateSummaryEl) dateSummaryEl.textContent = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
+            if (totalSummaryEl) totalSummaryEl.textContent = `₹${finalTotal.toFixed(2)}`;
 
-                // Set order ID for both buttons
-                if (outForDeliveryButton) outForDeliveryButton.setAttribute("data-order-id", order.id);
-                if (deliveredButton) deliveredButton.setAttribute("data-order-id", order.id);
+            // 8. Fix shipping address
+            const shippingAddressEl = document.querySelector("#shipping-address-box .body-text");
+            if (shippingAddressEl) {
+                shippingAddressEl.innerHTML = `
+                ${order.apartment || ''}<br>
+                ${order.city || ''}<br>
+                ${order.postal_code || ''}<br>
+                <strong>Phone:</strong> ${order.phone_number || 'N/A'}<br>
+                <strong>Email:</strong> ${order.email || 'N/A'}
+            `;
+            }
 
-                // Reset display states initially for all relevant elements
-                const elementsToReset = [outForDeliveryButton, deliveredButton, outForDeliveryStatusDiv, deliveredStatusDiv, canceledStatusDiv];
-                elementsToReset.forEach(el => {
-                    if (el) {
-                        el.style.display = 'none';
-                        if (el.tagName === 'BUTTON') {
-                            el.disabled = false;
-                            el.textContent = el.id === 'outForDeliveryButton' ? 'Mark as Out for Delivery' : 'Mark as Delivered';
-                            el.classList.remove('disabled-button-style');
-                        }
-                    }
+            // 9. Update payment method with more details
+            const paymentMethodEl = document.querySelector(".wg-box:nth-child(3) .body-text");
+            if (paymentMethodEl) {
+                const { statusText: orderStatusText, statusClass: orderStatusClass } = getOrderStatusDisplay(order);
+
+                // For delivery status, we directly use the order.delivery_status value to get its display
+                const { statusText: deliveryStatusText, statusClass: deliveryStatusClass } = getOrderStatusDisplay({
+                    delivery_status: order.delivery_status,
+                    status: order.status // pass main status as well for fallback in helper
                 });
 
-                // Logic based on order.status and order.delivery_status
-                const currentOrderStatus = (order.status || '').toLowerCase(); // Main status
-                const currentDeliveryStatus = (order.delivery_status || '').toLowerCase(); // Delivery sub-status
-
-                if (currentOrderStatus === 'canceled') {
-                    if (canceledStatusDiv && canceledTimestampSpan) {
-                        canceledStatusDiv.style.display = 'block';
-                        // Assuming 'updated_at' or a new 'canceled_at' would hold the cancellation time
-                        canceledTimestampSpan.textContent = formatDateTime(order.updated_at || new Date().toISOString());
-                    }
-                    // No action buttons for canceled orders
-                } else {
-                    // If not canceled, proceed with delivery-related status and buttons
-                    switch (currentDeliveryStatus) {
-                        case 'pending':
-                        case '': // If delivery_status is null/empty, assume pending for delivery actions
-                        case 'confirmed':
-                        case 'shipped':
-                            if (outForDeliveryButton) {
-                                outForDeliveryButton.style.display = 'block';
-                            }
-                            break;
-                        case 'out_for_delivery_at': // Changed from 'out for delivery' to match your backend field
-                            if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
-                                outForDeliveryStatusDiv.style.display = 'block';
-                                outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
-                            }
-                            if (deliveredButton) {
-                                deliveredButton.style.display = 'block';
-                            }
-                            break;
-                        case 'delivered_at': // Changed from 'delivered' to match your backend field
-                            if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
-                                outForDeliveryStatusDiv.style.display = 'block';
-                                outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
-                            }
-                            if (deliveredStatusDiv && deliveredTimestampSpan) {
-                                deliveredStatusDiv.style.display = 'block';
-                                deliveredTimestampSpan.textContent = formatDateTime(order.delivered_at);
-                            }
-                            break;
-                        default:
-                            console.warn(`Unknown delivery status: ${currentDeliveryStatus}`);
-                            break;
-                    }
-                }
-                // --- END Handle button visibility and status displays ---
-
-                console.log('Order details loaded successfully and UI updated.');
-
-            } catch (err) {
-                console.error("⚠️ Error loading order details:", err);
-                alert("Failed to load order details: " + err.message);
-            } finally {
-                // document.getElementById('loading-indicator').style.display = 'none';
+                paymentMethodEl.innerHTML = `
+                <strong>Payment Method:</strong> Razorpay<br>
+                <strong>Order Status:</strong> <span class="${orderStatusClass}">${orderStatusText.toUpperCase()}</span><br>
+                <strong>Delivery Status:</strong> <span class="${deliveryStatusClass}">${deliveryStatusText.toUpperCase()}</span><br>
+                <strong>Payment ID:</strong> ${order.razorpay_payment_id || 'Pending'}<br>
+                <strong>Order ID (Razorpay):</strong> ${order.razorpay_order_id || 'N/A'}<br>
+                <strong>Total Items:</strong> ${totalItems}<br>
+                <strong>Note:</strong> ${order.note || 'No additional notes'}
+            `;
             }
-        }
 
-        // --- Admin Data Loader (for header/sidebar) ---
-        async function loadAdminData() {
-            try {
-                const res = await fetch(`${BASE_API_URL}/admin/users/me`);
-                if (!res.ok) {
-                    window.location.href = "/admin/login.html";
-                    throw new Error("Failed to fetch admin data or session expired.");
-                }
-                const data = await res.json();
+            // 10. Update expected delivery date - CHANGE TO 7-10 DAYS
+            const expectedDeliveryDateEl = document.querySelector("#expectedDeliveryDate");
+            if (expectedDeliveryDateEl && order.created_at) {
+                const orderDate = new Date(order.created_at);
+                const minDeliveryDate = new Date(orderDate);
+                const maxDeliveryDate = new Date(orderDate);
 
-                const adminNameEl = document.getElementById("admin-name");
-                const adminRoleEl = document.getElementById("admin-role");
+                minDeliveryDate.setDate(orderDate.getDate() + 7);
+                maxDeliveryDate.setDate(orderDate.getDate() + 10);
 
-                if (adminNameEl) adminNameEl.textContent = data.admin.name;
-                if (adminRoleEl) adminRoleEl.textContent = data.admin.role;
-
-            } catch (err) {
-                console.error("Error loading admin data:", err);
+                expectedDeliveryDateEl.textContent = `${minDeliveryDate.toLocaleDateString()} - ${maxDeliveryDate.toLocaleDateString()}`;
+            } else if (expectedDeliveryDateEl) {
+                expectedDeliveryDateEl.textContent = 'N/A';
             }
-        }
 
-
-        // --- Event Listeners for Order Status Buttons ---
-        document.addEventListener('DOMContentLoaded', () => {
+            // 11. --- Handle button visibility and status displays ---
             const outForDeliveryButton = document.getElementById("outForDeliveryButton");
             const deliveredButton = document.getElementById("deliveredButton");
+            const markAsCancelledButton = document.getElementById("markAsCancelledButton"); // New Cancel Button
 
-            if (outForDeliveryButton) {
-                outForDeliveryButton.addEventListener("click", async () => {
-                    const orderId = outForDeliveryButton.getAttribute("data-order-id");
-                    if (!orderId) { alert("Error: Order ID not found for 'Out for Delivery' button."); return; }
+            const outForDeliveryStatusDiv = document.getElementById("outForDeliveryStatus");
+            const outForDeliveryTimestampSpan = document.getElementById("outForDeliveryTimestamp");
+            const deliveredStatusDiv = document.getElementById("deliveredStatus");
+            const deliveredTimestampSpan = document.getElementById("deliveredTimestamp");
+            const canceledStatusDiv = document.getElementById("canceledStatusDiv");
+            const canceledTimestampSpan = document.getElementById("canceledTimestamp");
 
-                    if (!confirm(`Are you sure you want to mark Order #${orderId} as "Out for Delivery"?`)) { return; }
 
-                    outForDeliveryButton.disabled = true;
-                    outForDeliveryButton.textContent = 'Updating...';
-                    outForDeliveryButton.classList.add('disabled-button-style');
+            // Set order ID for all buttons
+            [outForDeliveryButton, deliveredButton, markAsCancelledButton].forEach(button => {
+                if (button) button.setAttribute("data-order-id", order.id);
+            });
 
-                    try {
-                        const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ delivery_status: 'out_for_delivery_at' }) // Ensure this matches backend expected value
-                        });
-
-                        if (!res.ok) {
-                            const errorData = await res.json();
-                            throw new Error(errorData.message || `HTTP error! Status: ${res.status}`);
-                        }
-
-                        const data = await res.json();
-                        alert(`Order #${orderId} successfully marked as "Out for Delivery"!`);
-
-                        await loadOrderDetails(orderId);
-
-                    } catch (error) {
-                        console.error("Error marking order as out for delivery:", error);
-                        alert("Failed to mark order as out for delivery: " + error.message);
-                        outForDeliveryButton.disabled = false;
-                        outForDeliveryButton.textContent = 'Mark as Out for Delivery';
-                        outForDeliveryButton.classList.remove('disabled-button-style');
+            // Reset display states initially for all relevant elements
+            const elementsToReset = [outForDeliveryButton, deliveredButton, markAsCancelledButton,
+                                    outForDeliveryStatusDiv, deliveredStatusDiv, canceledStatusDiv];
+            elementsToReset.forEach(el => {
+                if (el) {
+                    el.style.display = 'none';
+                    if (el.tagName === 'BUTTON') {
+                        el.disabled = false;
+                        el.classList.remove('disabled-button-style');
+                        if (el.id === 'outForDeliveryButton') el.textContent = 'Mark as Out for Delivery';
+                        if (el.id === 'deliveredButton') el.textContent = 'Mark as Delivered';
+                        if (el.id === 'markAsCancelledButton') el.textContent = 'Mark as Cancelled';
                     }
-                });
-            }
+                }
+            });
 
-            if (deliveredButton) {
-                deliveredButton.addEventListener("click", async () => {
-                    const orderId = deliveredButton.getAttribute("data-order-id");
-                    if (!orderId) { alert("Error: Order ID not found for 'Delivered' button."); return; }
+            // Logic based on order.status and order.delivery_status
+            const currentMainStatus = (order.status || '').toLowerCase(); // Main status
+            const currentDeliveryStatus = (order.delivery_status || '').toLowerCase(); // Delivery sub-status
 
-                    if (!confirm(`Are you sure you want to mark Order #${orderId} as "Delivered"?`)) { return; }
-
-                    deliveredButton.disabled = true;
-                    deliveredButton.textContent = 'Updating...';
-                    deliveredButton.classList.add('disabled-button-style');
-
-                    try {
-                        const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ delivery_status: 'delivered_at' }) // Ensure this matches backend expected value
-                        });
-
-                        if (!res.ok) {
-                            const errorData = await res.json();
-                            throw new Error(errorData.message || `HTTP error! Status: ${res.status}`);
-                        }
-
-                        const data = await res.json();
-                        alert(`Order #${orderId} successfully marked as "Delivered"!`);
-
-                        await loadOrderDetails(orderId);
-
-                    } catch (error) {
-                        console.error("Error marking order as delivered:", error);
-                        alert("Failed to mark order as delivered: " + error.message);
-                        deliveredButton.disabled = false;
-                        deliveredButton.textContent = 'Mark as Delivered';
-                        deliveredButton.classList.remove('disabled-button-style');
-                    }
-                });
-            }
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const orderId = urlParams.get("id");
-
-            console.log('Order ID from URL:', orderId);
-
-            if (orderId) {
-                loadOrderDetails(orderId);
+            // Handle Canceled status first, as it's terminal
+            if (currentMainStatus === 'cancelled' || currentDeliveryStatus === 'cancelled') {
+                if (canceledStatusDiv && canceledTimestampSpan) {
+                    canceledStatusDiv.style.display = 'block';
+                    canceledTimestampSpan.textContent = formatDateTime(order.canceled_at || order.updated_at);
+                }
+                // No action buttons should be visible for canceled orders
             } else {
-                alert("No order ID found in URL. Please provide an ID like ?id=123");
-            }
+                // If not canceled, show action buttons based on delivery status
+                if (markAsCancelledButton) { // Always allow cancellation if not delivered or already cancelled
+                    if (currentDeliveryStatus !== 'delivered') {
+                        markAsCancelledButton.style.display = 'block';
+                    }
+                }
 
-            loadAdminData();
-        });
-    </script>
+                switch (currentDeliveryStatus) {
+                    case 'pending':
+                    case 'confirmed':
+                    case 'processing':
+                    case 'shipped':
+                        if (outForDeliveryButton) {
+                            outForDeliveryButton.style.display = 'block';
+                        }
+                        break;
+                    case 'out for delivery':
+                        if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
+                            outForDeliveryStatusDiv.style.display = 'block';
+                            outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
+                        }
+                        if (deliveredButton) {
+                            deliveredButton.style.display = 'block';
+                        }
+                        break;
+                    case 'delivered':
+                        if (outForDeliveryStatusDiv && outForDeliveryTimestampSpan) {
+                            outForDeliveryStatusDiv.style.display = 'block';
+                            outForDeliveryTimestampSpan.textContent = formatDateTime(order.out_for_delivery_at);
+                        }
+                        if (deliveredStatusDiv && deliveredTimestampSpan) {
+                            deliveredStatusDiv.style.display = 'block';
+                            deliveredTimestampSpan.textContent = formatDateTime(order.delivered_at);
+                        }
+                        // No further action buttons for delivered orders
+                        if(markAsCancelledButton) markAsCancelledButton.style.display = 'none'; // Hide cancel button if delivered
+                        break;
+                    default:
+                        // For any other unexpected delivery status, do nothing or show a warning
+                        console.warn(`Unknown or unhandled delivery status: ${currentDeliveryStatus}`);
+                        break;
+                }
+            }
+            // --- END Handle button visibility and status displays ---
+
+            console.log('Order details loaded successfully and UI updated.');
+
+        } catch (err) {
+            console.error("⚠️ Error loading order details:", err);
+            alert("Failed to load order details: " + err.message);
+        } finally {
+            // document.getElementById('loading-indicator').style.display = 'none'; // Re-enable if you have a loading indicator
+        }
+    }
+
+    // --- Admin Data Loader (for header/sidebar) ---
+    async function loadAdminData() {
+        try {
+            const res = await fetch(`${BASE_API_URL}/admin/users/me`);
+            if (!res.ok) {
+                window.location.href = "/admin/login.html";
+                throw new Error("Failed to fetch admin data or session expired.");
+            }
+            const data = await res.json();
+
+            const adminNameEl = document.getElementById("admin-name");
+            const adminRoleEl = document.getElementById("admin-role");
+
+            if (adminNameEl) adminNameEl.textContent = data.admin.name;
+            if (adminRoleEl) adminRoleEl.textContent = data.admin.role;
+
+        } catch (err) {
+            console.error("Error loading admin data:", err);
+        }
+    }
+
+
+    // --- Event Listeners for Order Status Buttons ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const outForDeliveryButton = document.getElementById("outForDeliveryButton");
+        const deliveredButton = document.getElementById("deliveredButton");
+        const markAsCancelledButton = document.getElementById("markAsCancelledButton"); // New Cancel Button
+
+        if (outForDeliveryButton) {
+            outForDeliveryButton.addEventListener("click", async () => {
+                const orderId = outForDeliveryButton.getAttribute("data-order-id");
+                if (!orderId) { alert("Error: Order ID not found for 'Out for Delivery' button."); return; }
+
+                if (!confirm(`Are you sure you want to mark Order #${orderId} as "Out for Delivery"?`)) { return; }
+
+                outForDeliveryButton.disabled = true;
+                outForDeliveryButton.textContent = 'Updating...';
+                outForDeliveryButton.classList.add('disabled-button-style');
+
+                try {
+                    const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ delivery_status: 'out for delivery' }) // CORRECTED VALUE
+                    });
+
+                    if (!res.ok) {
+                        const errorData = await res.json();
+                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`);
+                    }
+
+                    const data = await res.json();
+                    alert(`Order #${orderId} successfully marked as "Out for Delivery"!`);
+
+                    await loadOrderDetails(orderId); // Reload details to update UI
+
+                } catch (error) {
+                    console.error("Error marking order as out for delivery:", error);
+                    alert("Failed to mark order as out for delivery: " + error.message);
+                    outForDeliveryButton.disabled = false;
+                    outForDeliveryButton.textContent = 'Mark as Out for Delivery';
+                    outForDeliveryButton.classList.remove('disabled-button-style');
+                }
+            });
+        }
+
+        if (deliveredButton) {
+            deliveredButton.addEventListener("click", async () => {
+                const orderId = deliveredButton.getAttribute("data-order-id");
+                if (!orderId) { alert("Error: Order ID not found for 'Delivered' button."); return; }
+
+                if (!confirm(`Are you sure you want to mark Order #${orderId} as "Delivered"?`)) { return; }
+
+                deliveredButton.disabled = true;
+                deliveredButton.textContent = 'Updating...';
+                deliveredButton.classList.add('disabled-button-style');
+
+                try {
+                    const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ delivery_status: 'delivered' }) // CORRECTED VALUE
+                    });
+
+                    if (!res.ok) {
+                        const errorData = await res.json();
+                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`);
+                    }
+
+                    const data = await res.json();
+                    alert(`Order #${orderId} successfully marked as "Delivered"!`);
+
+                    await loadOrderDetails(orderId); // Reload details to update UI
+
+                } catch (error) {
+                    console.error("Error marking order as delivered:", error);
+                    alert("Failed to mark order as delivered: " + error.message);
+                    deliveredButton.disabled = false;
+                    deliveredButton.textContent = 'Mark as Delivered';
+                    deliveredButton.classList.remove('disabled-button-style');
+                }
+            });
+        }
+
+        // Event Listener for the new Cancel Button
+        if (markAsCancelledButton) {
+            markAsCancelledButton.addEventListener("click", async () => {
+                const orderId = markAsCancelledButton.getAttribute("data-order-id");
+                if (!orderId) { alert("Error: Order ID not found for 'Cancel' button."); return; }
+
+                if (!confirm(`Are you sure you want to CANCEL Order #${orderId}? This action cannot be undone.`)) { return; }
+
+                markAsCancelledButton.disabled = true;
+                markAsCancelledButton.textContent = 'Cancelling...';
+                markAsCancelledButton.classList.add('disabled-button-style');
+
+                try {
+                    // Use the existing PUT /delivery-status endpoint for consistency
+                    const res = await fetch(`${BASE_API_URL}/orders/${orderId}/delivery-status`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ delivery_status: 'cancelled' }) // Send 'cancelled'
+                    });
+
+                    if (!res.ok) {
+                        const errorData = await res.json();
+                        throw new Error(errorData.message || `HTTP error! Status: ${res.status}`);
+                    }
+
+                    const data = await res.json();
+                    alert(`Order #${orderId} successfully marked as "Cancelled"!`);
+
+                    await loadOrderDetails(orderId); // Reload details to update UI
+
+                } catch (error) {
+                    console.error("Error marking order as cancelled:", error);
+                    alert("Failed to cancel order: " + error.message);
+                    markAsCancelledButton.disabled = false;
+                    markAsCancelledButton.textContent = 'Mark as Cancelled';
+                    markAsCancelledButton.classList.remove('disabled-button-style');
+                }
+            });
+        }
+
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get("id");
+
+        if (orderId) {
+            loadOrderDetails(orderId);
+        } else {
+            alert("No order ID found in URL. Please provide an ID like ?id=123");
+        }
+
+        loadAdminData();
+    });
+</script>
 
     <script src="/admin/js/jquery.min.js"></script>
     <script src="/admin/js/bootstrap.min.js"></script>
