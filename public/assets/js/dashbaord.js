@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let statusText = 'Unknown';
         let statusClass = 'bg-gray text-gray'; // Default unknown color
 
-        if (order.status === 'cancelled') { // Changed from 'canceled' to 'cancelled' to match backend
+        if (order.status === 'cancelled') {
             statusText = 'Cancelled';
             statusClass = 'bg-red text-red';
         } else if (order.delivery_status === 'delivered_at') {
@@ -32,11 +32,9 @@ document.addEventListener("DOMContentLoaded", () => {
             statusText = 'Out for Delivery';
             statusClass = 'bg-purple text-purple';
         } else if (order.status === 'pending') {
-            statusText = 'Pending'; // Payment received, awaiting processing/shipping
+            statusText = 'Pending';
             statusClass = 'bg-blue text-blue';
         } else if (order.status === 'completed') {
-            // This assumes 'completed' means payment processed, but not necessarily delivered yet.
-            // If it can still be canceled, 'Processing' is a good status.
             statusText = 'Processing';
             statusClass = 'bg-orange text-orange';
         }
@@ -79,17 +77,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (userOrders.length > 0) {
                     // --- Populate Dashboard Overview Counts ---
-                    // Awaiting Pickup: orders by email on pending payments column, not delivered or out for delivery
                     const awaitingPickup = userOrders.filter(order =>
-                        (order.status === 'pending' || order.status === 'completed') && // Assuming 'completed' means payment done, but not yet shipped/delivered
+                        (order.status === 'pending' || order.status === 'completed') &&
                         (order.delivery_status !== 'delivered_at' && order.delivery_status !== 'out for delivery' && order.delivery_status !== 'out_for_delivery_at') &&
-                        order.status !== 'cancelled' // Ensure it's not cancelled
+                        order.status !== 'cancelled'
                     ).length;
 
-                    // Cancelled Orders: orders by email with status 'cancelled'
                     const cancelled = userOrders.filter(order => order.status === 'cancelled').length;
-
-                    // Total Number of Orders: all orders by email
                     const total = userOrders.length;
 
                     if (awaitingPickupCountEl) awaitingPickupCountEl.textContent = awaitingPickup;
@@ -102,9 +96,20 @@ document.addEventListener("DOMContentLoaded", () => {
                             const { statusText, statusClass } = getOrderStatusDisplay(order);
 
                             let productsHtml = '';
-                            if (order.products) {
+                            let showCancelButton = false;
+
+                            // Determine if the cancel button should be shown
+                            // Conditions: not yet delivered/out for delivery, and not already cancelled
+                            if ((order.status === 'pending' || order.status === 'completed') &&
+                                (order.delivery_status !== 'delivered_at' && order.delivery_status !== 'out for delivery' && order.delivery_status !== 'out_for_delivery_at') &&
+                                order.status !== 'cancelled') {
+                                showCancelButton = true;
+                            }
+
+
+                            // Only show products if the order is NOT cancelled
+                            if (order.status !== 'cancelled' && order.products) {
                                 let productsArray = order.products;
-                                // Attempt to parse if products is a JSON string
                                 if (typeof productsArray === 'string') {
                                     try {
                                         productsArray = JSON.parse(productsArray);
@@ -142,6 +147,9 @@ document.addEventListener("DOMContentLoaded", () => {
                                 } else {
                                     productsHtml = `<div class="prd_item py-5 text-secondary">No product details available for this order.</div>`;
                                 }
+                            } else if (order.status === 'cancelled') {
+                                // Display a message if the order is cancelled and products are "removed"
+                                productsHtml = `<div class="prd_item py-5 text-secondary text-center">This order has been cancelled. Products are no longer available.</div>`;
                             } else {
                                 productsHtml = `<div class="prd_item py-5 text-secondary">No product details available for this order.</div>`;
                             }
@@ -163,10 +171,14 @@ document.addEventListener("DOMContentLoaded", () => {
                                         ${productsHtml}
                                     </div>
                                     <div class="flex flex-wrap gap-4 p-5">
-                                        <a href="order-detail.html?id=${order.id}" class="button-main btn_order_detail">Order Details</a>
-                                        ${(order.status === 'pending' || order.status === 'completed') && (order.delivery_status !== 'delivered_at' && order.delivery_status !== 'out for delivery' && order.delivery_status !== 'out_for_delivery_at') && order.status !== 'cancelled'
-                                            ? `<button class="button-main bg-red border border-line hover:bg-black text-white cancel-order-btn" data-order-id="${order.id}">Cancel Order</button>`
-                                            : ''}
+                                        ${showCancelButton
+                                            ? `<button
+                                                class="button-main bg-red border border-line hover:bg-black text-white hover:text-white cancel-order-btn"
+                                                data-order-id="${order.id}">
+                                                Cancel Order
+                                            </button>`
+                                            : `<a href="order-detail.html?id=${order.id}" class="button-main btn_order_detail">Order Details</a>`
+                                        }
                                     </div>
                                 </div>
                             `;
@@ -230,7 +242,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                 } else {
-                    // No orders found for the user
                     if (listOrderContainer) listOrderContainer.innerHTML = "<p>No orders found for this user.</p>";
                     if (recentOrdersTableBody) recentOrdersTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-5">No recent orders.</td></tr>';
                     if (awaitingPickupCountEl) awaitingPickupCountEl.textContent = '0';
@@ -264,19 +275,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         button.disabled = true;
         button.textContent = 'Canceling...';
-        button.classList.add('opacity-50', 'cursor-not-allowed'); // Simple disabled styling
+        button.classList.add('opacity-50', 'cursor-not-allowed');
 
         try {
-            // Updated API endpoint and method as per your backend
             const res = await fetch(`https://www.shubhakuteer.in/api/orders/cancel-order`, {
-                method: 'POST', // Changed to POST as per your backend
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // Add Authorization header if your API requires it for canceling orders
-                    // 'Authorization': `Bearer ${localStorage.getItem('userAuthToken')}`
+                    // 'Authorization': `Bearer ${localStorage.getItem('userAuthToken')}` // Uncomment if needed
                 },
                 body: JSON.stringify({
-                    order_id: orderId // Backend expects 'order_id'
+                    order_id: orderId,
+                    // Optionally send cancelled_at timestamp from frontend if backend isn't doing it automatically
+                    // cancelled_at: new Date().toISOString()
                 })
             });
 
@@ -286,10 +297,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const data = await res.json();
-            alert(`Order #${orderId} has been successfully cancelled.`); // Updated message
+            alert(`Order #${orderId} has been successfully cancelled.`);
             console.log("Order cancelled response:", data);
 
             // Re-fetch and re-render all orders to update the UI
+            // This will ensure all statuses are updated, products are conditionally hidden,
+            // and dashboard counts are refreshed.
             await fetchAndRenderUserOrders();
 
         } catch (error) {
@@ -307,9 +320,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (userNameDisplay) userNameDisplay.textContent = storedUserName || "Guest User";
         if (userEmailDisplay) userEmailDisplay.textContent = storedUserEmail || "No Email";
         console.log("User is logged in. Loading orders...");
-        fetchAndRenderUserOrders(); // Call the async function to load orders
+        fetchAndRenderUserOrders();
     } else {
-        // Handle not logged in state for all elements
         if (userNameDisplay) userNameDisplay.textContent = "";
         if (userEmailDisplay) userEmailDisplay.textContent = "";
         if (listOrderContainer) listOrderContainer.innerHTML = "Please log in to view your orders.";
@@ -335,7 +347,6 @@ document.addEventListener("DOMContentLoaded", () => {
             item.classList.add('active');
             document.querySelector(`.filter-item[data-item="${targetTab}"]`).classList.add('active');
 
-            // If switching to the orders tab, ensure it's rendered
             if (targetTab === 'orders' && isLoggedIn === "true" && storedUserEmail) {
                 fetchAndRenderUserOrders();
             }
@@ -358,12 +369,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 orderTabIndicator.style.transform = `translateX(${buttonLeft}px)`;
             }
 
-            const filterType = button.getAttribute('data-filter'); // Assuming you add data-filter="all", "pending", "delivery"
+            const filterType = button.getAttribute('data-filter');
             console.log("Order tab clicked:", filterType || button.textContent.trim());
 
-            // TODO: Implement filtering of displayed orders based on filterType here
-            // This would likely involve re-calling fetchAndRenderUserOrders with an additional filter parameter
-            // or filtering the already fetched 'userOrders' array and re-rendering only the listOrderContainer.
+            // You would likely re-filter the 'userOrders' array or re-call fetchAndRenderUserOrders
+            // with a filter parameter here to update the listOrderContainer content based on filterType.
         });
     });
 
