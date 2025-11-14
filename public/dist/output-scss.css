@@ -1963,6 +1963,24 @@ input[type=file]::-webkit-file-upload-button {
   }
 }
 
+#suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    box-shadow: 0px 10px 25px rgba(0,0,0,0.15);
+
+    /* 👇 THIS IS THE KEY FIX */
+    z-index: 999999999 !important;
+
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+
 .modal-newsletter {
   display: flex;
   align-items: center;

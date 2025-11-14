@@ -68,59 +68,57 @@ export default async function handler(req, res) {
             }
         }
 
-        // ======================================================================
-        // LOGIN (POST)
-        // ======================================================================
-        async function loginUser(email, password) {
+        if (pathname === '/api/auth/login' && req.method === 'POST') {
             try {
-                const response = await fetch("https://shubhakuteer.in/api/auth/login", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-                console.log("🔵 [DEBUG] Login API Response:", data);
-
-                // Check if backend returned anything
-                if (!data.user) {
-                    console.log("🔴 [DEBUG] No user returned from backend!");
-                }
-
-                if (data.token && data.user) {
-
-                    const userData = {
-                        firstName: data.user.first_name || "",
-                        lastName: data.user.last_name || "",
-                        email: data.user.email || "",
-                        id: data.user.id || "",
-                    };
-
-                    // BEFORE SAVING
-                    console.log("🟡 [DEBUG] UserData BEFORE saving:", userData);
-
-                    // Save
-                    localStorage.setItem("authToken", data.token);
-                    localStorage.setItem("userData", JSON.stringify(userData));
-
-                    // AFTER SAVING
-                    console.log("🟢 [DEBUG] LocalStorage userData AFTER saving:", localStorage.getItem("userData"));
-                    console.log("🟢 [DEBUG] LocalStorage token AFTER saving:", localStorage.getItem("authToken"));
-
-                    // Update UI
-                    showUserOnFrontend();
-
-                } else {
-                    console.error("🔴 [DEBUG] Invalid login response format:", data);
-                }
-
+                const { loginUser } = await import("../backend/controllers/authController.js");
+                const mockReq = {
+                    body: req.body,
+                    method: req.method,
+                    url: req.url
+                };
+                const mockRes = {
+                    status: (code) => ({
+                        json: (data) => res.status(code).json(data)
+                    }),
+                    json: (data) => res.status(200).json(data)
+                };
+                await loginUser(mockReq, mockRes);
+                return;
             } catch (error) {
-                console.error("🔥 [DEBUG] Login error:", error);
+                console.error("Login error:", error);
+                return res.status(500).json({ message: "Login failed", error: error.message });
             }
         }
 
+        if (pathname === '/api/dashboard-content' && method === 'GET') {
+            let authResult;
+            const authCheckMockRes = {
+                status: (code) => ({
+                    json: (data) => {
+                        authResult = { code, data };
+                        if (code !== 200) {
+                            sendResponse(code, data);
+                        }
+                    }
+                }),
+                json: (data) => {
+                    authResult = { code: 200, data };
+                    sendResponse(200, data);
+                }
+            };
+        
+            await checkAuth(req, authCheckMockRes);
+        
+            if (authResult && authResult.code === 200) {
+                sendResponse(200, {
+                    message: `Welcome to your dashboard, ${authResult.data.user.first_name}!`,
+                    userData: authResult.data.user,
+                    dashboardStats: "Your personalized statistics are here.",
+                    recentActivity: ["User logged in", "Viewed analytics"]
+                });
+            }
+            return;
+        }
 
         // Admin auth routes
         if (pathname === '/api/admin/auth/login' && req.method === 'POST') {
