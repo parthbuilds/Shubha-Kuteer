@@ -180,7 +180,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                         ${productsHtml}
                                     </div>
                                     <div class="flex flex-wrap gap-4 p-5">
-                                        <button class="button-main btn_order_detail">Order Details</button>
                                         ${showCancelButton ?
                                             `<button class="button-main bg-red border border-line hover:bg-black text-white hover:text-white cancel-order-btn" data-order-id="${order.id}">Cancel Order</button>`
                                             : ''
