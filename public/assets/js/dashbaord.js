@@ -188,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                                     alt="${mainProduct.name}"
                                                     class="flex-shrink-0 w-12 h-12 rounded" />
                                                 <div class="info flex flex-col">
-                                                    <strong class="product_name text-button">${mainProduct.name}</strong>
+                                                    <strong class="product_name text-primary">${mainProduct.name}</strong>
                                                     <span class="product_tag caption1 text-secondary">${mainProduct.category || 'Category'}</span>
                                                 </div>
                                             </a>
