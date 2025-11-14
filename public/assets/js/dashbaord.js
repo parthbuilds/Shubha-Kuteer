@@ -823,42 +823,16 @@
 //     }
 // });
 // dashboard.js
-
 document.addEventListener("DOMContentLoaded", () => {
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const dashboardBtn = document.getElementById("dashboardBtn");
-    const registerBlock = document.getElementById("registerBlock");
+    const saved = JSON.parse(localStorage.getItem("userData"));
 
-    const isLoggedIn = localStorage.getItem("isLoggedIn");
-    const userData = JSON.parse(localStorage.getItem("userData") || "{}");
+    console.log("Restored user:", saved);
 
-    console.log("📦 Restoring user from localStorage:", userData);
+    if (!saved) return;
 
-    // UI logic
-    if (isLoggedIn === "true") {
-        loginBtn?.classList.add("hidden");
-        logoutBtn?.classList.remove("hidden");
-        dashboardBtn?.classList.remove("hidden");
-        registerBlock && (registerBlock.style.display = "none");
+    const userName = document.getElementById("userName");
+    const userEmail = document.getElementById("userEmail");
 
-        // Update User UI
-        document.getElementById("userName").textContent =
-            `${userData.firstName} ${userData.lastName}`;
-
-        document.getElementById("userEmail").textContent =
-            userData.email;
-
-    } else {
-        loginBtn?.classList.remove("hidden");
-        logoutBtn?.classList.add("hidden");
-        dashboardBtn?.classList.add("hidden");
-        registerBlock && (registerBlock.style.display = "block");
-    }
-
-    // Logout
-    logoutBtn?.addEventListener("click", () => {
-        localStorage.clear();
-        window.location.href = "index.html";
-    });
+    userName.textContent = `${saved.firstName} ${saved.lastName}`;
+    userEmail.textContent = saved.email;
 });

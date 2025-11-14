@@ -68,15 +68,12 @@ export default async function handler(req, res) {
             }
         }
 
-        // index.js login route
-if (pathname === "/api/auth/login" && req.method === "POST") {
+        if (pathname === '/api/auth/login' && req.method === 'POST') {
     try {
         const { loginUser } = await import("../backend/controllers/authController.js");
 
         const mockReq = {
-            body: req.body,
-            method: req.method,
-            url: req.url,
+            body: req.body
         };
 
         const mockRes = {
@@ -91,11 +88,7 @@ if (pathname === "/api/auth/login" && req.method === "POST") {
 
     } catch (error) {
         console.error("Login error:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Login failed",
-            error: error.message
-        });
+        return res.status(500).json({ message: "Login failed", error: error.message });
     }
 }
 
