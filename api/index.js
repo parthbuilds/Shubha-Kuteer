@@ -121,7 +121,6 @@ export default async function handler(req, res) {
     }
 }
 
-
         if (pathname === '/api/dashboard-content' && method === 'GET') {
             let authResult;
             const authCheckMockRes = {
