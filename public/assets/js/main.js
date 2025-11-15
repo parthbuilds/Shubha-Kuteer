@@ -1305,17 +1305,19 @@ const handleItemModalQuickview = () => {
     `;
 
     const listCategory = modalQuickviewMain.querySelector(".list-category");
-
-    listCategory.innerHTML = `
-      <a href="shop.html" class="text-secondary">${item.category},</a>
-      <a href="shop.html" class="text-secondary"> ${item.gender}</a>
-    `;
+    if (listCategory) {
+      listCategory.innerHTML = `
+        <a href="shop.html" class="text-secondary">${item.category},</a>
+        <a href="shop.html" class="text-secondary"> ${item.gender}</a>
+      `;
+    }
 
     const listTag = modalQuickviewMain.querySelector(".list-tag");
-
-    listTag.innerHTML = `
-      <a href="shop.html" class="text-secondary">${item.type}</a>
-    `;
+    if (listTag) {
+      listTag.innerHTML = `
+        <a href="shop.html" class="text-secondary">${item.type}</a>
+      `;
+    }
 
     let wishlistStore = localStorage.getItem("wishlistStore");
     wishlistStore = wishlistStore ? JSON.parse(wishlistStore) : [];
