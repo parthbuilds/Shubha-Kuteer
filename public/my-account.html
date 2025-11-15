@@ -864,7 +864,7 @@
                                 <span class="ph ph-gear-six text-xl"></span>
                                 <strong class="heading6">Setting</strong>
                             </a>
-                            <a href="login.html" id="logoutBtn"
+                            <a id="logoutBtn"
                                 class="category-item flex items-center gap-3 w-full px-5 py-4 rounded-lg cursor-pointer duration-300 hover:bg-white mt-1.5">
                                 <span class="ph ph-sign-out text-xl"></span>
                                 <strong class="heading6">Logout</strong>
@@ -928,15 +928,15 @@
                                             <td class="py-3">
                                                 <a href="product-default.html" class="product flex items-center gap-3">
                                                     <div class="info flex flex-col">
-                                                        <strong class="product_name text-secondary">No Orders Found</strong>
+                                                        <strong class="product_name text-secondary">No Orders
+                                                            Found</strong>
                                                         <span class="product_tag form-caption text-secondary"></span>
                                                     </div>
                                                 </a>
                                             </td>
                                             <td class="py-3 price"></td>
                                             <td class="py-3 text-right">
-                                                <span
-                                                    class=""></span>
+                                                <span class=""></span>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -2423,6 +2423,16 @@
             </div>
         </div>
     </div>
+    <script>
+        document.getElementById("logoutBtn").addEventListener("click", function () {
+            // Clear login data
+            localStorage.removeItem("isLoggedIn");
+            localStorage.removeItem("userData");  // if any user data stored
+
+            // Redirect
+            window.location.href = "login.html";
+        });
+    </script>
     <script src="./assets/js/dashbaord.js"></script>
     <script src="./assets/js/login.js"></script>
     <script src="./assets/js/phosphor-icons.js"></script>
