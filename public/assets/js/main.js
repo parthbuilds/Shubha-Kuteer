@@ -1802,7 +1802,7 @@ function addEventToProductItem(products) {
           const productItem = quickviewIcon.closest(".product-item");
           const productId = productItem.getAttribute("data-item");
           let quickViewStore = localStorage.getItem("quickViewStore");
-          quickViewStore = quickViewStore && [];
+          quickViewStore = quickViewStore ? JSON.parse(quickViewStore) : [];
 
           // add it to quick view
           const productToAdd = products?.find((item) => item.id === productId);
