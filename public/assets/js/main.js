@@ -3456,41 +3456,33 @@ const handleInforCart = () => {
       if (checkoutTotalCartElement) checkoutTotalCartElement.innerHTML = `₹${totalCart.toFixed(2)}`;
 
       // Freeship logic (show how much more is needed for freeship)
-      const morePriceElement = document.querySelector(".heading.banner .more-price");
-      if (morePriceElement) {
-        morePriceElement.innerHTML = totalCart <= moneyForFreeship ? (moneyForFreeship - totalCart).toFixed(2) : "0.00";
-      }
-
       const moneyFreeshipProgress = document.querySelector('.freeship-progress-bar-class'); // Replace with actual class/ID
       if (moneyFreeshipProgress) {
         moneyFreeshipProgress.style.width = totalCart <= moneyForFreeship ? `${(totalCart / moneyForFreeship) * 100}%` : `100%`;
       }
 
       // Auto-apply shipping based on cart total
-      (function applyShippingLogic() {
-        const SHIPPING_THRESHOLD = 2000; // orders >= this get free shipping
-        const FLAT_RATE = 100;
-        const shipElem = document.querySelector('.ship-block .ship');
+      const SHIPPING_THRESHOLD = 2000;
+      const FLAT_RATE = 100;
+      const shipElem = document.querySelector('.ship-block .ship');
 
-        // Determine shipping amount automatically
-        let shippingAmount = totalCart >= SHIPPING_THRESHOLD ? 0 : FLAT_RATE;
+      let shippingAmount = totalCart >= SHIPPING_THRESHOLD ? 0 : FLAT_RATE;
 
-        // Update shipping display
-        if (shipElem) shipElem.textContent = `₹${shippingAmount.toFixed(2)}`;
+      // Update shipping display
+      if (shipElem) {
+        shipElem.textContent = `₹${shippingAmount.toFixed(2)}`;
+      }
 
-        // Update subtotal
-        const totalProductElement = document.querySelector('.total-block .total-product');
-        if (totalProductElement) totalProductElement.innerHTML = totalCart.toFixed(2);
-
-        // Calculate and update grand total (subtotal + shipping)
-        const grandTotal = Number(totalCart) + Number(shippingAmount);
-        const grandTotalElems = document.querySelectorAll('.total-cart-block .total-cart, .total-cart');
-        grandTotalElems.forEach((el) => {
-          el.innerHTML = `₹${grandTotal.toFixed(2)}`;
-        });
-      })();
+      // Calculate and update grand total (subtotal + shipping)
+      const grandTotal = Number(totalCart) + Number(shippingAmount);
+      const grandTotalElems = document.querySelectorAll('.total-cart-block .total-cart, .total-cart');
+      grandTotalElems.forEach((el) => {
+        el.innerHTML = `₹${grandTotal.toFixed(2)}`;
+      });
 
       console.log('Cart total updated:', totalCart.toFixed(2));
+      console.log('Shipping:', shippingAmount.toFixed(2));
+      console.log('Grand total:', grandTotal.toFixed(2));
     };
 
     updateTotalCart(); // Initial call to update totals
