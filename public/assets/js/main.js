@@ -3456,7 +3456,7 @@ const handleInforCart = () => {
       if (checkoutTotalCartElement) checkoutTotalCartElement.innerHTML = `₹${totalCart.toFixed(2)}`;
 
       // Freeship logic (show how much more is needed for freeship)
-      const moneyFreeshipProgress = document.querySelector('.freeship-progress-bar-class'); // Replace with actual class/ID
+      const moneyFreeshipProgress = document.querySelector('.progress-line');
       if (moneyFreeshipProgress) {
         moneyFreeshipProgress.style.width = totalCart <= moneyForFreeship ? `${(totalCart / moneyForFreeship) * 100}%` : `100%`;
       }
