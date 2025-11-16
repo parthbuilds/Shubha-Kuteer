@@ -1285,25 +1285,8 @@ const handleItemModalQuickview = () => {
     modalQuickviewMain.querySelector(".product-infor .desc").innerHTML =
       item.description;
 
-    const listColor = modalQuickviewMain.querySelector(".list-color");
-    listColor.innerHTML = `
-      ${item.variation
-        .map(
-          (color) =>
-            `
-        <div class="color-item w-12 h-12 rounded-xl duration-300 relative">
-          <img
-              src="${color.colorImage}"
-              alt='color'
-              class='rounded-xl w-full h-full object-cover'
-          />
-          <div class="tag-action bg-black text-white caption2 capitalize px-1.5 py-0.5 rounded-sm">${color.color}</div>
-        </div>
-        `
-        )
-        .join("")}
-    `;
-
+    // Color section removed - not needed
+    
     const listCategory = modalQuickviewMain.querySelector(".list-category");
     if (listCategory) {
       listCategory.innerHTML = `
