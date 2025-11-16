@@ -3466,74 +3466,28 @@ const handleInforCart = () => {
         moneyFreeshipProgress.style.width = totalCart <= moneyForFreeship ? `${(totalCart / moneyForFreeship) * 100}%` : `100%`;
       }
 
-      // Shipping selection and total calculation
+      // Auto-apply shipping based on cart total
       (function applyShippingLogic() {
         const SHIPPING_THRESHOLD = 2000; // orders >= this get free shipping
-        const freeRadio = document.getElementById('shipping');
-        const flatRadio = document.getElementById('flat');
+        const FLAT_RATE = 100;
         const shipElem = document.querySelector('.ship-block .ship');
-        const flatElem = document.querySelector('.ship-block .flat');
 
-        // Determine flat rate value (read from DOM if available, fallback to 100)
-        let flatRate = 100;
-        if (flatElem) {
-          const num = parseFloat(flatElem.textContent.replace(/[^0-9.]/g, ''));
-          if (!isNaN(num)) flatRate = num;
-        }
+        // Determine shipping amount automatically
+        let shippingAmount = totalCart >= SHIPPING_THRESHOLD ? 0 : FLAT_RATE;
 
-        let shippingAmount = 0;
-
-        if (totalCart >= SHIPPING_THRESHOLD) {
-          // free shipping
-          shippingAmount = 0;
-          if (freeRadio) freeRadio.checked = true;
-          if (flatRadio) flatRadio.checked = false;
-        } else {
-          // apply flat rate
-          shippingAmount = flatRate;
-          if (flatRadio) flatRadio.checked = true;
-          if (freeRadio) freeRadio.checked = false;
-        }
-
-        // Update shipping display elements
+        // Update shipping display
         if (shipElem) shipElem.textContent = `₹${shippingAmount.toFixed(2)}`;
-        if (flatElem) flatElem.textContent = `₹${flatRate.toFixed(2)}`;
 
-        // Update displayed totals (subtotal and grand total)
-        // Subtotal element (order summary)
+        // Update subtotal
         const totalProductElement = document.querySelector('.total-block .total-product');
         if (totalProductElement) totalProductElement.innerHTML = totalCart.toFixed(2);
 
-        // Grand total element (subtotal + shipping)
-        const grandTotal = Number(totalCart) + Number(shippingAmount || 0);
+        // Calculate and update grand total (subtotal + shipping)
+        const grandTotal = Number(totalCart) + Number(shippingAmount);
         const grandTotalElems = document.querySelectorAll('.total-cart-block .total-cart, .total-cart');
         grandTotalElems.forEach((el) => {
           el.innerHTML = `₹${grandTotal.toFixed(2)}`;
         });
-
-        // Also update any .total-cart placeholders used elsewhere
-        const anyTotalCart = document.querySelector('.total-cart');
-        if (anyTotalCart) anyTotalCart.innerHTML = `₹${grandTotal.toFixed(2)}`;
-
-        // When user manually changes shipping radio, adjust totals accordingly
-        if (freeRadio) {
-          freeRadio.addEventListener('change', () => {
-            if (freeRadio.checked) {
-              if (shipElem) shipElem.textContent = '₹0.00';
-              const newGrand = Number(totalCart) + 0;
-              document.querySelectorAll('.total-cart-block .total-cart, .total-cart').forEach((el) => el.innerHTML = `₹${newGrand.toFixed(2)}`);
-            }
-          });
-        }
-        if (flatRadio) {
-          flatRadio.addEventListener('change', () => {
-            if (flatRadio.checked) {
-              if (shipElem) shipElem.textContent = `₹${flatRate.toFixed(2)}`;
-              const newGrand = Number(totalCart) + Number(flatRate || 0);
-              document.querySelectorAll('.total-cart-block .total-cart, .total-cart').forEach((el) => el.innerHTML = `₹${newGrand.toFixed(2)}`);
-            }
-          });
-        }
       })();
 
       console.log('Cart total updated:', totalCart.toFixed(2));
