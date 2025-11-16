@@ -2163,10 +2163,9 @@ fetch("api/admin/products")
           );
         }
     
-        // You can keep these calls if they are necessary for newly injected product items
-        // and are defined functions in your scope.
-        // handleActiveImgWhenColorChange(products);
-        // addEventToProductItem(products);
+        // Event listeners for newly injected product items
+        handleActiveImgWhenColorChange(products);
+        addEventToProductItem(products);
       });
     }
 
