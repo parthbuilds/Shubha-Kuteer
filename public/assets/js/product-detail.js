@@ -137,15 +137,17 @@ if (productDetail) {
             const prevBtn = document.querySelector('.breadcrumb-product .prev-btn')
             const nextBtn = document.querySelector('.breadcrumb-product .next-btn')
 
-            nextBtn.addEventListener('click', () => {
-                currentIndex = (currentIndex + 1) % mappedProducts.length;
-                const nextProduct = mappedProducts[currentIndex];
-                window.location.href = `product-${typePage}.html?id=${nextProduct.id}`
-            })
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    currentIndex = (currentIndex + 1) % mappedProducts.length;
+                    const nextProduct = mappedProducts[currentIndex];
+                    window.location.href = `product-${typePage}.html?id=${nextProduct.id}`
+                })
+            }
 
-            if (productId === '1') {
+            if (productId === '1' && prevBtn) {
                 prevBtn.remove()
-            } else {
+            } else if (prevBtn) {
                 prevBtn.addEventListener('click', () => {
                     currentIndex = (currentIndex - 1) % mappedProducts.length;
                     const nextProduct = mappedProducts[currentIndex];
@@ -364,17 +366,19 @@ if (productDetail) {
             })
 
             const listCategory = productDetail.querySelector('.list-category')
-
-            listCategory.innerHTML = `
-            <a href="shop.html" class="text-secondary">${productMain.category},</a>
-            <a href="shop.html" class="text-secondary"> ${productMain.gender}</a>
-            `
+            if (listCategory) {
+                listCategory.innerHTML = `
+                <a href="shop.html" class="text-secondary">${productMain.category},</a>
+                <a href="shop.html" class="text-secondary"> ${productMain.gender}</a>
+                `
+            }
 
             const listTag = productDetail.querySelector('.list-tag')
-
-            listTag.innerHTML = `
-            <a href="shop.html" class="text-secondary">${productMain.type}</a>
-            `
+            if (listTag) {
+                listTag.innerHTML = `
+                <a href="shop.html" class="text-secondary">${productMain.type}</a>
+                `
+            }
         })
         .catch(error => console.error('Error fetching products:', error));
 }

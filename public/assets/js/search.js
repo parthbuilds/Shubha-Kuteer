@@ -4,6 +4,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const suggestionsBox = document.getElementById("suggestions");
     const searchIcon = document.querySelector(".ph-magnifying-glass");
 
+    // Exit if search elements don't exist on this page
+    if (!searchInput || !suggestionsBox || !searchIcon) {
+        return;
+    }
+
     const API_URL = "https://www.shubhakuteer.in/api/admin/products"; 
     const SHOP_PAGE_BASE_URL = "/shop.html"; 
     // New: Define the base URL for your generic product display page
