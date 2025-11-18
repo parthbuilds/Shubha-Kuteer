@@ -771,7 +771,7 @@
                                 Add To Cart</div>
                         </div>
                         <div class="button-block mt-5">
-                            <a href="checkout.html" class="button-main w-full text-center">Buy It Now</a>
+                            <button class="buy-now-btn button-main w-full text-center">Buy It Now</button>
                         </div>
                         <div class="more-infor mt-6">
                             <div class="flex items-center gap-4 flex-wrap">
@@ -2096,7 +2096,7 @@
                                         Add To Cart</div>
                                 </div>
                                 <div class="button-block mt-5">
-                                    <a href="checkout.html" class="button-main w-full text-center">Buy It Now</a>
+                                    <button class="buy-now-btn button-main w-full text-center">Buy It Now</button>
                                 </div>
                                 <div class="flex items-center flex-wrap lg:gap-20 gap-8 gap-y-4 mt-5">
                                     <div class="compare flex items-center gap-3 cursor-pointer">
@@ -2195,6 +2195,98 @@
         <script src="./assets/js/magnific-popup.min.js"></script>
         <script src="./assets/js/product-detail.js"></script>
         <script src="./assets/js/main.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const buyNowBtns = document.querySelectorAll('.buy-now-btn');
+                buyNowBtns.forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        try {
+                            const url = new URL(window.location.href);
+                            const productId = url.searchParams.get('id');
+                            if (!productId) {
+                                alert('Product ID not found');
+                                return;
+                            }
+                            const res = await fetch('/api/admin/products');
+                            if (!res.ok) throw new Error('Failed to fetch products');
+                            const allProducts = await res.json();
+                            const backendProduct = allProducts.find(p => String(p.id) === String(productId));
+                            if (!backendProduct) {
+                                alert('Product not found');
+                                return;
+                            }
+                            const thumbImages = [];
+                            if (backendProduct.thumb_image) thumbImages.push(backendProduct.thumb_image);
+                            if (backendProduct.main_image && !thumbImages.includes(backendProduct.main_image)) {
+                                thumbImages.push(backendProduct.main_image);
+                            }
+                            if (thumbImages.length === 0) {
+                                thumbImages.push("./assets/images/placeholder.png");
+                            }
+                            let variations = [];
+                            if (Array.isArray(backendProduct.attributes)) {
+                                const colorAttr = backendProduct.attributes.find((attr) => attr.attribute_name?.toLowerCase() === "color");
+                                if (colorAttr?.attribute_values) {
+                                    try {
+                                        const attributeValues = typeof colorAttr.attribute_values === "string" ? JSON.parse(colorAttr.attribute_values) : colorAttr.attribute_values;
+                                        if (Array.isArray(attributeValues)) {
+                                            variations = attributeValues.map((v) => ({
+                                                color: v.value || "Unknown",
+                                                colorCode: v.code || "#000000",
+                                                colorImage: "./assets/images/product/color/48x48.png",
+                                                image: backendProduct.main_image || "./assets/images/product/bag-1.png"
+                                            }));
+                                        }
+                                    } catch (err) {
+                                        console.warn("Failed to parse variations");
+                                    }
+                                }
+                            }
+                            if (variations.length === 0) {
+                                variations = [{
+                                    color: "Default",
+                                    colorCode: "#000000",
+                                    colorImage: "./assets/images/product/color/48x48.png",
+                                    image: backendProduct.main_image || "./assets/images/product/bag-1.png"
+                                }];
+                            }
+                            const productToAdd = {
+                                id: String(backendProduct.id),
+                                category: backendProduct.category || "Uncategorized",
+                                type: backendProduct.type || "",
+                                name: backendProduct.name || "Untitled Product",
+                                new: Boolean(backendProduct.is_new),
+                                sale: Boolean(backendProduct.on_sale),
+                                rate: parseFloat(backendProduct.rate) || 0,
+                                price: parseFloat(backendProduct.price) || 0,
+                                originPrice: parseFloat(backendProduct.origin_price) || 0,
+                                brand: backendProduct.brand || "",
+                                sold: backendProduct.sold || 0,
+                                quantity: backendProduct.quantity || 0,
+                                quantityPurchase: 1,
+                                sizes: ["S", "M", "L", "XL"],
+                                variation: variations,
+                                thumbImage: thumbImages,
+                                images: thumbImages,
+                                description: backendProduct.description || ""
+                            };
+                            let cartStore = localStorage.getItem('cartStore');
+                            cartStore = cartStore ? JSON.parse(cartStore) : [];
+                            const existingIndex = cartStore.findIndex(item => String(item.id) === String(productId));
+                            if (existingIndex === -1) {
+                                cartStore.push(productToAdd);
+                            }
+                            localStorage.setItem('cartStore', JSON.stringify(cartStore));
+                            window.location.href = 'checkout.html';
+                        } catch (error) {
+                            console.error('Buy Now error:', error);
+                            alert('Error: ' + error.message);
+                        }
+                    });
+                });
+            });
+        </script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 (async function renderRelatedProducts() {
