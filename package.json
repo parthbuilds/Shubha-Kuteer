@@ -6,9 +6,9 @@
   "version": "1.0.0",
   "main": "tailwind.config.js",
   "scripts": {
-    "dev": "npx tailwindcss -i ./assets/css/style.css -o ./dist/output-tailwind.css --watch",
-    "sass": "sass --watch ./assets/scss/style.scss ./dist/output-scss.css",
-    "build:css": "tailwindcss -i ./assets/css/style.css -o ./assets/css/output.css",
+    "dev": "npx tailwindcss -i ./public/assets/css/style.css -o ./public/dist/output-tailwind.css --watch",
+    "sass": "sass --watch ./public/assets/scss/style.scss ./public/dist/output-scss.css",
+    "build:css": "tailwindcss -i ./public/assets/css/style.css -o ./public/assets/css/output.css",
     "build": "npm run build:css"
   },
   "keywords": [],
