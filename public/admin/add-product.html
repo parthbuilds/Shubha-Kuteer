@@ -196,7 +196,7 @@
                                                     <div class="text">Order detail</div>
                                                 </a>
                                             </li>-->
-                                            
+
                                         </ul>
                                     </li>
                                     <li class="menu-item has-children">
@@ -253,14 +253,14 @@
                             <div class="center-item">
                                 <div class="center-heading">Setting</div>
                                 <ul class="menu-list">
-                                    
+
                                     <li class="menu-item">
                                         <a href="/admin/setting.html" class="">
                                             <div class="icon"><i class="icon-settings"></i></div>
                                             <div class="text">Setting</div>
                                         </a>
                                     </li>
-                                    
+
                                 </ul>
                             </div>
 
@@ -601,7 +601,7 @@
                                         <i class="icon-maximize"></i>
                                     </div>
                                 </div>
-                                
+
                                 <div class="popup-wrap user type-header">
                                     <div class="dropdown">
                                         <button class="btn btn-secondary dropdown-toggle" type="button"
@@ -1131,9 +1131,8 @@
                         return;
                     }
 
-                    // Clear previous previews and reset array
-                    galleryPreviewContainer.querySelectorAll('.uploaded-img-preview').forEach(img => img.remove());
-                    uploadedGallery = [];
+                    // DO NOT clear previous previews/array to allow appending
+                    // uploadedGallery = []; 
 
                     const uploadingText = document.createElement('div');
                     uploadingText.className = 'uploading-text text-tiny mt-5';
@@ -1145,14 +1144,48 @@
                         const url = await uploadFileToCloudinary(file);
                         if (url) {
                             uploadedGallery.push(url);
+
+                            // Create wrapper for image + remove button
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'relative inline-block';
+                            wrapper.style.marginRight = '10px';
+                            wrapper.style.marginTop = '10px';
+                            wrapper.style.position = 'relative';
+
                             const img = document.createElement('img');
                             img.src = url;
                             img.style.maxWidth = '80px';
                             img.style.maxHeight = '80px';
-                            img.style.marginRight = '5px';
-                            img.style.marginTop = '10px';
                             img.className = 'uploaded-img-preview';
-                            galleryPreviewContainer.appendChild(img);
+                            img.style.display = 'block';
+
+                            // Remove button
+                            const removeBtn = document.createElement('button');
+                            removeBtn.innerHTML = '&times;';
+                            removeBtn.className = 'btn-remove-image';
+                            removeBtn.style.position = 'absolute';
+                            removeBtn.style.top = '-5px';
+                            removeBtn.style.right = '-5px';
+                            removeBtn.style.background = 'red';
+                            removeBtn.style.color = 'white';
+                            removeBtn.style.border = 'none';
+                            removeBtn.style.borderRadius = '50%';
+                            removeBtn.style.width = '20px';
+                            removeBtn.style.height = '20px';
+                            removeBtn.style.cursor = 'pointer';
+                            removeBtn.style.lineHeight = '18px';
+                            removeBtn.style.fontSize = '14px';
+                            removeBtn.style.padding = '0';
+                            removeBtn.type = 'button'; // Prevent form submit
+
+                            removeBtn.onclick = () => {
+                                uploadedGallery = uploadedGallery.filter(u => u !== url);
+                                wrapper.remove();
+                            };
+
+                            wrapper.appendChild(img);
+                            wrapper.appendChild(removeBtn);
+                            galleryPreviewContainer.appendChild(wrapper);
                         } else {
                             alert(`Gallery image "${file.name}" upload failed.`);
                         }
@@ -1211,6 +1244,10 @@
                 // Auto-slug
                 if (!payload.slug && payload.name) {
                     payload.slug = payload.name.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
+                    // Fallback for empty slug if name is all special chars
+                    if (!payload.slug) {
+                        payload.slug = "product-" + Date.now();
+                    }
                 }
 
                 console.log('Final Payload to send:', payload);
@@ -1223,7 +1260,7 @@
                     });
                     const data = await res.json();
                     if (res.ok) {
-                        alert("✅ Product added successfully!");
+                        alert(`✅ Product added successfully! ID: ${data.productId || 'N/A'}`);
                         form.reset(); // Clears text inputs
 
                         // Manually clear JS state and previews
@@ -1238,7 +1275,8 @@
 
                         // Clear image previews
                         mainImagePreviewContainer.querySelectorAll('.uploaded-img-preview').forEach(img => img.remove());
-                        galleryPreviewContainer.querySelectorAll('.uploaded-img-preview').forEach(img => img.remove());
+                        galleryPreviewContainer.innerHTML = ''; // Clear gallery container
+
                     } else {
                         alert("❌ Error: " + (data.message || data.error || "Unknown error"));
                         console.error("Backend Error Response:", data);
