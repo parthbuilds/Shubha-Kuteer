@@ -867,6 +867,7 @@
 
                                         <div class="cols gap10">
                                             <button class="tf-button w-full" type="submit">Add Product</button>
+                                            <div id="form-message" class="mt-10 text-center text-tiny"></div>
                                         </div>
                                     </div>
                                 </form>
@@ -899,6 +900,15 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const form = document.getElementById("addProductForm");
+            const msgDiv = document.getElementById("form-message");
+
+            // Helper to show message
+            function showMessage(text, type = 'success') {
+                msgDiv.innerHTML = `<span class="${type === 'success' ? 'text-success' : 'text-danger'}">${text}</span>`;
+                // Also alert for visibility if needed, or remove alert if page message is enough
+                // alert(text); 
+            }
+
             // --- Variations (Attributes) ---
             const variationsHidden = document.getElementById("variationsHidden");
             const variantsContainer = document.getElementById("variantsContainer");
@@ -1207,16 +1217,19 @@
                 const payload = Object.fromEntries(formData.entries());
 
                 // Validate required fields
+                msgDiv.innerHTML = 'Submitting...';
+
+                // Validate required fields
                 if (!payload.name) {
-                    alert('Please enter a Product Name.');
+                    showMessage('Please enter a Product Name.', 'error');
                     return;
                 }
                 if (!payload.category || payload.category === "") {
-                    alert('Please select a Category.');
+                    showMessage('Please select a Category.', 'error');
                     return;
                 }
                 if (Number(payload.price) <= 0 || isNaN(Number(payload.price))) {
-                    alert('Please enter a valid Price.');
+                    showMessage('Please enter a valid Price.', 'error');
                     return;
                 }
 
@@ -1260,7 +1273,8 @@
                     });
                     const data = await res.json();
                     if (res.ok) {
-                        alert(`✅ Product added successfully! ID: ${data.productId || 'N/A'}`);
+                        showMessage(`✅ Product added successfully! ID: ${data.productId || 'N/A'}`, 'success');
+                        alert(`✅ Product added successfully! ID: ${data.productId || 'N/A'}`); // Keep alert for immediate feedback too
                         form.reset(); // Clears text inputs
 
                         // Manually clear JS state and previews
@@ -1278,12 +1292,16 @@
                         galleryPreviewContainer.innerHTML = ''; // Clear gallery container
 
                     } else {
-                        alert("❌ Error: " + (data.message || data.error || "Unknown error"));
+                        const errMsg = "❌ Error: " + (data.message || data.error || "Unknown error");
+                        showMessage(errMsg, 'error');
+                        alert(errMsg);
                         console.error("Backend Error Response:", data);
                     }
                 } catch (err) {
                     console.error("⚠️ Fetch error (network or server not reachable):", err);
-                    alert("⚠️ Failed to add product. See console for details.");
+                    const errMsg = "⚠️ Failed to add product. See console for details.";
+                    showMessage(errMsg, 'error');
+                    alert(errMsg);
                 }
             });
 
