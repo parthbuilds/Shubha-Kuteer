@@ -1,19 +1,20 @@
 {
-  "name": "Shubha-Kuteer_html",
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  },
+  "name": "Shubha Kuteer_html",
   "version": "1.0.0",
   "main": "tailwind.config.js",
   "scripts": {
-    "dev": "npx tailwindcss -i ./public/assets/css/style.css -o ./public/dist/output-tailwind.css --watch",
-    "sass": "sass --watch ./public/assets/scss/style.scss ./public/dist/output-scss.css",
-    "build:css": "tailwindcss -i ./public/assets/css/style.css -o ./public/assets/css/output.css",
-    "build": "npm run build:css"
+    "dev": "npx tailwindcss -i ./assets/css/style.css -o ./dist/output-tailwind.css --watch",
+    "sass": "sass --watch ./assets/scss/style.scss ./dist/output-scss.css",
+    "build:css": "tailwindcss -i ./assets/css/style.css -o ./assets/css/output.css"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "tailwindcss": "^3.4.17",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",

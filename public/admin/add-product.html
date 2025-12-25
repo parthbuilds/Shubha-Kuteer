@@ -964,12 +964,7 @@
                     try {
                         attributeValues = JSON.parse(attrObj.attribute_values); // ✅ Stored as JSON in DB
                     } catch (e) {
-                        console.warn("Attribute values not JSON, parsing as CSV:", attrObj.attribute_values);
-                        if (typeof attrObj.attribute_values === 'string') {
-                            attributeValues = attrObj.attribute_values.split(',').map(s => s.trim());
-                        } else {
-                            attributeValues = [];
-                        }
+                        console.error("Invalid JSON for", attributeName, e);
                     }
                 }
 
@@ -1040,50 +1035,6 @@
             function updateVariationsHidden() {
                 variationsHidden.value = JSON.stringify(selectedAttributeVariants);
                 console.log("Updated variations:", selectedAttributeVariants);
-            }
-
-            // --- Sizes Logic ---
-            const sizesSelect = document.getElementById("sizesSelect");
-            const selectedSizesContainer = document.getElementById("selectedSizes");
-            const sizesHidden = document.getElementById("sizesHidden");
-            let selectedSizes = [];
-
-            function renderSizes() {
-                selectedSizesContainer.innerHTML = "";
-                selectedSizes.forEach(size => {
-                    const tag = document.createElement("div");
-                    tag.style.display = "inline-flex";
-                    tag.style.alignItems = "center";
-                    tag.style.marginRight = "10px";
-                    tag.style.background = "#f0f0f0";
-                    tag.style.padding = "5px 10px";
-                    tag.style.borderRadius = "4px";
-                    tag.style.marginTop = "5px";
-
-                    tag.innerHTML = `
-                        <span class="body-text">${size}</span>
-                        <i class="icon-x cls-size" data-size="${size}" style="cursor:pointer; margin-left:10px; font-style:normal;">&times;</i>
-                    `;
-
-                    tag.querySelector(".cls-size").addEventListener("click", () => {
-                        selectedSizes = selectedSizes.filter(s => s !== size);
-                        renderSizes();
-                    });
-
-                    selectedSizesContainer.appendChild(tag);
-                });
-                sizesHidden.value = JSON.stringify(selectedSizes);
-            }
-
-            if (sizesSelect) {
-                sizesSelect.addEventListener("change", (e) => {
-                    const val = e.target.value;
-                    if (val && !selectedSizes.includes(val)) {
-                        selectedSizes.push(val);
-                        renderSizes();
-                    }
-                    e.target.value = ""; // Reset dropdown
-                });
             }
 
             // --- Load Categories ---
