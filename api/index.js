@@ -1,4 +1,4 @@
-// Working serverless function using Vercel format
+// Working serverless function using Vercel format - Deployed at 2025-12-25
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
